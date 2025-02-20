@@ -1,0 +1,8 @@
+transformers
+datasets
+faiss-cpu
+requests
+pdf2image
+matplotlib
+torch
+torchvision
