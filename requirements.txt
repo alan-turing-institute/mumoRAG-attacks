@@ -6,3 +6,5 @@ pdf2image
 matplotlib
 torch
 torchvision
+einops
+timm
