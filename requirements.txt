@@ -8,3 +8,5 @@ torch
 torchvision
 einops
 timm
+sentencepiece
+protobuf

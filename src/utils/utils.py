@@ -52,34 +52,6 @@ def create_hf_dataset(images: dict):
 
     return Dataset.from_dict(ds_dict)
 
-# add an extra column to the dataset containing the embeddings of images
-def add_img_embedding_column(ds, model, processor, existing_col_name="image", new_col_name="image_embeddings", device="cpu"):
-    ds_with_embeddings = ds.map(
-        lambda example: {
-            new_col_name: model.get_image_features(**processor(images=[example[existing_col_name]], return_tensors="pt").to(device))[0].cpu().detach().numpy()
-        }
-    )
-    return ds_with_embeddings
-
-# add an extra column to the dataset containing the embeddings of texts (not used yet)
-def add_txt_embedding_column(ds, model, processor, existing_col_name="text", new_col_name="text_embeddings"):
-    ds_with_embeddings = ds.map(
-        lambda example: {
-            new_col_name: model.get_text_features(**processor(images=[example[existing_col_name]], return_tensors="pt"))[0].detach().numpy()
-        }
-    )
-    return ds_with_embeddings
-
-# find images close to the provided prompt in embedding space
-def retrieve_images_by_prompt(prompt, ds_with_faiss, model, tokenizer, topk, device="cpu", plot=True):
-    prompt_embedding = (
-        model.get_text_features(**tokenizer([prompt], return_tensors="pt", truncation=True).to(device))[0].cpu().detach().numpy()
-    )
-    scores, retrieved_examples = ds_with_faiss.get_nearest_examples("image_embeddings", prompt_embedding, k=topk)
-    if plot: plot_images(retrieved_examples["image"], topk)
-    return scores, retrieved_examples
-
-
 # reverse the effect of image normalization
 def unnormalize_image(image, processor):
     image_mean, image_std = processor.image_processor.image_mean, processor.image_processor.image_std
