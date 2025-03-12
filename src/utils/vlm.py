@@ -17,6 +17,8 @@ MODEL_NAMES = [
     "deepseek-ai/deepseek-vl2-tiny", # 3.75b
     "meta-llama/Llama-3.2-11B-Vision-Instruct",
     "microsoft/Phi-3.5-vision-instruct",
+    "google/gemma-3-4b-it",
+    "google/gemma-3-12b-it"
     ]
 
 SMOL_VLMS = [

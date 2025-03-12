@@ -3,6 +3,7 @@ import torch.autograd.profiler as profiler
 from utils.embedding import EmbeddingModel, compute_embedding_loss
 from utils.vlm import VLM
 from utils.scheduler import LearningRateScheduler
+from utils.utils import print_memory_consumption
 
 
 
@@ -76,7 +77,9 @@ def rag_attack(
 
         # total loss function
         total_loss = lambda_emb * loss_emb + lambda_vlm * loss_vlm
-        if i==0 or i%print_every==print_every-1: print(f"Iter {i+1:4d}, Losses -> Embedding: {loss_emb.item():.8f}, VLM: {loss_vlm.item():.8f}, Total: {total_loss.item():.8f}")
+        if i==0 or i%print_every==print_every-1: 
+            print(f"Iter {i+1:4d}, Losses -> Embedding: {loss_emb.item():.8f}, VLM: {loss_vlm.item():.8f}, Total: {total_loss.item():.8f}")
+            print_memory_consumption(device)
 
         # backpropagation
         grads = torch.autograd.grad(total_loss, raw_image)
