@@ -10,3 +10,5 @@ einops
 timm
 sentencepiece
 protobuf
+qwen-vl-utils
+colpali-engine

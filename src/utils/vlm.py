@@ -1,23 +1,51 @@
-from transformers import AutoModel, AutoProcessor, AutoTokenizer, AutoModelForVision2Seq
+from transformers import AutoModel, AutoProcessor, AutoTokenizer, AutoModelForVision2Seq, BitsAndBytesConfig
 import torch
 import torchvision.transforms as T
 from utils.image_utils import process_image
+
+# candidate models
+MODEL_NAMES = [
+    "HuggingFaceTB/SmolVLM-256M-Instruct",
+    "microsoft/Florence-2-base",
+    "google/paligemma2-3b-mix-224", # seems to need specific prompts to work
+    "Qwen/Qwen2.5-VL-3B-Instruct",
+    "llava-hf/llava-onevision-qwen2-0.5b-ov-hf",
+    # larger models: to test later:
+    "HuggingFaceTB/SmolVLM2-2.2B-Instruct",
+    "Qwen/Qwen2.5-VL-7B-Instruct",
+    "llava-hf/llava-onevision-qwen2-7b-ov-hf"
+    "deepseek-ai/deepseek-vl2-tiny", # 3.75b
+    "meta-llama/Llama-3.2-11B-Vision-Instruct",
+    "microsoft/Phi-3.5-vision-instruct",
+    ]
+
+SMOL_VLMS = [
+    "HuggingFaceTB/SmolVLM-256M-Instruct",
+    "HuggingFaceTB/SmolVLM-500M-Instruct",
+    "HuggingFaceTB/SmolVLM2-2.2B-Instruct",    
+]
 
 class VLM():
     """
     Contains functionalities for both Generator VLMs and Judge VLMs
     """
     
-    def __init__(self, model_name, device):
+    def __init__(self, model_name, device, quantize=False):
         self.name = model_name
         self.device = device
 
+        quantization_config = BitsAndBytesConfig(load_in_4bit=True) if quantize else None
+
         self.model = AutoModelForVision2Seq.from_pretrained(
             model_name, 
-            torch_dtype=torch.float32 if device == "mps" else torch.bfloat16,).to(device)
+            torch_dtype=torch.float32 if device == "mps" else "auto",
+            quantization_config=quantization_config).to(device)
         # potentially use: _attn_implementation="flash_attention_2" if device == "cuda" else "eager",
+        
         self.tokenizer = None
-        self.processor = AutoProcessor.from_pretrained(model_name)
+        
+        self.processor = AutoProcessor.from_pretrained(model_name, use_fast=True)
+        
         self.processor.image_processor.do_image_splitting = False
         if self.processor.image_processor.resample == 1: 
             self.processor.image_processor.resample = 3 # change from LANCZOS (1) to BICUBIC (3) since the former has no pytorch implementation
@@ -39,6 +67,28 @@ class VLM():
         prompt = self.processor.apply_chat_template(messages, add_generation_prompt=True)
         return prompt
 
+    def get_target_tokens(self, target_generation: str):
+        
+        msg_without_template = " " + target_generation
+        raw_target_tokens = self.processor(text=msg_without_template, return_tensors="pt").to(self.device)['input_ids'][0]
+
+        msg_with_template = [
+                {
+                    "role": "assistant",
+                    "content": [
+                        {"type": "text", "text": target_generation}
+                    ]
+                },
+            ]
+        
+        prompt_with_template = self.processor.apply_chat_template(msg_with_template, add_generation_prompt=False)
+        full_tokens = self.processor(text=prompt_with_template, return_tensors="pt").to(self.device)['input_ids'][0]
+
+        target_tokens = full_tokens[-len(raw_target_tokens)-2:]
+
+        return target_tokens
+
+
     def get_training_prompt(self, 
             user_query: str, # list or str 
             target_generation: str, 
@@ -46,7 +96,6 @@ class VLM():
         """
         builds the prompt skeleton for the VLM including the image placeholder, the user query, and the required response
         """
-        target_tokens = self.processor(text=target_generation, return_tensors="pt").to(self.device)['input_ids'][0]
         if isinstance(user_query, str): user_query = [user_query]
 
         messages = [
@@ -60,11 +109,15 @@ class VLM():
                 },
                 {
                     "role": "assistant",
-                    "content": target_generation
+                    "content": [
+                        {"type": "text", "text": target_generation}
+                    ]
                 },
             ]
             for i in range(len(user_query))]
         prompt = self.processor.apply_chat_template(messages, add_generation_prompt=False)
+
+        target_tokens = self.get_target_tokens(target_generation)       
 
         return prompt, target_tokens
     
@@ -72,11 +125,15 @@ class VLM():
     def generate(self, image: torch.tensor, user_query: str, overwrite: bool = False):
         self.model.eval()
         test_prompt = self.get_test_prompt(user_query)
-        inputs = self.processor(text=test_prompt, images=[T.ToPILImage()(image)], return_tensors="pt").to(self.device)
         
-        if overwrite:
-            image_ppd = process_image(image, self.processor)
-            inputs['pixel_values'][0][0] = image_ppd
+        if self.name == "Qwen/Qwen2.5-VL-3B-Instruct":
+            inputs = self.processor(text=test_prompt, images=[image], return_tensors="pt").to(self.device)
+        else:
+            inputs = self.processor(text=test_prompt, images=[T.ToPILImage()(image)], return_tensors="pt").to(self.device)
+            
+            if overwrite:
+                image_ppd = process_image(image, self)
+                inputs['pixel_values'][0][0] = image_ppd
         
         generated_ids = self.model.generate(**inputs, max_new_tokens=100, do_sample=True, temperature=0.5)
         generated_texts = self.processor.batch_decode(
@@ -89,22 +146,29 @@ class VLM():
     def forward(self, image, mock_images, prompt, overwrite: bool = False):
         self.model.eval()
         if isinstance(prompt, str): prompt = [prompt]
-        if self.name == "HuggingFaceTB/SmolVLM-256M-Instruct":
+        if self.name in SMOL_VLMS:
             if overwrite:
                 inputs_vlm = self.processor(text=prompt, images=mock_images, return_tensors="pt", truncation=True, padding=True).to(self.device) # here we feed the intiial image since we are overwriting it anyways
-                image_ppd_vlm = process_image(image, self.processor)
+                image_ppd_vlm = process_image(image, self)
                 inputs_vlm['pixel_values'] = image_ppd_vlm.unsqueeze(0).unsqueeze(0).repeat(len(prompt),1,1,1,1).to(self.device)
             else:
                 inputs_vlm = self.processor(text=prompt, images=[image for _ in range(len(prompt))], return_tensors="pt", truncation=True, padding=True).to(self.device) # here we feed the intiial image since we are overwriting it anyways
+        
+        if self.name == "Qwen/Qwen2.5-VL-3B-Instruct":
+            # it seems that qwen implement their preprocessors in pytorch --> differentiable (no need to overwrite image)
+            inputs_vlm = self.processor(text=prompt, images=[image for _ in range(len(prompt))], return_tensors="pt", truncation=True, padding=True).to(self.device)
+        
+        if inputs_vlm:
             out = self.model(**inputs_vlm)
             return out
-        
+
         quit(f"Not supported model {self.name}!")
 
 
 
     def compute_gen_loss(self, vlm_output, target_tokens):
         # TODO: not sure if we need to pass logits to softmax first
-        if self.name == "HuggingFaceTB/SmolVLM-256M-Instruct":
-            logits_to_optimize = vlm_output.logits[0,-len(target_tokens)-2:-2,:]
-            return torch.nn.CrossEntropyLoss()(logits_to_optimize, target_tokens)
+        # if self.name == "HuggingFaceTB/SmolVLM-256M-Instruct":
+        logits_to_optimize = vlm_output.logits[:,-len(target_tokens)-1:-1,:].transpose(1,2)
+        target_tokens = target_tokens.unsqueeze(0).repeat(logits_to_optimize.shape[0], 1)
+        return torch.nn.CrossEntropyLoss()(logits_to_optimize, target_tokens)

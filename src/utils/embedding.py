@@ -1,26 +1,51 @@
-from transformers import AutoModelForZeroShotImageClassification, AutoModelForImageTextToText, AutoTokenizer, AutoProcessor
+from transformers import AutoModelForZeroShotImageClassification, AutoModel, AutoModelForImageTextToText, AutoTokenizer, AutoProcessor, BitsAndBytesConfig
 import torch
 import torch.nn.functional as F
 from utils.image_utils import process_image
 from utils.utils import plot_images
+import torchvision.transforms as T
 
-CLIP_LIKE_MODELS = ["openai/clip-vit-base-patch16", "google/siglip2-base-patch16-224"]
+
+# candidate models
+MODEL_NAMES = [
+    "openai/clip-vit-base-patch16",
+    "openai/clip-vit-large-patch14",
+    "google/siglip2-base-patch16-224",
+    "jinaai/jina-clip-v2",
+    "vidore/colSmol-256M", # maybe not worth trying since it requires installing colpali
+    # larger models: test later
+    "royokong/e5-v",
+    "nomic-ai/nomic-embed-vision-v1.5", # multimodal retrieval requires using this in conjunction with "nomic-ai/nomic-embed-text-v1.5"
+    "vidore/colpali-v1.3-hf",
+]
+
+CLIP_LIKE_MODELS = ["openai/clip-vit-base-patch16", "google/siglip2-base-patch16-224", ]
 
 class EmbeddingModel():
 
-    def __init__(self, model_name, device):
+    def __init__(self, model_name, device, quantize=False):
         self.name = model_name
         self.device = device
+
+        quantization_config = BitsAndBytesConfig(load_in_4bit=True) if quantize else None
         
-        if model_name in CLIP_LIKE_MODELS:
-            self.model = AutoModelForZeroShotImageClassification.from_pretrained(
+        if model_name == "jinaai/jina-clip-v2":
+            self.model = AutoModel.from_pretrained(
                 model_name,
-                torch_dtype=torch.float32 if device == "mps" else torch.bfloat16).to(device)
+                torch_dtype=torch.float32 if device == "mps" else "auto",
+                trust_remote_code=True).to(device)
+            self.processor = None
+            self.tokenizer = None
+
+        if model_name in CLIP_LIKE_MODELS:
+            self.model = AutoModel.from_pretrained(
+                model_name,
+                torch_dtype=torch.float32 if device == "mps" else "auto").to(device)
             self.processor = AutoProcessor.from_pretrained(model_name)
             self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-        
+                
         if model_name == "royokong/e5-v":
-            self.model = AutoModelForImageTextToText.from_pretrained(model_name).to(device)
+            self.model = AutoModelForImageTextToText.from_pretrained(model_name, quantization_config=quantization_config).to(device)
             self.processor = AutoProcessor.from_pretrained(model_name)
             self.tokenizer = None
             # reduce number of image patches
@@ -50,6 +75,9 @@ class EmbeddingModel():
 
     def compute_txt_embedding(self, user_query):
         
+        if self.name == "jinaai/jina-clip-v2":
+            return torch.tensor(self.model.encode_text(user_query)).to(self.device).type(self.model.dtype)
+
         if self.name in CLIP_LIKE_MODELS:
             user_query_embedding = self.model.get_text_features(**self.tokenizer(user_query, return_tensors="pt", truncation=True, padding=True).to(self.device)) # it had [0].detach()
             return user_query_embedding
@@ -68,12 +96,22 @@ class EmbeddingModel():
 
     def compute_img_embedding(self, image, mock_image, overwrite=False):
         self.model.eval()
+
+        if self.name == "jinaai/jina-clip-v2":
+            # TODO: we should consider the processor
+            if isinstance(image, list): 
+                image = torch.cat(tuple([T.PILToTensor()(img.resize((512,512))).unsqueeze(0) for img in image]))
+            else:
+                image = image.unsqueeze(0)
+            embeddings = self.model.get_image_features(image.to(self.device))
+            embeddings = F.normalize(embeddings, p=2, dim=1)
+            return embeddings
         
         if self.name in CLIP_LIKE_MODELS:
             if overwrite:
                 image_input_emb = self.processor(images=[mock_image], return_tensors='pt').to(self.device)
                 # we cannot process multiple images
-                image_ppd_emb = process_image(image, self.processor)
+                image_ppd_emb = process_image(image, self)
                 image_input_emb['pixel_values'][0] = image_ppd_emb
             else:
                 if isinstance(image, list):
@@ -90,7 +128,7 @@ class EmbeddingModel():
             
             if overwrite:
                 img_inputs = self.processor(img_prompt, mock_image, return_tensors="pt", padding=True).to(self.device)
-                image_ppd_emb = process_image(image, self.processor)
+                image_ppd_emb = process_image(image)
                 img_inputs['pixel_values'][0][0] = image_ppd_emb
                 img_inputs['pixel_values'][0][1] = image_ppd_emb
             else:
@@ -116,7 +154,8 @@ def compute_embedding_loss(image_embedding, text_embedding, loss_type: str):
     elif loss_type == "l2_nosqrt":
         return torch.nn.functional.pairwise_distance(image_embedding, text_embedding).pow(2).mean()
     elif loss_type == "cos":
-        return -torch.nn.CosineSimilarity()(image_embedding, text_embedding).mean(dim=1)
+        # return -(image_embedding @ text_embedding.transpose(0,1)).mean()
+        return -torch.nn.CosineSimilarity()(image_embedding, text_embedding).mean()
 
 # add an extra column to the dataset containing the embeddings of images
 def add_img_embedding_column(ds, embedder: EmbeddingModel, existing_col_name="image", new_col_name="image_embeddings", device="cpu"):
@@ -128,13 +167,13 @@ def add_img_embedding_column(ds, embedder: EmbeddingModel, existing_col_name="im
 # add an extra column to the dataset containing the embeddings of texts (not used yet)
 def add_txt_embedding_column(ds, embedder: EmbeddingModel, existing_col_name="text", new_col_name="text_embeddings"):
     func = lambda example: {
-        new_col_name: embedder.compute_txt_embedding(user_query=example[existing_col_name])[0].cpu().detach().numpy()
+        new_col_name: embedder.compute_txt_embedding(user_query=example[existing_col_name])[0].float().cpu().detach().numpy()
     }
     return ds.map(func)
 
 # find images close to the provided prompt in embedding space
 def retrieve_images_by_prompt(prompt, ds_with_faiss, embedder: EmbeddingModel, topk, device="cpu", plot=True):
-    prompt_embedding = embedder.compute_txt_embedding(prompt).cpu().detach().numpy()
+    prompt_embedding = embedder.compute_txt_embedding(prompt).float().cpu().detach().numpy()
     
     scores, retrieved_examples = ds_with_faiss.get_nearest_examples("image_embeddings", prompt_embedding, k=topk)
     if plot: plot_images(retrieved_examples["image"], topk)

@@ -4,6 +4,7 @@ import torchvision.transforms as T
 import torch.nn.functional as F
 import torchvision.transforms.v2.functional as Tv2F
 from enum import IntEnum
+from transformers.models.qwen2_vl.image_processing_qwen2_vl import smart_resize
 
 """
 Meaning of resample ints fetched from https://github.com/python-pillow/Pillow/blob/main/src/PIL/Image.py#L164
@@ -17,7 +18,7 @@ class Resampling(IntEnum):
     LANCZOS = 1
 """
 
-def process_image(image: torch.tensor, processor: AutoProcessor):
+def process_image(image: torch.tensor, model_instance):
     """
     Simulates the functionalitly of the Huggingface Processor call:
     >>> processor(images=[image], return_tensors="pt").to(device)
@@ -41,6 +42,7 @@ def process_image(image: torch.tensor, processor: AutoProcessor):
     NOTE: this a known issue https://github.com/pytorch/vision/issues/2950
     NOTE: when resample = 0 -> we get 0 erorrs (only if we do not need resizing)
     """
+    processor = model_instance.processor
     p = processor.image_processor
 
     # Lanczos resampling (code 1) is not implemented by pytorch, so we replace by bicubic (3)
