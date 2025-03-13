@@ -13,6 +13,12 @@ def get_device(prefer_mps=False):
         return "mps"
     return "cpu"
 
+def get_memory_consumption(device):
+    if device == "mps":
+        return torch.mps.current_allocated_memory()/1e9
+    elif device == "cuda":
+        return torch.cuda.memory_allocated(0)/1e9
+
 def print_memory_consumption(device):
     if device == "mps":
         allocated_ram = torch.mps.current_allocated_memory()

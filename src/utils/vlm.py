@@ -146,22 +146,26 @@ class VLM():
         return generated_texts[0]
 
     def forward(self, image, mock_images, prompt, overwrite: bool = False):
+        """
+        Important:
+        padding_side should be set to "left", otherwise this will interfere with the attack optimization
+        """
         self.model.eval()
         if isinstance(prompt, str): prompt = [prompt]
         if self.name in SMOL_VLMS:
             if overwrite:
-                inputs_vlm = self.processor(text=prompt, images=mock_images, return_tensors="pt", truncation=True, padding=True).to(self.device) # here we feed the intiial image since we are overwriting it anyways
+                inputs_vlm = self.processor(text=prompt, images=mock_images, return_tensors="pt", truncation=True, padding=True, padding_side="left").to(self.device) # here we feed the intiial image since we are overwriting it anyways
                 image_ppd_vlm = process_image(image, self)
                 inputs_vlm['pixel_values'] = image_ppd_vlm.unsqueeze(0).unsqueeze(0).repeat(len(prompt),1,1,1,1).to(self.device)
             else:
-                inputs_vlm = self.processor(text=prompt, images=[image for _ in range(len(prompt))], return_tensors="pt", truncation=True, padding=True).to(self.device) # here we feed the intiial image since we are overwriting it anyways
+                inputs_vlm = self.processor(text=prompt, images=[image for _ in range(len(prompt))], return_tensors="pt", truncation=True, padding=True, padding_side="left").to(self.device) # here we feed the intiial image since we are overwriting it anyways
         
         if self.name == "Qwen/Qwen2.5-VL-3B-Instruct":
-            # it seems that qwen implement their preprocessors in pytorch --> differentiable (no need to overwrite image)
-            inputs_vlm = self.processor(text=prompt, images=[image for _ in range(len(prompt))], return_tensors="pt", truncation=True, padding=True).to(self.device)
+            # it seems that qwen implements their preprocessors in pytorch --> differentiable (no need to overwrite image)
+            inputs_vlm = self.processor(text=prompt, images=[image for _ in range(len(prompt))], return_tensors="pt", truncation=True, padding=True, padding_side="left").to(self.device)
         
         if inputs_vlm:
-            out = self.model(**inputs_vlm)
+            out = self.model(**inputs_vlm, use_cache=False, output_attentions=False, output_hidden_states=False)
             return out
 
         quit(f"Not supported model {self.name}!")
@@ -169,8 +173,6 @@ class VLM():
 
 
     def compute_gen_loss(self, vlm_output, target_tokens):
-        # TODO: not sure if we need to pass logits to softmax first
-        # if self.name == "HuggingFaceTB/SmolVLM-256M-Instruct":
         logits_to_optimize = vlm_output.logits[:,-len(target_tokens)-1:-1,:].transpose(1,2)
         target_tokens = target_tokens.unsqueeze(0).repeat(logits_to_optimize.shape[0], 1)
         return torch.nn.CrossEntropyLoss()(logits_to_optimize, target_tokens)
