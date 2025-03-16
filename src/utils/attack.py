@@ -145,7 +145,7 @@ if __name__ == "__main__":
     max_perturbation = 0.05
     n_gradient_steps = 100
     gradient_acc_steps = 4
-    lr_scheduler = LearningRateScheduler(start_lr=255 * (5e-3), end_lr=255*(5e-4), n_iter=n_iter) # multiply by 255 since input is [0,255]
+    lr_scheduler = LearningRateScheduler(start_lr=255 * (5e-3), end_lr=255*(5e-4), n_iter=n_gradient_steps) # multiply by 255 since input is [0,255]
     lambda_emb = 1
     lambda_vlm = 0
     print_every = 10

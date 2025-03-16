@@ -124,26 +124,26 @@ class VLM():
         return prompt, target_tokens
     
     @torch.no_grad()
-    def generate(self, image: torch.tensor, user_query: str, overwrite: bool = False):
+    def generate(self, image: torch.tensor, user_queries, overwrite: bool = False):
         self.model.eval()
-        test_prompt = self.get_test_prompt(user_query)
+        if isinstance(user_queries, str): user_queries = [user_queries]
+        test_prompts = [self.get_test_prompt(query) for query in user_queries]
         
         if self.name == "Qwen/Qwen2.5-VL-3B-Instruct":
-            inputs = self.processor(text=test_prompt, images=[image], return_tensors="pt").to(self.device)
-        else:
-            inputs = self.processor(text=test_prompt, images=[T.ToPILImage()(image)], return_tensors="pt").to(self.device)
+            inputs = self.processor(text=test_prompts, images=[image for _ in range(len(user_queries))], return_tensors="pt", padding=True, padding_side="left").to(self.device)
+        else:            
+            images = [T.ToPILImage()(image) for _ in range(len(user_queries))]
+            inputs = self.processor(text=test_prompts, images=images, return_tensors="pt", padding=True, padding_side="left").to(self.device)
             
             if overwrite:
                 image_ppd = process_image(image, self)
-                inputs['pixel_values'][0][0] = image_ppd
+                for i in range(inputs['pixel_values'].shape[0]):
+                    inputs['pixel_values'][i][0] = image_ppd
         
-        generated_ids = self.model.generate(**inputs, max_new_tokens=100, do_sample=True, temperature=0.5)
-        generated_texts = self.processor.batch_decode(
-            generated_ids,
-            skip_special_tokens=True,
-        )
+        generated_ids = self.model.generate(**inputs, max_new_tokens=30, do_sample=True, temperature=0.5)
+        generated_texts = self.processor.batch_decode(generated_ids, skip_special_tokens=True)
         
-        return generated_texts[0]
+        return generated_texts
 
     def forward(self, image, mock_images, prompt, overwrite: bool = False):
         """
