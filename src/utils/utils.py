@@ -13,6 +13,20 @@ def get_device(prefer_mps=False):
         return "mps"
     return "cpu"
 
+def get_memory_consumption(device):
+    if device == "mps":
+        return torch.mps.current_allocated_memory()/1e9
+    elif device == "cuda":
+        return torch.cuda.memory_allocated(0)/1e9
+
+def print_memory_consumption(device):
+    if device == "mps":
+        allocated_ram = torch.mps.current_allocated_memory()
+        print(f"Allocated RAM: {allocated_ram/1e9:.2f} GB")
+    elif device == "cuda":
+        allocated_ram = torch.cuda.memory_allocated(0)
+        max_allocated_ram = torch.cuda.max_memory_allocated(0)
+        print(f"Current allocated RAM: {allocated_ram/1e9:.2f} GB, max: {max_allocated_ram/1e9:.2f} GB")
 
 
 # converts all pdfs in the specified folder to a list of images (one per page) 

@@ -17,6 +17,8 @@ MODEL_NAMES = [
     "deepseek-ai/deepseek-vl2-tiny", # 3.75b
     "meta-llama/Llama-3.2-11B-Vision-Instruct",
     "microsoft/Phi-3.5-vision-instruct",
+    "google/gemma-3-4b-it",
+    "google/gemma-3-12b-it"
     ]
 
 SMOL_VLMS = [
@@ -122,44 +124,48 @@ class VLM():
         return prompt, target_tokens
     
     @torch.no_grad()
-    def generate(self, image: torch.tensor, user_query: str, overwrite: bool = False):
+    def generate(self, image: torch.tensor, user_queries, overwrite: bool = False):
         self.model.eval()
-        test_prompt = self.get_test_prompt(user_query)
+        if isinstance(user_queries, str): user_queries = [user_queries]
+        test_prompts = [self.get_test_prompt(query) for query in user_queries]
         
         if self.name == "Qwen/Qwen2.5-VL-3B-Instruct":
-            inputs = self.processor(text=test_prompt, images=[image], return_tensors="pt").to(self.device)
-        else:
-            inputs = self.processor(text=test_prompt, images=[T.ToPILImage()(image)], return_tensors="pt").to(self.device)
+            inputs = self.processor(text=test_prompts, images=[image for _ in range(len(user_queries))], return_tensors="pt", padding=True, padding_side="left").to(self.device)
+        else:            
+            images = [T.ToPILImage()(image) for _ in range(len(user_queries))]
+            inputs = self.processor(text=test_prompts, images=images, return_tensors="pt", padding=True, padding_side="left").to(self.device)
             
             if overwrite:
                 image_ppd = process_image(image, self)
-                inputs['pixel_values'][0][0] = image_ppd
+                for i in range(inputs['pixel_values'].shape[0]):
+                    inputs['pixel_values'][i][0] = image_ppd
         
-        generated_ids = self.model.generate(**inputs, max_new_tokens=100, do_sample=True, temperature=0.5)
-        generated_texts = self.processor.batch_decode(
-            generated_ids,
-            skip_special_tokens=True,
-        )
+        generated_ids = self.model.generate(**inputs, max_new_tokens=30, do_sample=True, temperature=0.5)
+        generated_texts = self.processor.batch_decode(generated_ids, skip_special_tokens=True)
         
-        return generated_texts[0]
+        return generated_texts
 
     def forward(self, image, mock_images, prompt, overwrite: bool = False):
+        """
+        Important:
+        padding_side should be set to "left", otherwise this will interfere with the attack optimization
+        """
         self.model.eval()
         if isinstance(prompt, str): prompt = [prompt]
         if self.name in SMOL_VLMS:
             if overwrite:
-                inputs_vlm = self.processor(text=prompt, images=mock_images, return_tensors="pt", truncation=True, padding=True).to(self.device) # here we feed the intiial image since we are overwriting it anyways
+                inputs_vlm = self.processor(text=prompt, images=mock_images, return_tensors="pt", truncation=True, padding=True, padding_side="left").to(self.device) # here we feed the intiial image since we are overwriting it anyways
                 image_ppd_vlm = process_image(image, self)
                 inputs_vlm['pixel_values'] = image_ppd_vlm.unsqueeze(0).unsqueeze(0).repeat(len(prompt),1,1,1,1).to(self.device)
             else:
-                inputs_vlm = self.processor(text=prompt, images=[image for _ in range(len(prompt))], return_tensors="pt", truncation=True, padding=True).to(self.device) # here we feed the intiial image since we are overwriting it anyways
+                inputs_vlm = self.processor(text=prompt, images=[image for _ in range(len(prompt))], return_tensors="pt", truncation=True, padding=True, padding_side="left").to(self.device) # here we feed the intiial image since we are overwriting it anyways
         
         if self.name == "Qwen/Qwen2.5-VL-3B-Instruct":
-            # it seems that qwen implement their preprocessors in pytorch --> differentiable (no need to overwrite image)
-            inputs_vlm = self.processor(text=prompt, images=[image for _ in range(len(prompt))], return_tensors="pt", truncation=True, padding=True).to(self.device)
+            # it seems that qwen implements their preprocessors in pytorch --> differentiable (no need to overwrite image)
+            inputs_vlm = self.processor(text=prompt, images=[image for _ in range(len(prompt))], return_tensors="pt", truncation=True, padding=True, padding_side="left").to(self.device)
         
         if inputs_vlm:
-            out = self.model(**inputs_vlm)
+            out = self.model(**inputs_vlm, use_cache=False, output_attentions=False, output_hidden_states=False)
             return out
 
         quit(f"Not supported model {self.name}!")
@@ -167,8 +173,6 @@ class VLM():
 
 
     def compute_gen_loss(self, vlm_output, target_tokens):
-        # TODO: not sure if we need to pass logits to softmax first
-        # if self.name == "HuggingFaceTB/SmolVLM-256M-Instruct":
         logits_to_optimize = vlm_output.logits[:,-len(target_tokens)-1:-1,:].transpose(1,2)
         target_tokens = target_tokens.unsqueeze(0).repeat(logits_to_optimize.shape[0], 1)
         return torch.nn.CrossEntropyLoss()(logits_to_optimize, target_tokens)
