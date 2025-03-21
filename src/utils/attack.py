@@ -4,6 +4,7 @@ from utils.embedding import EmbeddingModel, compute_embedding_loss
 from utils.vlm import VLM
 from utils.scheduler import LearningRateScheduler
 from utils.utils import get_memory_consumption
+from utils.attack_config import AttackConfig
 
 
 
@@ -12,16 +13,8 @@ def rag_attack(
         embedder: EmbeddingModel,
         vlm: VLM,
         user_query: list, # but maybe string also
-        target_answer: str,
-        max_perturbation: float,
-        n_gradient_steps: int,
+        config: AttackConfig,
         print_every: int,
-        lr_scheduler: LearningRateScheduler,
-        max_batch_size_per_iter: int,
-        gradient_acc_steps: int,
-        lambda_emb: float,
-        lambda_vlm: float,
-        emb_loss_type: str,
         device: str):
     """
     Simulates an attack against the full RAG pipeline.
@@ -36,6 +29,17 @@ def rag_attack(
     OBSERVATION: 
     1. Using batch_size=1 with gradient accumulation is much more effective than using larger batch_size. No idea why?
     """
+    # extract config variables
+    target_answer = config.target_answer
+    max_perturbation = config.max_perturbation
+    n_gradient_steps = config.n_gradient_steps
+    lr_scheduler = LearningRateScheduler(lr_start=config.lr_start, lr_end=config.lr_end, n_iter=config.n_gradient_steps)
+    max_batch_size_per_iter = config.max_batch_size_per_iter
+    gradient_acc_steps = config.gradient_acc_steps
+    lambda_emb = config.lambda_emb
+    lambda_vlm = config.lambda_vlm
+    emb_loss_type = config.emb_train_loss_type
+
     initial_image = raw_image.clone()
     max_perturbation_pixels = max_perturbation*255
     batch_size_per_iter = min(len(user_query), max_batch_size_per_iter)
@@ -130,69 +134,69 @@ def attack_step_bim(
     return raw_image
 
 
-if __name__ == "__main__":
-    # imports
-    from transformers.image_utils import load_image
-    from utils import plot_images, get_device
-    import torchvision.transforms as T
+# if __name__ == "__main__":
+#     # imports
+#     from transformers.image_utils import load_image
+#     from utils import plot_images, get_device
+#     import torchvision.transforms as T
 
-    emb_model_name = "google/siglip2-base-patch16-224" # "openai/clip-vit-base-patch16", "vidore/colSmol-256M", "google/siglip2-base-patch16-224", ""
-    vlm_model_name = "HuggingFaceTB/SmolVLM-256M-Instruct" # "HuggingFaceTB/SmolVLM-256M-Instruct", "naver-clova-ix/donut-base-finetuned-docvqa"
-    user_query = "They are eating fish. What type of fish are they eating?"
-    target_answer = "They are actually eating beef"
-    image = load_image("https://farm9.staticflickr.com/8096/8445896722_e28fb3f055_z.jpg")
-    device = get_device(prefer_mps=True)
-    max_perturbation = 0.05
-    n_gradient_steps = 100
-    gradient_acc_steps = 4
-    lr_scheduler = LearningRateScheduler(start_lr=255 * (5e-3), end_lr=255*(5e-4), n_iter=n_gradient_steps) # multiply by 255 since input is [0,255]
-    lambda_emb = 1
-    lambda_vlm = 0
-    print_every = 10
-    max_batch_size_per_iter = 10 # number of queries to optimize for simulataneously (actual batch size is min(this, len([user_query])))
-    emb_loss_type = "mse" # mse, l2, l2_nosqrt, cos
-    print("Initialized variables!")
+#     emb_model_name = "google/siglip2-base-patch16-224" # "openai/clip-vit-base-patch16", "vidore/colSmol-256M", "google/siglip2-base-patch16-224", ""
+#     vlm_model_name = "HuggingFaceTB/SmolVLM-256M-Instruct" # "HuggingFaceTB/SmolVLM-256M-Instruct", "naver-clova-ix/donut-base-finetuned-docvqa"
+#     user_query = "They are eating fish. What type of fish are they eating?"
+#     target_answer = "They are actually eating beef"
+#     image = load_image("https://farm9.staticflickr.com/8096/8445896722_e28fb3f055_z.jpg")
+#     device = get_device(prefer_mps=True)
+#     max_perturbation = 0.05
+#     n_gradient_steps = 100
+#     gradient_acc_steps = 4
+#     lr_scheduler = LearningRateScheduler(start_lr=255 * (5e-3), end_lr=255*(5e-4), n_iter=n_gradient_steps) # multiply by 255 since input is [0,255]
+#     lambda_emb = 1
+#     lambda_vlm = 0
+#     print_every = 10
+#     max_batch_size_per_iter = 10 # number of queries to optimize for simulataneously (actual batch size is min(this, len([user_query])))
+#     emb_loss_type = "mse" # mse, l2, l2_nosqrt, cos
+#     print("Initialized variables!")
 
-    embedder = EmbeddingModel(emb_model_name, device)
-    vlm = VLM(vlm_model_name, device)
-    print("Loaded models and processors!")
+#     embedder = EmbeddingModel(emb_model_name, device)
+#     vlm = VLM(vlm_model_name, device)
+#     print("Loaded models and processors!")
 
-    image_tensor = T.PILToTensor()(image)
-    initial_image = image_tensor.clone()
-    image_tensor = image_tensor.float()
-    image_tensor.requires_grad = True
+#     image_tensor = T.PILToTensor()(image)
+#     initial_image = image_tensor.clone()
+#     image_tensor = image_tensor.float()
+#     image_tensor.requires_grad = True
 
-    image_adv = rag_attack(
-        raw_image=image_tensor,
-        emb_model_name=emb_model_name,
-        embedder=embedder,
-        vlm=vlm,
-        user_query=user_query,
-        target_answer=target_answer,
-        max_perturbation=max_perturbation,
-        n_gradient_steps=n_gradient_steps,
-        print_every=print_every,
-        lr_scheduler=lr_scheduler,
-        max_batch_size_per_iter=max_batch_size_per_iter,
-        gradient_acc_steps=gradient_acc_steps,
-        lambda_emb=lambda_emb,
-        lambda_vlm=lambda_vlm,
-        emb_loss_type=emb_loss_type,
-        device=device
-    )
+#     image_adv = rag_attack(
+#         raw_image=image_tensor,
+#         emb_model_name=emb_model_name,
+#         embedder=embedder,
+#         vlm=vlm,
+#         user_query=user_query,
+#         target_answer=target_answer,
+#         max_perturbation=max_perturbation,
+#         n_gradient_steps=n_gradient_steps,
+#         print_every=print_every,
+#         lr_scheduler=lr_scheduler,
+#         max_batch_size_per_iter=max_batch_size_per_iter,
+#         gradient_acc_steps=gradient_acc_steps,
+#         lambda_emb=lambda_emb,
+#         lambda_vlm=lambda_vlm,
+#         emb_loss_type=emb_loss_type,
+#         device=device
+#     )
 
-    print(f"MSE: {torch.nn.functional.mse_loss(initial_image, image_adv)}")
-    print(f"Linf: {(initial_image - image_adv).norm(p=float('inf'))}")
-    plot_images([T.ToPILImage()(image/255) for image in [initial_image, image_adv]], n_subplots=2)
+#     print(f"MSE: {torch.nn.functional.mse_loss(initial_image, image_adv)}")
+#     print(f"Linf: {(initial_image - image_adv).norm(p=float('inf'))}")
+#     plot_images([T.ToPILImage()(image/255) for image in [initial_image, image_adv]], n_subplots=2)
 
-    # Test generation
-    out_init = vlm.generate(initial_image, user_query) # this is the image we started with
-    out_adv = vlm.generate(image_adv, user_query) # this is the image we optimized but after potentially being modified by the processor
-    out_adv_ow = vlm.generate(image_adv, user_query, overwrite=True) # this is the image we optimized
-    print(out_init, out_adv, out_adv_ow, sep="\n===\n")
+#     # Test generation
+#     out_init = vlm.generate(initial_image, user_query) # this is the image we started with
+#     out_adv = vlm.generate(image_adv, user_query) # this is the image we optimized but after potentially being modified by the processor
+#     out_adv_ow = vlm.generate(image_adv, user_query, overwrite=True) # this is the image we optimized
+#     print(out_init, out_adv, out_adv_ow, sep="\n===\n")
 
-    # test retrieval
-    loss_emb_init = embedder.compare_embeddings(initial_image, user_query)
-    loss_emb_adv = embedder.compare_embeddings(image_adv.type(torch.int32), user_query)
-    loss_emb_adv_ow = embedder.compare_embeddings(image_adv.type(torch.int32), user_query, overwrite=True)
-    print(loss_emb_init, loss_emb_adv, loss_emb_adv_ow, sep="\n----\n")
+#     # test retrieval
+#     loss_emb_init = embedder.compare_embeddings(initial_image, user_query)
+#     loss_emb_adv = embedder.compare_embeddings(image_adv.type(torch.int32), user_query)
+#     loss_emb_adv_ow = embedder.compare_embeddings(image_adv.type(torch.int32), user_query, overwrite=True)
+#     print(loss_emb_init, loss_emb_adv, loss_emb_adv_ow, sep="\n----\n")
