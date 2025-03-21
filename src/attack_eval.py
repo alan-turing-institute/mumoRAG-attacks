@@ -56,7 +56,7 @@ filename = save_folder+attack_config.create_filename()
 try:
     image_adv = torch.load(filename) 
 except:
-    print(f"Error! Could not find  file: {filename}! You need to train an attack with this configuration first")
+    print(f"Error! Could not find file: {filename}! You need to train an attack with this configuration first")
     quit()
 
 # load embedding model and VLM
