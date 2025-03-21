@@ -132,7 +132,7 @@ class EmbeddingModel():
                 img_inputs['pixel_values'][0][0] = image_ppd_emb
                 img_inputs['pixel_values'][0][1] = image_ppd_emb
             else:
-                if isinstance(image, list): image = [image]
+                if not isinstance(image, list): image = [image]
                 img_inputs = self.processor([img_prompt]*len(image), image, return_tensors="pt", padding=True).to(self.device)
             image_embedding = self.model(**img_inputs, output_hidden_states=True, return_dict=True).hidden_states[-1][:, -1, :] 
             image_embedding = F.normalize(image_embedding, dim=-1)
