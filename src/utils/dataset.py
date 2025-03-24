@@ -66,7 +66,7 @@ class ViDoReDataset:
             print(f"Computed {self.num_queries} query embeddings in {time.time()-t:.2f}s")
     
     
-    def create_retriever_score_table(self, loss_type="mse"):
+    def create_retriever_score_table(self, loss_type: Literal["mse"]|Literal["cos"]="mse"):
         """
         creates a [num_queries x num_images] tensor of scores/losses
         """
