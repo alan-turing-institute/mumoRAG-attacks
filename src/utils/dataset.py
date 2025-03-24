@@ -85,8 +85,13 @@ class ViDoReDataset():
             self.query_embeddings = self.embedder.compute_txt_embedding(self.queries)
             print(f"Computed {self.num_queries} query embeddings in {time.time()-t:.2f}s")
         
-        # TODO: save to file
-        dict_to_save = {"image_embeddings": self.image_embeddings, "query_embeddings": self.query_embeddings}
+        # save to file
+        dict_to_save = {
+            "image_embeddings": self.image_embeddings, 
+            "query_embeddings": self.query_embeddings,
+            "dataset":          self.ds_name,
+            "model_name":       self.embedder.name
+        }
         torch.save(dict_to_save, self.embeddings_filename())
         print("Saved computed embeddings to disk.")
     
