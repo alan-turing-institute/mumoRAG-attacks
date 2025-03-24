@@ -1,0 +1,25 @@
+[project]
+name = "mumoRAG-attacks"
+version = "0.0.1"
+requires-python = "<3.13"
+dependencies = [
+    "transformers>=4.50.0",
+    "datasets",
+    "faiss-cpu",
+    "requests",
+    "pdf2image",
+    "matplotlib",
+    "torch",
+    "torchvision",
+    "einops",
+    "timm",
+    "sentencepiece",
+    "protobuf",
+    "qwen-vl-utils",
+    "colpali-engine",
+    ]
+
+[project.optional-dependencies]
+nb = [
+    "jupyter"
+]
