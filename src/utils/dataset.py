@@ -1,3 +1,5 @@
+from typing import Literal
+
 from datasets import load_dataset
 from .embedding import EmbeddingModel
 from .vlm import VLM
