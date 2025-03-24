@@ -2,7 +2,7 @@ import torch
 from utils import unnormalize_image, get_min_max_image, normalize_image
 from transformers import AutoProcessor
 
-# computes an adversarial example by perturbing the image so that its embeddgings are close to those of the prompt text
+# computes an adversarial example by perturbing the image so that its embeddings are close to those of the prompt text
 def adversarial_attack_fgsm_iterative(image_input, model, prompt, tokenizer, processor, n_iters, lr, initial_image, perturb_max):
     image_input['pixel_values'].requires_grad = True
     prompt_embedding = model.get_text_features(**tokenizer([prompt], return_tensors="pt", truncation=True))[0].detach()

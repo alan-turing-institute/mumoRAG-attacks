@@ -154,11 +154,11 @@ class VLM():
         if isinstance(prompt, str): prompt = [prompt]
         if self.name in SMOL_VLMS:
             if overwrite:
-                inputs_vlm = self.processor(text=prompt, images=mock_images, return_tensors="pt", truncation=True, padding=True, padding_side="left").to(self.device) # here we feed the intiial image since we are overwriting it anyways
+                inputs_vlm = self.processor(text=prompt, images=mock_images, return_tensors="pt", truncation=True, padding=True, padding_side="left").to(self.device) # here we feed the initial image since we are overwriting it anyway
                 image_ppd_vlm = process_image(image, self)
                 inputs_vlm['pixel_values'] = image_ppd_vlm.unsqueeze(0).unsqueeze(0).repeat(len(prompt),1,1,1,1).to(self.device)
             else:
-                inputs_vlm = self.processor(text=prompt, images=[image for _ in range(len(prompt))], return_tensors="pt", truncation=True, padding=True, padding_side="left").to(self.device) # here we feed the intiial image since we are overwriting it anyways
+                inputs_vlm = self.processor(text=prompt, images=[image for _ in range(len(prompt))], return_tensors="pt", truncation=True, padding=True, padding_side="left").to(self.device) # here we feed the initial image since we are overwriting it anyway
         
         if self.name == "Qwen/Qwen2.5-VL-3B-Instruct":
             # it seems that qwen implements their preprocessors in pytorch --> differentiable (no need to overwrite image)

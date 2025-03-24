@@ -56,7 +56,7 @@ ds = ViDoReDataset(ds_name, do_retrieval=False, embedder=embedder)
 query_strings = ds.queries_train
 print("Loaded dataset.")
 
-# choose attaked image
+# choose attacked image
 chosen_image = ds.images[chosen_index]
 chosen_image = chosen_image.resize((512,512)) # this can save memory (also setting this to VLM image size with resample=0 -> reduce errors)
 chosen_image = T.PILToTensor()(chosen_image) # choose from after 100 since those do not have associated queries

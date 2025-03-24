@@ -1,8 +1,8 @@
 from transformers import AutoModelForZeroShotImageClassification, AutoModel, AutoModelForImageTextToText, AutoTokenizer, AutoProcessor, BitsAndBytesConfig
 import torch
 import torch.nn.functional as F
-from utils.image_utils import process_image
-from utils.utils import plot_images
+from .image_utils import process_image
+from .utils import plot_images
 import torchvision.transforms as T
 
 
@@ -21,7 +21,7 @@ MODEL_NAMES = [
 
 CLIP_LIKE_MODELS = ["openai/clip-vit-base-patch16", "google/siglip2-base-patch16-224", ]
 
-class EmbeddingModel():
+class EmbeddingModel:
 
     def __init__(self, model_name, device, quantize=False):
         self.name = model_name
@@ -63,9 +63,9 @@ class EmbeddingModel():
         if type(user_query) == str: user_query = [user_query]
 
         user_query_embedding = self.compute_txt_embedding(user_query)        
-        image_emebedding = self.compute_img_embedding(image, image, overwrite)
+        image_embedding = self.compute_img_embedding(image, image, overwrite)
 
-        return compute_embedding_loss(image_emebedding, user_query_embedding, loss_type).item()
+        return compute_embedding_loss(image_embedding, user_query_embedding, loss_type).item()
 
         # if len(user_query) > 1:
         #     image_features = model_emb.get_image_features(**image_input_emb)

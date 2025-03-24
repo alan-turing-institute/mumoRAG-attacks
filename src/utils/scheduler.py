@@ -1,4 +1,4 @@
-class LearningRateScheduler():
+class LearningRateScheduler:
     def __init__(self, lr_start, lr_end, n_iter):
         self.lr_start = lr_start
         self.lr_end = lr_end

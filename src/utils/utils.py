@@ -54,7 +54,7 @@ def plot_images(images, n_subplots):
     plt.tight_layout()
     plt.show()
 
-# cretaes a huggingface datset given a dict of pdfs, each pdf is a list of images 
+# creates a huggingface dataset given a dict of pdfs, each pdf is a list of images
 def create_hf_dataset(images: dict):
 
     ds_dict = defaultdict(list)
