@@ -1,7 +1,6 @@
 import torchvision.transforms as T
-from utils.utils import get_device, plot_images, print_memory_consumption
+from utils.utils import get_device, attempt_load_pt
 import torch
-from utils.attack import rag_attack
 from utils.embedding import EmbeddingModel
 from utils.vlm import VLM
 from utils.scheduler import LearningRateScheduler
@@ -53,9 +52,8 @@ topk = 1
 
 # load adversarial image
 filename = save_folder+attack_config.create_filename()
-try:
-    image_adv = torch.load(filename) 
-except:
+image_adv = attempt_load_pt(filename)
+if image_adv in None:
     print(f"Error! Could not find file: {filename}! You need to train an attack with this configuration first")
     quit()
 
