@@ -23,7 +23,7 @@ class AttackConfig:
 
 
     def create_filename(self,):
-        # this should incliude more info, but this suffices for now
+        # this should include more info, but this suffices for now
         config_str = f"{self.model_name_emb}{self.model_name_vlm}{self.ds_name}{self.chosen_index}{self.max_perturbation}{self.lambda_emb}{self.lambda_vlm}"
         hash_str = hashlib.md5(config_str.encode())
         return f"adv_img_{hash_str.hexdigest()}.pt"

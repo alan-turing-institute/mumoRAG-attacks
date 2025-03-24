@@ -1,10 +1,10 @@
 import torch
 import torch.autograd.profiler as profiler
-from utils.embedding import EmbeddingModel, compute_embedding_loss
-from utils.vlm import VLM
-from utils.scheduler import LearningRateScheduler
-from utils.utils import get_memory_consumption
-from utils.attack_config import AttackConfig
+from .embedding import EmbeddingModel, compute_embedding_loss
+from .vlm import VLM
+from .scheduler import LearningRateScheduler
+from .utils import get_memory_consumption
+from .attack_config import AttackConfig
 
 
 
@@ -153,7 +153,7 @@ def attack_step_bim(
 #     lambda_emb = 1
 #     lambda_vlm = 0
 #     print_every = 10
-#     max_batch_size_per_iter = 10 # number of queries to optimize for simulataneously (actual batch size is min(this, len([user_query])))
+#     max_batch_size_per_iter = 10 # number of queries to optimize for simultaneously (actual batch size is min(this, len([user_query])))
 #     emb_loss_type = "mse" # mse, l2, l2_nosqrt, cos
 #     print("Initialized variables!")
 

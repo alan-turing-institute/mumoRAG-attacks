@@ -1,11 +1,11 @@
 from datasets import load_dataset
-from utils.embedding import EmbeddingModel
-from utils.vlm import VLM
+from .embedding import EmbeddingModel
+from .vlm import VLM
 import time
 import torch
 import math
 
-class ViDoReDataset():
+class ViDoReDataset:
     def __init__(self, ds_name: str, do_retrieval: bool = True, embedder=None, train_ratio: float = 0.8):
         self.do_retrieval = do_retrieval
         self.train_ratio = train_ratio
@@ -19,7 +19,7 @@ class ViDoReDataset():
         self.num_train = int(self.num_queries * train_ratio)
         self.num_test = self.num_queries - self.num_train
 
-        # overides (just for testing)
+        # overrides (just for testing)
         # self.num_queries = 50
         # self.num_images = 200
 
@@ -49,24 +49,24 @@ class ViDoReDataset():
         else:
             self.images[-1] = adv_img
             if self.do_retrieval: self.image_embeddings[-1,:] = self.embedder.compute_img_embedding([adv_img], None)
-        print(f"Added adversarial image embddings in {time.time()-t:.2f}s")
+        print(f"Added adversarial image embeddings in {time.time()-t:.2f}s")
     
    
     def compute_embeddings(self, batch_size=None, for_queries=True, for_images=True):
         if for_images:
             # batching yields faster results (batch_size=16 seems good)
-            if batch_size == None: batch_size = self.num_images
+            if batch_size is None: batch_size = self.num_images
             t = time.time()
             img_embeds = [self.embedder.compute_img_embedding(self.images[i*batch_size:(i+1)*batch_size], None) for i in range(math.ceil(len(self.images)/batch_size))]
             self.image_embeddings = torch.cat(tuple(img_embeds), dim=0)
-            print(f"Computed {self.num_images} image embddings in {time.time()-t:.2f}s")
+            print(f"Computed {self.num_images} image embeddings in {time.time()-t:.2f}s")
         if for_queries:
             t = time.time()
             self.query_embeddings = self.embedder.compute_txt_embedding(self.queries)
-            print(f"Computed {self.num_queries} query embddings in {time.time()-t:.2f}s")
+            print(f"Computed {self.num_queries} query embeddings in {time.time()-t:.2f}s")
     
     
-    def create_retriever_score_table(self, loss_type="mse"):
+    def create_retriever_score_table(self, loss_type: Literal["mse"]|Literal["cos"]="mse"):
         """
         creates a [num_queries x num_images] tensor of scores/losses
         """
@@ -105,7 +105,7 @@ class ViDoReDataset():
     
     def evaluate_generation(self, vlm: VLM, image_tensor, target_generation: str, metric="exact", eval_train=False):
         """
-        By default we use the test dataset
+        By default, we use the test dataset
         """
         t = time.time()
 
