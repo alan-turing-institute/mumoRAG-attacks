@@ -1,7 +1,7 @@
 from transformers import AutoModel, AutoProcessor, AutoTokenizer, AutoModelForVision2Seq, BitsAndBytesConfig
 import torch
 import torchvision.transforms as T
-from utils.image_utils import process_image
+from .image_utils import process_image
 
 # candidate models
 MODEL_NAMES = [

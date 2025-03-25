@@ -19,7 +19,9 @@ class AttackConfig:
     gradient_acc_steps: int
     lambda_emb: float
     lambda_vlm: float
-    emb_train_loss_type: str 
+    emb_train_loss_type: str
+    is_adaptive: bool
+    lambda_constant: float 
 
 
     def create_filename(self,):

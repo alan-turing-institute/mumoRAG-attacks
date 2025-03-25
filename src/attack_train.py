@@ -27,6 +27,8 @@ gradient_acc_steps=4
 lambda_emb=1
 lambda_vlm=0.5
 emb_train_loss_type = "mse" # the loss type used to train the attack: mse, l2, cos 
+is_adaptive=True
+lambda_constant=0.2
 
 attack_config = AttackConfig(
     ds_name=ds_name,
@@ -42,7 +44,9 @@ attack_config = AttackConfig(
     gradient_acc_steps=gradient_acc_steps,
     lambda_emb=lambda_emb,
     lambda_vlm=lambda_vlm,
-    emb_train_loss_type=emb_train_loss_type
+    emb_train_loss_type=emb_train_loss_type,
+    is_adaptive=is_adaptive,
+    lambda_constant=lambda_constant
 )
 
 
