@@ -2,8 +2,22 @@ from transformers import AutoModel, AutoProcessor, AutoTokenizer, AutoModelForVi
 import torch
 import torchvision.transforms as T
 from .image_utils import process_image
+from strenum import StrEnum
 
 # candidate models
+class VLMName(StrEnum):
+    SMOLVLM_1_256M = "HuggingFaceTB/SmolVLM-256M-Instruct"
+    SMOLVLM_1_500M = "HuggingFaceTB/SmolVLM-500M-Instruct"
+    SMOLVLM_2_2B = "HuggingFaceTB/SmolVLM2-2.2B-Instruct"
+    QWEN_2p5_VL_3B = "Qwen/Qwen2.5-VL-3B-Instruct"
+    QWEN_2p5_VL_7B = "Qwen/Qwen2.5-VL-7B-Instruct"
+
+SMOL_VLMS = [
+    VLMName.SMOLVLM_1_256M,
+    VLMName.SMOLVLM_1_500M,
+    VLMName.SMOLVLM_2_2B,    
+]
+
 MODEL_NAMES = [
     "HuggingFaceTB/SmolVLM-256M-Instruct",
     "microsoft/Florence-2-base",
@@ -21,11 +35,7 @@ MODEL_NAMES = [
     "google/gemma-3-12b-it"
     ]
 
-SMOL_VLMS = [
-    "HuggingFaceTB/SmolVLM-256M-Instruct",
-    "HuggingFaceTB/SmolVLM-500M-Instruct",
-    "HuggingFaceTB/SmolVLM2-2.2B-Instruct",    
-]
+
 
 class VLM():
     """

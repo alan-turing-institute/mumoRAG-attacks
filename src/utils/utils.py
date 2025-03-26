@@ -8,7 +8,7 @@ from datasets import Dataset
 
 def attempt_load_pt(filename: str):
     try:
-        loaded_obj = torch.load(filename) 
+        loaded_obj = torch.load(filename, weights_only=False) 
     except:
         # print(f"Warning! Could not find file: {filename}!")
         return None

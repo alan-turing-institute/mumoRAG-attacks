@@ -7,9 +7,18 @@ import torch
 import math
 import hashlib
 from typing import Literal
+from strenum import StrEnum
+import itertools
 
 
-class ViDoReDataset():
+class DatasetName(StrEnum):
+    VIDORE_SYN_AI = "vidore/syntheticDocQA_artificial_intelligence_test"
+    VIDORE_SYN_ENERGY = "vidore/syntheticDocQA_energy_test"
+    VIDORE_SYN_GOVREP = "vidore/syntheticDocQA_government_reports_test"
+    VIDORE_SYN_HEALTH = "vidore/syntheticDocQA_healthcare_industry_test"
+
+
+class ViDoReDataset:
     def __init__(self, ds_name: str, do_retrieval: bool = True, embedder: EmbeddingModel=None, train_ratio: float = 0.8, num_images: int = -1):
         self.do_retrieval = do_retrieval
         self.train_ratio = train_ratio
@@ -107,30 +116,40 @@ class ViDoReDataset():
             losses = torch.nn.functional.mse_loss(txt_embs, img_embs, reduction="none")
             losses = torch.mean(losses, dim=-1)
         elif loss_type == "cos":
-            losses = -torch.nn.functional.cosine_similarity(txt_embs, img_embs, dim=-1)
+            losses = 1-torch.nn.functional.cosine_similarity(txt_embs, img_embs, dim=-1)
         return losses
 
     
-    def evaluate_retrieval(self, k=1, loss_type="mse", include_adv=True):
+    def evaluate_retrieval(self, ks=[1], loss_types=["mse"], include_adv=True):
         """
         Accuracy@k: whether the top-k retrieved images include the ground truth image
         """
-        losses = self.create_retriever_score_table(loss_type)
-        if not include_adv:
-            losses = losses[:,:self.num_images_orig]
+        metric_dict = {}
+        retrievals = {}
+        ks = sorted(ks) # sort ascendingly
+        loss_types_and_topks = itertools.product(loss_types, ks)
         
-        topk = torch.topk(losses, k=k, dim=-1, largest=False, sorted=True)
-        
-        correct_retrievals = [self.ground_truth[i] in topk.indices[i] for i in range(self.num_queries)]
-        accuracy_train = sum(correct_retrievals[:self.num_train]) / self.num_train
-        accuracy_test = sum(correct_retrievals[self.num_train:]) / self.num_test
+        for loss_type, k in loss_types_and_topks:
+            losses = self.create_retriever_score_table(loss_type)
+            if not include_adv:
+                losses = losses[:,:self.num_images_orig]
+            
+            topk = torch.topk(losses, k=k, dim=-1, largest=False, sorted=True)
+            
+            correct_retrievals = [self.ground_truth[i] in topk.indices[i] for i in range(self.num_queries)]
+            accuracy_train = sum(correct_retrievals[:self.num_train]) / self.num_train
+            accuracy_test = sum(correct_retrievals[self.num_train:]) / self.num_test
 
-        # if include_adv=False, then will always be zero
-        adversarial_retrievals = [self.num_images_orig in topk.indices[i] for i in range(self.num_queries)]
-        asr_train = sum(adversarial_retrievals[:self.num_train]) / self.num_train
-        asr_test = sum(adversarial_retrievals[self.num_train:]) / self.num_test
+            # if include_adv=False, then will always be zero
+            adversarial_retrievals = [self.num_images_orig in topk.indices[i] for i in range(self.num_queries)]
+            asr_train = sum(adversarial_retrievals[:self.num_train]) / self.num_train
+            asr_test = sum(adversarial_retrievals[self.num_train:]) / self.num_test
 
-        return {"acc_train": accuracy_train, "acc_test": accuracy_test, "asr_train": asr_train, "asr_test": asr_test}
+            metric_dict[f"loss_{loss_type}_topk_{k}"] = {"acc_train": accuracy_train, "acc_test": accuracy_test, "asr_train": asr_train, "asr_test": asr_test}
+            # keep only the retrievals for highest k, should include thodse for small k
+            retrievals[f"loss_{loss_type}"] = topk.indices
+
+        return metric_dict, retrievals
     
     
     def evaluate_generation(self, vlm: VLM, image_tensor, target_generation: str, metric="exact", eval_train=False, print_gen=False):

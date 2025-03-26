@@ -4,3 +4,6 @@ Adversarial and poisoning attacks against multimodal retrieval-augmented generat
 ## Instructions
 - Install poppler utils `brew install poppler`
 - Install the project as editable `pip install -e .`
+
+## Run Experiments
+- All experimets must be run from within the `/src` directory
