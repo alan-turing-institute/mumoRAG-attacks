@@ -122,7 +122,7 @@ class ViDoReDataset:
         return losses
 
     
-    def evaluate_retrieval(self, ks=[1], loss_types=["mse"], include_adv=True):
+    def evaluate_retrieval(self, ks: list[int], loss_types: list[str], include_adv=True):
         """
         Accuracy@k: whether the top-k retrieved images include the ground truth image
         """
