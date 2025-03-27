@@ -6,6 +6,7 @@ from utils.dataset import DatasetName
 from utils.embedding import EmbedderName
 from utils.vlm import VLMName
 from dataclasses import dataclass
+from pathlib import Path
 
 
 @dataclass

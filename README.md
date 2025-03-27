@@ -6,4 +6,4 @@ Adversarial and poisoning attacks against multimodal retrieval-augmented generat
 - Install the project as editable `pip install -e .`
 
 ## Run Experiments
-- All experimets must be run from within the `/src` directory
+- All experiments must be run from within the `/src` directory

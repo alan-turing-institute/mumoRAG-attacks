@@ -1,7 +1,6 @@
 from datasets import load_dataset
 from .embedding import EmbeddingModel, EmbedderName
 from .vlm import VLM
-from .utils import attempt_load_pt
 import time
 import torch
 import math
@@ -10,6 +9,7 @@ from typing import Literal
 from strenum import StrEnum
 import itertools
 from tqdm import tqdm
+from pathlib import Path
 
 
 class DatasetName(StrEnum):
@@ -46,8 +46,9 @@ class ViDoReDataset:
 
         if self.do_retrieval:
             self.embedder = embedder
-            is_precomputed = self.attempt_load_embeddings()
-            if not is_precomputed: 
+            try:
+                self.attempt_load_embeddings()
+            except FileNotFoundError: 
                 print("Precomputing Embeddings ...")
                 batch_size = 4 if self.embedder.name == EmbedderName.COLPALI_HF else 16
                 with torch.no_grad():
@@ -71,14 +72,10 @@ class ViDoReDataset:
     
    
     def attempt_load_embeddings(self,):
-        loaded_obj = attempt_load_pt(self.embeddings_filename())
-        
-        if loaded_obj is None: return False 
-
+        loaded_obj = torch.load(self.embeddings_filename(), weights_only=False)
         self.image_embeddings = loaded_obj['image_embeddings'].type(self.embedder.model.dtype)
         self.query_embeddings = loaded_obj['query_embeddings'].type(self.embedder.model.dtype)  
         print("Loaded precomputed embeddings from disk.")
-        return True
 
     def embeddings_filename(self,):
         emb_str = f"{self.ds_name}{self.embedder.name}"

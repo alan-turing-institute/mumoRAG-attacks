@@ -33,11 +33,11 @@ def load_adv_image(params) -> torch.tensor:
     )
 
     # load adversarial image
-    filename = exp_config_train.save_folder+attack_config.create_filename()
-    attack_info_dict = attempt_load_pt(filename)
-    if attack_info_dict is None:
-        print(f"Error! Could not find file: {filename}! You need to train an attack with this configuration first")
-        raise ValueError
+    filename = exp_config_train.save_folder + attack_config.create_filename()
+    try:
+        attack_info_dict = torch.load(filename, weights_only=False)
+    except FileNotFoundError:
+        raise ValueError(f"Error! Could not find file: {filename}! You need to train an attack with this configuration first")
     
     return attack_info_dict
 
