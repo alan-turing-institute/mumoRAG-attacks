@@ -1,6 +1,6 @@
 import torch
 import torch.autograd.profiler as profiler
-from .embedding import EmbeddingModel, compute_embedding_loss
+from .embedding import EmbeddingModel
 from .vlm import VLM
 from .scheduler import LearningRateScheduler
 from .utils import get_memory_consumption
@@ -39,6 +39,8 @@ def rag_attack(
     lambda_emb = config.lambda_emb
     lambda_vlm = config.lambda_vlm
     emb_loss_type = config.emb_train_loss_type
+    is_adaptive = config.is_adaptive
+    lambda_constant = config.lambda_constant
 
     initial_image = raw_image.clone()
     max_perturbation_pixels = max_perturbation*255
@@ -79,7 +81,7 @@ def rag_attack(
         if lambda_emb > 0:
             # retrieval loss function
             image_embedding = embedder.compute_img_embedding(raw_image, initial_image, overwrite=True)
-            loss_emb = compute_embedding_loss(image_embedding, user_query_embedding_batch, emb_loss_type)
+            loss_emb = embedder.compute_embedding_loss(image_embedding, user_query_embedding_batch, emb_loss_type)
     
 
         if lambda_vlm > 0:
@@ -87,10 +89,14 @@ def rag_attack(
             out = vlm.forward(raw_image, mock_images, full_text_vlm_prompt_batch, overwrite=True)
             loss_vlm = vlm.compute_gen_loss(out, target_tokens)
 
+        # update loss coefficients if we use the adaptive attack
+        if i==0 and is_adaptive and lambda_emb>0 and lambda_vlm>0:
+            lambda_emb, lambda_vlm = adaptive_attack_coefficients(loss_emb, loss_vlm, lambda_constant)
+        
         # total loss function
         total_loss = lambda_emb * loss_emb + lambda_vlm * loss_vlm
         if i==0 or ((i+1)/gradient_acc_steps)%print_every==0: 
-            print(f"Iter {(i//gradient_acc_steps)+1:4d}/{n_gradient_steps}, RAM usage -> {get_memory_consumption(device):.2f} GB, Losses -> Embedding: {loss_emb.item():.8f}, VLM: {loss_vlm.item():.8f}, Total: {total_loss.item():.8f}")
+            print(f"Iter {(i//gradient_acc_steps)+1:4d}/{n_gradient_steps}, RAM usage -> {get_memory_consumption(device):.2f} GB, Losses -> Embedding: {loss_emb.item():.8f}, VLM: {loss_vlm.item():.8f}, Total: {total_loss.item():.8f}, Lambdas -> Embedding: {lambda_emb:.2f}, VLM: {lambda_vlm:.2f}")
 
         # backpropagation
         grads += torch.autograd.grad(total_loss, raw_image)[0]
@@ -133,70 +139,9 @@ def attack_step_bim(
     
     return raw_image
 
+@torch.no_grad()
+def adaptive_attack_coefficients(loss_emb, loss_vlm, lambda_constant):
+    lambda_vlm = 1
+    lambda_emb = lambda_constant * abs(loss_vlm) / abs(loss_emb)
 
-# if __name__ == "__main__":
-#     # imports
-#     from transformers.image_utils import load_image
-#     from utils import plot_images, get_device
-#     import torchvision.transforms as T
-
-#     emb_model_name = "google/siglip2-base-patch16-224" # "openai/clip-vit-base-patch16", "vidore/colSmol-256M", "google/siglip2-base-patch16-224", ""
-#     vlm_model_name = "HuggingFaceTB/SmolVLM-256M-Instruct" # "HuggingFaceTB/SmolVLM-256M-Instruct", "naver-clova-ix/donut-base-finetuned-docvqa"
-#     user_query = "They are eating fish. What type of fish are they eating?"
-#     target_answer = "They are actually eating beef"
-#     image = load_image("https://farm9.staticflickr.com/8096/8445896722_e28fb3f055_z.jpg")
-#     device = get_device(prefer_mps=True)
-#     max_perturbation = 0.05
-#     n_gradient_steps = 100
-#     gradient_acc_steps = 4
-#     lr_scheduler = LearningRateScheduler(start_lr=255 * (5e-3), end_lr=255*(5e-4), n_iter=n_gradient_steps) # multiply by 255 since input is [0,255]
-#     lambda_emb = 1
-#     lambda_vlm = 0
-#     print_every = 10
-#     max_batch_size_per_iter = 10 # number of queries to optimize for simultaneously (actual batch size is min(this, len([user_query])))
-#     emb_loss_type = "mse" # mse, l2, l2_nosqrt, cos
-#     print("Initialized variables!")
-
-#     embedder = EmbeddingModel(emb_model_name, device)
-#     vlm = VLM(vlm_model_name, device)
-#     print("Loaded models and processors!")
-
-#     image_tensor = T.PILToTensor()(image)
-#     initial_image = image_tensor.clone()
-#     image_tensor = image_tensor.float()
-#     image_tensor.requires_grad = True
-
-#     image_adv = rag_attack(
-#         raw_image=image_tensor,
-#         emb_model_name=emb_model_name,
-#         embedder=embedder,
-#         vlm=vlm,
-#         user_query=user_query,
-#         target_answer=target_answer,
-#         max_perturbation=max_perturbation,
-#         n_gradient_steps=n_gradient_steps,
-#         print_every=print_every,
-#         lr_scheduler=lr_scheduler,
-#         max_batch_size_per_iter=max_batch_size_per_iter,
-#         gradient_acc_steps=gradient_acc_steps,
-#         lambda_emb=lambda_emb,
-#         lambda_vlm=lambda_vlm,
-#         emb_loss_type=emb_loss_type,
-#         device=device
-#     )
-
-#     print(f"MSE: {torch.nn.functional.mse_loss(initial_image, image_adv)}")
-#     print(f"Linf: {(initial_image - image_adv).norm(p=float('inf'))}")
-#     plot_images([T.ToPILImage()(image/255) for image in [initial_image, image_adv]], n_subplots=2)
-
-#     # Test generation
-#     out_init = vlm.generate(initial_image, user_query) # this is the image we started with
-#     out_adv = vlm.generate(image_adv, user_query) # this is the image we optimized but after potentially being modified by the processor
-#     out_adv_ow = vlm.generate(image_adv, user_query, overwrite=True) # this is the image we optimized
-#     print(out_init, out_adv, out_adv_ow, sep="\n===\n")
-
-#     # test retrieval
-#     loss_emb_init = embedder.compare_embeddings(initial_image, user_query)
-#     loss_emb_adv = embedder.compare_embeddings(image_adv.type(torch.int32), user_query)
-#     loss_emb_adv_ow = embedder.compare_embeddings(image_adv.type(torch.int32), user_query, overwrite=True)
-#     print(loss_emb_init, loss_emb_adv, loss_emb_adv_ow, sep="\n----\n")
+    return lambda_emb, lambda_vlm

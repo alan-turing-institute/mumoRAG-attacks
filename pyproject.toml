@@ -17,6 +17,7 @@ dependencies = [
     "protobuf",
     "qwen-vl-utils",
     "colpali-engine",
+    "strenum",
     ]
 
 [project.optional-dependencies]

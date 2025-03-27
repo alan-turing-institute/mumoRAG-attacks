@@ -6,6 +6,14 @@ from collections import defaultdict
 from datasets import Dataset
 
 
+def attempt_load_pt(filename: str):
+    try:
+        loaded_obj = torch.load(filename, weights_only=False) 
+    except:
+        # print(f"Warning! Could not find file: {filename}!")
+        return None
+    return loaded_obj
+
 def get_device(prefer_mps=False):
     if torch.cuda.is_available():
         return "cuda"

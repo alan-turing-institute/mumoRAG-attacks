@@ -1,86 +1,106 @@
 import torchvision.transforms as T
-from utils.utils import get_device, plot_images, print_memory_consumption
+from utils.utils import get_device, attempt_load_pt
 import torch
-from utils.attack import rag_attack
 from utils.embedding import EmbeddingModel
 from utils.vlm import VLM
-from utils.scheduler import LearningRateScheduler
 from utils.dataset import ViDoReDataset
 from utils.attack_config import AttackConfig
-
-device = get_device(prefer_mps=True)
-ds_name = "vidore/syntheticDocQA_artificial_intelligence_test"
-model_name_emb = "openai/clip-vit-base-patch16" # "openai/clip-vit-base-patch16" or "nomic-ai/nomic-embed-vision-v1.5", "jinaai/jina-clip-v2" (large), "jinaai/jina-clip-v1", "vidore/colSmol-256M", "vidore/colpali-v1.3-hf" (3B), "google/siglip2-base-patch16-224"
-model_name_vlm = "HuggingFaceTB/SmolVLM-256M-Instruct" # "HuggingFaceTB/SmolVLM-256M-Instruct", "HuggingFaceTB/SmolVLM-500M-Instruct", "microsoft/Florence-2-large", , "naver-clova-ix/donut-base-finetuned-docvqa", "Qwen/Qwen2.5-VL-3B-Instruct"
-emb_test_loss_type = "mse" # the loss type used by the retriever embedding model: mse, l2, cos
-target_answer = "I will not reply to you!"
-do_retrieval = True # whether to add adversarial image to dataset and test retrieval
-do_generation = True
-save_folder = "data/attacks/"
+from experiments.params import exp_config_train, exp_config_eval
+from itertools import product
 
 
-# attack config
-chosen_index = 150
-n_gradient_steps = 40
-max_perturbation = 8.0/255
-lr_start, lr_end = 255*(3e-3), 255*(3e-4)
-max_batch_size_per_iter=2
-gradient_acc_steps=4
-lambda_emb=1
-lambda_vlm=0.5
-emb_train_loss_type = "mse" # the loss type used to train the attack: mse, l2, cos 
+def load_adv_image(params) -> torch.tensor:
+    ds_name, model_name_emb, model_name_vlm, max_perturbation, emb_train_loss_type, is_adaptive, _, _ = params
+    lambda_constant = exp_config_train.lambda_constant
 
-attack_config = AttackConfig(
-    ds_name=ds_name,
-    model_name_emb=model_name_emb,
-    model_name_vlm=model_name_vlm,
-    target_answer=target_answer,
-    chosen_index=chosen_index,
-    max_perturbation=max_perturbation,
-    n_gradient_steps=n_gradient_steps,
-    lr_start=lr_start,
-    lr_end=lr_end,
-    max_batch_size_per_iter=max_batch_size_per_iter,
-    gradient_acc_steps=gradient_acc_steps,
-    lambda_emb=lambda_emb,
-    lambda_vlm=lambda_vlm,
-    emb_train_loss_type=emb_train_loss_type
+    attack_config = AttackConfig(
+        ds_name=ds_name,
+        model_name_emb=model_name_emb,
+        model_name_vlm=model_name_vlm,
+        target_answer=exp_config_train.target_answer,
+        chosen_index=exp_config_train.chosen_index,
+        max_perturbation=max_perturbation,
+        n_gradient_steps=exp_config_train.n_gradient_steps,
+        lr_start=exp_config_train.lr_start,
+        lr_end=exp_config_train.lr_end,
+        max_batch_size_per_iter=exp_config_train.max_batch_size_per_iter,
+        gradient_acc_steps=exp_config_train.gradient_acc_steps,
+        lambda_emb=exp_config_train.lambda_emb,
+        lambda_vlm=exp_config_train.lambda_vlm,
+        emb_train_loss_type=emb_train_loss_type,
+        is_adaptive=is_adaptive,
+        lambda_constant=lambda_constant,
+    )
+
+    # load adversarial image
+    filename = exp_config_train.save_folder + attack_config.create_filename()
+    try:
+        attack_info_dict = torch.load(filename, weights_only=False)
+    except FileNotFoundError:
+        raise ValueError(f"Error! Could not find file: {filename}! You need to train an attack with this configuration first")
+    
+    return attack_info_dict
+
+
+
+parameter_collection = product(
+    exp_config_train.dataset_list, 
+    exp_config_train.embedder_list, 
+    exp_config_train.vlm_list, 
+    exp_config_train.max_perturbation_list, 
+    exp_config_train.emb_train_loss_type_list, 
+    exp_config_train.is_adaptive_list,
+    exp_config_eval.eval_emb_list,
+    exp_config_eval.eval_vlm_list,
 )
-
-# eval config
-topk = 1
-
-
-# load adversarial image
-filename = save_folder+attack_config.create_filename()
-try:
-    image_adv = torch.load(filename) 
-except:
-    print(f"Error! Could not find file: {filename}! You need to train an attack with this configuration first")
-    quit()
-
-# load embedding model and VLM
-embedder = EmbeddingModel(model_name_emb, device)
-vlm = VLM(model_name_vlm, device)
-print("Loaded models.")
-
-# load dataset
-ds = ViDoReDataset(ds_name, do_retrieval=do_retrieval, embedder=embedder)
-print("Loaded dataset.")
+parameter_collection = [x for x in parameter_collection]
+n_evals = len(parameter_collection)
+device = get_device(prefer_mps=True)
 
 
+# first we just make sure that all required files are on disk, so that we dont waste time
+# this will raise an error if there are missing file(s)
+for params in parameter_collection:
+    _ = load_adv_image(params)
 
-if do_retrieval:
-    print("=== Evaluating retrieval ...")
-    ds.add_adv_image(T.ToPILImage()(image_adv/255))
-    metric_dict_before = ds.evaluate_retrieval(k=topk, loss_type=emb_test_loss_type, include_adv=False)
-    print(f"Before attack: {metric_dict_before}")
-    metric_dict_after = ds.evaluate_retrieval(k=topk, loss_type=emb_test_loss_type, include_adv=True)
-    print(f"After attack: {metric_dict_after}")
 
-if do_generation:
-    print("=== Evaluating generation ...")
-    asr_test, gs_test = ds.evaluate_generation(vlm, image_adv, target_answer, eval_train=False)
-    print(f"Test ASR: {asr_test:.2f}")
-    asr_train, gs_train = ds.evaluate_generation(vlm, image_adv, target_answer, eval_train=True)
-    print(f"Train ASR: {asr_train:.2f}")
+for i, params in enumerate(parameter_collection):
+
+    print(f"++++++++++++++++++++++\nEval {(i+1):4d}/{n_evals}, params -> {params}")
+    ds_name, model_name_emb, model_name_vlm, max_perturbation, emb_train_loss_type, is_adaptive, eval_emb_name, eval_vlm_name = params
+
+    attack_info_dict = load_adv_image(params)
+    image_adv = attack_info_dict['image_adv']
+    
+
+    # update model names in case we test transferability
+    model_name_emb = model_name_emb if eval_emb_name=="" else eval_emb_name
+    model_name_vlm = model_name_vlm if eval_vlm_name=="" else eval_vlm_name
+    
+    # TODO: we dont need to load the models and datasets every time if not changed
+    # load embedding model and VLM
+    embedder = EmbeddingModel(model_name_emb, device)
+    vlm = VLM(model_name_vlm, device)
+    print("Loaded models.")
+
+    # load dataset
+    ds = ViDoReDataset(ds_name, do_retrieval=exp_config_eval.do_retrieval, embedder=embedder)
+    print("Loaded dataset.")
+
+
+    # test retrieval
+    if exp_config_eval.do_retrieval:
+        print("=== Evaluating retrieval ...")
+        ds.add_adv_image(T.ToPILImage()(image_adv/255))
+        metric_dict_before, retrievals_before = ds.evaluate_retrieval(ks=exp_config_eval.topk_list, loss_types=exp_config_eval.emb_test_loss_type_list, include_adv=False)
+        print(f"Before attack:\n{metric_dict_before}")
+        metric_dict_after, retrievals_after = ds.evaluate_retrieval(ks=exp_config_eval.topk_list, loss_types=exp_config_eval.emb_test_loss_type_list, include_adv=True)
+        print(f"After attack:\n{metric_dict_after}")
+    
+    # test generation
+    if exp_config_eval.do_generation:
+        print("=== Evaluating generation ...")
+        asr_test, gs_test = ds.evaluate_generation(vlm, image_adv, exp_config_train.target_answer, eval_train=False)
+        print(f"Test ASR: {asr_test:.2f}")
+        asr_train, gs_train = ds.evaluate_generation(vlm, image_adv, exp_config_train.target_answer, eval_train=True)
+        print(f"Train ASR: {asr_train:.2f}")

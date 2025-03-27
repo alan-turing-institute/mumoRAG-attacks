@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 import hashlib
 
 @dataclass
@@ -19,11 +19,21 @@ class AttackConfig:
     gradient_acc_steps: int
     lambda_emb: float
     lambda_vlm: float
-    emb_train_loss_type: str 
+    emb_train_loss_type: str
+    is_adaptive: bool
+    lambda_constant: float 
 
 
     def create_filename(self,):
         # this should include more info, but this suffices for now
-        config_str = f"{self.model_name_emb}{self.model_name_vlm}{self.ds_name}{self.chosen_index}{self.max_perturbation}{self.lambda_emb}{self.lambda_vlm}"
+        effective_batch_size = self.max_batch_size_per_iter*self.gradient_acc_steps
+        config_str = f"{self.model_name_emb}{self.model_name_vlm}{self.ds_name}{self.chosen_index}{self.target_answer}{self.max_perturbation}{self.emb_train_loss_type}{self.is_adaptive}"
+        
+        if self.is_adaptive: config_str += f"{self.lambda_constant}"
+        else: config_str += f"{self.lambda_emb}{self.lambda_vlm}"
+        
         hash_str = hashlib.md5(config_str.encode())
         return f"adv_img_{hash_str.hexdigest()}.pt"
+    
+    def to_dict(self,):
+        return asdict(self)
