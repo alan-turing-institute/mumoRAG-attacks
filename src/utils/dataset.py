@@ -1,17 +1,17 @@
-from typing import Literal
+import hashlib
+import itertools
+import time
+from pathlib import Path
+from typing import Literal, Optional
 
+import math
+import torch
 from datasets import load_dataset
+from strenum import StrEnum
+from tqdm import tqdm
+
 from .embedding import EmbeddingModel, EmbedderName
 from .vlm import VLM
-import time
-import torch
-import math
-import hashlib
-from typing import Literal
-from strenum import StrEnum
-import itertools
-from tqdm import tqdm
-from pathlib import Path
 
 
 class DatasetName(StrEnum):
@@ -27,7 +27,7 @@ class ViDoReDataset:
         self.train_ratio = train_ratio
         self.ds_name = ds_name
 
-        self.embeddings_folder = "../data/embeddings/"
+        self.embeddings_folder = Path(__file__).parents[2] / "data/embeddings/"
 
         self.ds = load_dataset(ds_name, split='test')
         self.num_queries = 100

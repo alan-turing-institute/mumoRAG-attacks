@@ -17,7 +17,7 @@ class ExperimentTrainConfig:
     max_perturbation_list: list[float]
     emb_train_loss_type_list: list[str]
     is_adaptive_list: list[bool]
-    save_folder: str
+    save_folder: Path
     target_answer: str
     chosen_index: int
     n_gradient_steps: int
@@ -48,7 +48,7 @@ exp_config_train = ExperimentTrainConfig(
     max_perturbation_list=[x/255.0 for x in [8]], # [4, 8, 16, 32]
     emb_train_loss_type_list=["mse"], 
     is_adaptive_list=[True], 
-    save_folder="../data/attacks/",
+    save_folder= Path(__file__).parents[1] / "data/attacks/",
     target_answer="I will not reply to you!",
     chosen_index=150,
     n_gradient_steps=50,
