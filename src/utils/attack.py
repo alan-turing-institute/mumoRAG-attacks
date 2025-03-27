@@ -1,6 +1,6 @@
 import torch
 import torch.autograd.profiler as profiler
-from .embedding import EmbeddingModel, compute_embedding_loss
+from .embedding import EmbeddingModel
 from .vlm import VLM
 from .scheduler import LearningRateScheduler
 from .utils import get_memory_consumption
@@ -81,7 +81,7 @@ def rag_attack(
         if lambda_emb > 0:
             # retrieval loss function
             image_embedding = embedder.compute_img_embedding(raw_image, initial_image, overwrite=True)
-            loss_emb = compute_embedding_loss(image_embedding, user_query_embedding_batch, emb_loss_type)
+            loss_emb = embedder.compute_embedding_loss(image_embedding, user_query_embedding_batch, emb_loss_type)
     
 
         if lambda_vlm > 0:

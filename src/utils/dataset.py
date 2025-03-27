@@ -1,5 +1,5 @@
 from datasets import load_dataset
-from .embedding import EmbeddingModel
+from .embedding import EmbeddingModel, EmbedderName
 from .vlm import VLM
 from .utils import attempt_load_pt
 import time
@@ -9,6 +9,7 @@ import hashlib
 from typing import Literal
 from strenum import StrEnum
 import itertools
+from tqdm import tqdm
 
 
 class DatasetName(StrEnum):
@@ -46,7 +47,11 @@ class ViDoReDataset:
         if self.do_retrieval:
             self.embedder = embedder
             is_precomputed = self.attempt_load_embeddings()
-            if not is_precomputed: self.compute_embeddings(batch_size=16)
+            if not is_precomputed: 
+                print("Precomputing Embeddings ...")
+                batch_size = 4 if self.embedder.name == EmbedderName.COLPALI_HF else 16
+                with torch.no_grad():
+                    self.compute_embeddings(batch_size=batch_size)
 
     
     def add_adv_image(self, adv_img):
@@ -86,7 +91,7 @@ class ViDoReDataset:
             # batching yields faster results (batch_size=16 seems good)
             if batch_size is None: batch_size = self.num_images
             t = time.time()
-            img_embeds = [self.embedder.compute_img_embedding(self.images[i*batch_size:(i+1)*batch_size], None) for i in range(math.ceil(len(self.images)/batch_size))]
+            img_embeds = [self.embedder.compute_img_embedding(self.images[i*batch_size:(i+1)*batch_size], None) for i in tqdm(range(math.ceil(len(self.images)/batch_size)))]
             self.image_embeddings = torch.cat(tuple(img_embeds), dim=0)
             print(f"Computed {self.num_images} image embeddings in {time.time()-t:.2f}s")
         if for_queries:
