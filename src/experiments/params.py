@@ -33,6 +33,7 @@ class ExperimentTrainConfig:
 
 @dataclass
 class ExperimentEvalConfig:
+    results_folder: Path
     emb_test_loss_type_list: list[str]
     topk_list: list[int]
     gen_metric_list: list[str]
@@ -65,6 +66,7 @@ exp_config_train = ExperimentTrainConfig(
     lambda_constant=0.2,
 )
 exp_config_eval = ExperimentEvalConfig(
+    results_folder=Path(__file__).parents[2] / "data/results/",
     emb_test_loss_type_list=["mse", "cos"],
     topk_list=[1,5],
     gen_metric_list=["exact", "embed"],

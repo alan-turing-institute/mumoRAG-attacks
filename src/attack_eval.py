@@ -8,9 +8,11 @@ from utils.dataset import ViDoReDataset
 from utils.attack_config import AttackConfig
 from experiments.params import exp_config_train, exp_config_eval
 from itertools import product
+import json
+import pprint
 
 
-def load_adv_image(params) -> torch.tensor:
+def extract_attack_config(params) -> AttackConfig:
     ds_name, model_name_emb, model_name_vlm, max_perturbation, emb_train_loss_type, is_adaptive, _, _ = params
     lambda_constant = exp_config_train.lambda_constant
 
@@ -33,6 +35,11 @@ def load_adv_image(params) -> torch.tensor:
         lambda_constant=lambda_constant,
     )
 
+    return attack_config
+
+def load_adv_image(params) -> torch.tensor:
+    
+    attack_config = extract_attack_config(params)
     # load adversarial image
     filename = exp_config_train.save_folder / attack_config.create_filename()
     try:
@@ -42,6 +49,27 @@ def load_adv_image(params) -> torch.tensor:
     
     return attack_info_dict
 
+
+
+def get_retrieval_saved_info(metric_dict_before, metric_dict_after):
+    retrieval_dict = {}
+    retrieval_dict["topk_list"] = exp_config_eval.topk_list
+    retrieval_dict["eval_emb_loss"] = exp_config_eval.emb_test_loss_type_list
+    
+    retrieval_dict["train"] = {}
+    retrieval_dict["test"] = {}
+    for k in metric_dict_before.keys():
+        retrieval_dict['train'][k] = {
+            "recall_before": metric_dict_before[k]["acc_train"],
+            "recall_after": metric_dict_after[k]["acc_train"],
+            "asr": metric_dict_after[k]["asr_train"]
+        }
+        retrieval_dict['test'][k] = {
+            "recall_before": metric_dict_before[k]["acc_test"],
+            "recall_after": metric_dict_after[k]["acc_test"],
+            "asr": metric_dict_after[k]["asr_test"]
+        }
+    return retrieval_dict
 
 
 parameter_collection = product(
@@ -72,7 +100,7 @@ else:
 
 for i, params in enumerate(parameter_collection):
 
-    print(f"++++++++++++++++++++++\nEval {(i+1):4d}/{n_evals}, params -> {params}")
+    print("+"*20, f"\nEval {(i+1):4d}/{n_evals}, params -> {params}")
     ds_name, model_name_emb, model_name_vlm, max_perturbation, emb_train_loss_type, is_adaptive, eval_emb_name, eval_vlm_name = params
 
     attack_info_dict = load_adv_image(params)
@@ -99,14 +127,19 @@ for i, params in enumerate(parameter_collection):
         print("=== Evaluating retrieval ...")
         ds.add_adv_image(T.ToPILImage()(image_adv/255))
         metric_dict_before, retrievals_before = ds.evaluate_retrieval(ks=exp_config_eval.topk_list, loss_types=exp_config_eval.emb_test_loss_type_list, include_adv=False)
-        print(f"Retrieval Before attack:\n{metric_dict_before}\n")
         metric_dict_after, retrievals_after = ds.evaluate_retrieval(ks=exp_config_eval.topk_list, loss_types=exp_config_eval.emb_test_loss_type_list, include_adv=True)
-        print(f"Retrieval After attack:\n{metric_dict_after}\n")
+        retrieval_metric_dict = get_retrieval_saved_info(metric_dict_before, metric_dict_after)
     
     # test generation
     if exp_config_eval.do_generation:
         print("=== Evaluating generation ...")
         metric_dict_test, gs_test = ds.evaluate_generation(vlm, image_adv, exp_config_train.target_answer, metrics=exp_config_eval.gen_metric_list, text_embedder=text_embedder, eval_train=False)
-        print(f"Test Gen performance: {metric_dict_test}")
         metric_dict_train, gs_train = ds.evaluate_generation(vlm, image_adv, exp_config_train.target_answer, metrics=exp_config_eval.gen_metric_list, text_embedder=text_embedder, eval_train=True)
-        print(f"Train Gen performance: {metric_dict_train}")
+        generation_metric_dict = {"train": metric_dict_train, "test": metric_dict_test}
+    
+    # save results to JSON format
+    metric_dict_full = {"retrieval": retrieval_metric_dict, "generation": generation_metric_dict}
+    with open(exp_config_eval.results_folder / f"metrics_{extract_attack_config(params).create_hash_string()}.json", "w") as file: 
+        json.dump(metric_dict_full, file)
+    print("Saved results.")
+    # pprint.pprint(metric_dict_full)
