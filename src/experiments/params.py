@@ -48,7 +48,7 @@ exp_config_train = ExperimentTrainConfig(
     max_perturbation_list=[x/255.0 for x in [8]], # [4, 8, 16, 32]
     emb_train_loss_type_list=["mse"], 
     is_adaptive_list=[True], 
-    save_folder= Path(__file__).parents[1] / "data/attacks/",
+    save_folder= Path(__file__).parents[2] / "data/attacks/",
     target_answer="I will not reply to you!",
     chosen_index=150,
     n_gradient_steps=50,
@@ -69,7 +69,6 @@ exp_config_eval = ExperimentEvalConfig(
     eval_emb_list=[""],
     eval_vlm_list=[""],
 )
-
 
 # TODO: configuration 1 (small stuff that can run on laptop)
 
