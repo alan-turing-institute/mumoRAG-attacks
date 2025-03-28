@@ -1,26 +1,51 @@
 [project]
 name = "mumoRAG-attacks"
 version = "0.0.1"
-requires-python = "<3.13"
+requires-python = " >=3.10, <3.13"
 dependencies = [
-    "transformers>=4.50.0",
-    "datasets",
-    "faiss-cpu",
-    "requests",
-    "pdf2image",
-    "matplotlib",
-    "torch",
-    "torchvision",
-    "einops",
-    "timm",
-    "sentencepiece",
-    "protobuf",
-    "qwen-vl-utils",
-    "colpali-engine",
-    "strenum",
-    ]
+  "transformers>=4.50.3",
+  "datasets",
+  "faiss-cpu",
+  "requests",
+  "pdf2image",
+  "matplotlib",
+  "torch==2.6.0",
+  "torchvision",
+  "einops",
+  "timm",
+  "sentencepiece",
+  "protobuf",
+  "qwen-vl-utils",
+  "colpali-engine @  git+https://github.com/illuin-tech/colpali@fc1289b96e5035c0b459a6a816e004faa47198ce",
+  "strenum",
+]
 
 [project.optional-dependencies]
-nb = [
-    "jupyter"
+nb = ["jupyter"]
+
+opt = [
+  "xformers",
+  "flash-attn @ https://github.com/Dao-AILab/flash-attention/releases/download/v2.7.4.post1/flash_attn-2.7.4.post1+cu12torch2.6cxx11abiTRUE-cp311-cp311-linux_x86_64.whl",
 ]
+
+[tool.uv]
+no-build-isolation-package = ["flash-attn"]
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cu126", marker = "sys_platform != 'darwin'" }]
+torchvision = [{ index = "pytorch-cu126", marker = "sys_platform != 'darwin'" }]
+xformers = [{ index = "pytorch-cu126", marker = "sys_platform != 'darwin'" }]
+
+[[tool.uv.dependency-metadata]]
+name = "flash-attn"
+requires-dist = ["torch", "einops"]
+
+[[tool.uv.index]]
+name = "pytorch-cu126"
+url = "https://download.pytorch.org/whl/cu126"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cu118"
+url = "https://download.pytorch.org/whl/cu118"
+explicit = true

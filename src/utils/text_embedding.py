@@ -18,7 +18,7 @@ class TextEmbeddingModel:
         if model_name == TextEmbedderName.JINA_TEXT_V3:
             self.model = AutoModel.from_pretrained(
                 model_name,
-                torch_dtype=torch.float32 if device == "mps" else "auto",
+                torch_dtype=torch.float32 if device == "mps" else torch.bfloat16,
                 trust_remote_code=True).to(device)
             self.processor = None
             self.tokenizer = None
