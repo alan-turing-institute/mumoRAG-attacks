@@ -11,6 +11,7 @@ class EmbedderName(StrEnum):
     CLIP_BASE_PATCH16 = "openai/clip-vit-base-patch16"
     CLIP_LARGE_PATCH14 = "openai/clip-vit-large-patch14"
     SIGLIP2_BASE_PATCH16 = "google/siglip2-base-patch16-224"
+    SIGLIP2_LARGE_PATCH16 = "google/siglip2-large-patch16-256"
     JINA_CLIP_2 = "jinaai/jina-clip-v2"
     E5_V = "royokong/e5-v"
     COLPALI_HF = "vidore/colpali-v1.3-hf"
@@ -20,7 +21,8 @@ class EmbedderName(StrEnum):
 CLIP_LIKE_MODELS = [
     EmbedderName.CLIP_BASE_PATCH16, 
     EmbedderName.CLIP_LARGE_PATCH14,
-    EmbedderName.SIGLIP2_BASE_PATCH16
+    EmbedderName.SIGLIP2_BASE_PATCH16,
+    EmbedderName.SIGLIP2_LARGE_PATCH16,
 ]
 
 # candidate models

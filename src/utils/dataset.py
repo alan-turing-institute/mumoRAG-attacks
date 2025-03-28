@@ -12,6 +12,7 @@ from tqdm import tqdm
 
 from .embedding import EmbeddingModel, EmbedderName
 from .vlm import VLM
+from .text_embedding import TextEmbeddingModel, TextEmbedderName
 
 
 class DatasetName(StrEnum):
@@ -84,7 +85,7 @@ class ViDoReDataset:
         else:
             self.images[-1] = adv_img
             if self.do_retrieval: self.image_embeddings[-1,:] = self.embedder.compute_img_embedding([adv_img], None)
-        print(f"Added adversarial image embeddings in {time.time()-t:.2f}s")
+        # print(f"Added adversarial image embeddings in {time.time()-t:.2f}s")
     
    
     def attempt_load_embeddings(self,):
@@ -170,11 +171,13 @@ class ViDoReDataset:
         return metric_dict, retrievals
     
     
-    def evaluate_generation(self, vlm: VLM, image_tensor, target_generation: str, metric="exact", eval_train=False, print_gen=False):
+    def evaluate_generation(self, vlm: VLM, image_tensor, target_generation: str, metrics: list[str], text_embedder: TextEmbeddingModel, eval_train=False, print_gen=False):
         """
         By default, we use the test dataset
         """
         t = time.time()
+
+        metric_dict = {}
 
         queries = self.queries_train if eval_train else self.queries_test
         generations = vlm.generate(image_tensor, queries, overwrite=True)
@@ -183,10 +186,19 @@ class ViDoReDataset:
 
         if print_gen: print(generations)
 
-        if metric == "exact":
-            correct_generations = [g == target_generation for g in generations]
-        asr = sum(correct_generations) / len(queries)
+        for metric in metrics:
+            # exact match of VLM generation and target answer
+            if metric == "exact":
+                correct_generations = [g == target_generation for g in generations]
+                metric_value = sum(correct_generations) / len(queries)
+            
+            # similarity score between VLM generation and target anser in [0,1]
+            if metric == "embed":
+                similarity = text_embedder.compare_embeddings(generations, target_generation, similarity_metric="cos")
+                metric_value = similarity.mean().item()
+
+            metric_dict[metric] = metric_value
 
         print(f"Evaluated {len(queries)} generations in {time.time()-t:.2f}s")
 
-        return asr, generations
+        return metric_dict, generations

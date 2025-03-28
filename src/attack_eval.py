@@ -3,6 +3,7 @@ from utils.utils import get_device, attempt_load_pt
 import torch
 from utils.embedding import EmbeddingModel
 from utils.vlm import VLM
+from utils.text_embedding import TextEmbeddingModel
 from utils.dataset import ViDoReDataset
 from utils.attack_config import AttackConfig
 from experiments.params import exp_config_train, exp_config_eval
@@ -63,6 +64,11 @@ device = get_device(prefer_mps=True)
 for params in parameter_collection:
     _ = load_adv_image(params)
 
+# load text embedding model in case we need it for evaluation
+if "embed" in exp_config_eval.gen_metric_list:
+    text_embedder = TextEmbeddingModel(exp_config_eval.gen_text_embedder, device=device)
+else:
+    text_embedder = None
 
 for i, params in enumerate(parameter_collection):
 
@@ -93,14 +99,14 @@ for i, params in enumerate(parameter_collection):
         print("=== Evaluating retrieval ...")
         ds.add_adv_image(T.ToPILImage()(image_adv/255))
         metric_dict_before, retrievals_before = ds.evaluate_retrieval(ks=exp_config_eval.topk_list, loss_types=exp_config_eval.emb_test_loss_type_list, include_adv=False)
-        print(f"Before attack:\n{metric_dict_before}")
+        print(f"Retrieval Before attack:\n{metric_dict_before}\n")
         metric_dict_after, retrievals_after = ds.evaluate_retrieval(ks=exp_config_eval.topk_list, loss_types=exp_config_eval.emb_test_loss_type_list, include_adv=True)
-        print(f"After attack:\n{metric_dict_after}")
+        print(f"Retrieval After attack:\n{metric_dict_after}\n")
     
     # test generation
     if exp_config_eval.do_generation:
         print("=== Evaluating generation ...")
-        asr_test, gs_test = ds.evaluate_generation(vlm, image_adv, exp_config_train.target_answer, eval_train=False)
-        print(f"Test ASR: {asr_test:.2f}")
-        asr_train, gs_train = ds.evaluate_generation(vlm, image_adv, exp_config_train.target_answer, eval_train=True)
-        print(f"Train ASR: {asr_train:.2f}")
+        metric_dict_test, gs_test = ds.evaluate_generation(vlm, image_adv, exp_config_train.target_answer, metrics=exp_config_eval.gen_metric_list, text_embedder=text_embedder, eval_train=False)
+        print(f"Test Gen performance: {metric_dict_test}")
+        metric_dict_train, gs_train = ds.evaluate_generation(vlm, image_adv, exp_config_train.target_answer, metrics=exp_config_eval.gen_metric_list, text_embedder=text_embedder, eval_train=True)
+        print(f"Train Gen performance: {metric_dict_train}")

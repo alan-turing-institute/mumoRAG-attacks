@@ -4,6 +4,7 @@ This file includes different configurations for the parameters of the attack and
 
 from utils.dataset import DatasetName
 from utils.embedding import EmbedderName
+from utils.text_embedding import TextEmbedderName
 from utils.vlm import VLMName
 from dataclasses import dataclass
 from pathlib import Path
@@ -34,6 +35,8 @@ class ExperimentTrainConfig:
 class ExperimentEvalConfig:
     emb_test_loss_type_list: list[str]
     topk_list: list[int]
+    gen_metric_list: list[str]
+    gen_text_embedder: str
     do_retrieval: bool
     do_generation: bool
     # following used to test transferability, [""] means white-box setting
@@ -64,6 +67,8 @@ exp_config_train = ExperimentTrainConfig(
 exp_config_eval = ExperimentEvalConfig(
     emb_test_loss_type_list=["mse", "cos"],
     topk_list=[1,5],
+    gen_metric_list=["exact", "embed"],
+    gen_text_embedder=TextEmbedderName.JINA_TEXT_V3,
     do_retrieval=True,
     do_generation=True,
     eval_emb_list=[""],
