@@ -81,5 +81,5 @@ for params in parameter_collection:
     # save adv image
     attack_dict = attack_config.to_dict()
     attack_dict["image_adv"] = image_adv.type(torch.uint8)
-    torch.save(attack_dict, exp_config_train.save_folder+attack_config.create_filename())
+    torch.save(attack_dict, exp_config_train.save_folder / attack_config.create_filename())
     print("Saved adversarial image.")

@@ -33,7 +33,7 @@ def load_adv_image(params) -> torch.tensor:
     )
 
     # load adversarial image
-    filename = exp_config_train.save_folder + attack_config.create_filename()
+    filename = exp_config_train.save_folder / attack_config.create_filename()
     try:
         attack_info_dict = torch.load(filename, weights_only=False)
     except FileNotFoundError:
