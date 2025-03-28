@@ -17,21 +17,22 @@ parameter_collection = product(
     exp_config_train.vlm_list, 
     exp_config_train.max_perturbation_list, 
     exp_config_train.emb_train_loss_type_list, 
-    exp_config_train.is_adaptive_list
+    exp_config_train.is_adaptive_list,
+    exp_config_train.chosen_index_list,
 )
 
 
 for params in parameter_collection:
     
     print(params)
-    ds_name, model_name_emb, model_name_vlm, max_perturbation, emb_train_loss_type, is_adaptive = params
+    ds_name, model_name_emb, model_name_vlm, max_perturbation, emb_train_loss_type, is_adaptive, chosen_index = params
 
     attack_config = AttackConfig(
         ds_name=ds_name,
         model_name_emb=model_name_emb,
         model_name_vlm=model_name_vlm,
         target_answer=exp_config_train.target_answer,
-        chosen_index=exp_config_train.chosen_index,
+        chosen_index=chosen_index,
         max_perturbation=max_perturbation,
         n_gradient_steps=exp_config_train.n_gradient_steps,
         lr_start=exp_config_train.lr_start,
@@ -58,7 +59,7 @@ for params in parameter_collection:
     print("Loaded dataset.")
 
     # choose attacked image
-    chosen_image = ds.images[exp_config_train.chosen_index]
+    chosen_image = ds.images[chosen_index]
     chosen_image = chosen_image.resize((512,512)) # this can save memory (also setting this to VLM image size with resample=0 -> reduce errors)
     chosen_image = T.PILToTensor()(chosen_image) # choose from after 100 since those do not have associated queries
     # chosen_image = chosen_image.type(vlm.model.dtype)

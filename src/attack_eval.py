@@ -13,7 +13,7 @@ import pprint
 
 
 def extract_attack_config(params) -> AttackConfig:
-    ds_name, model_name_emb, model_name_vlm, max_perturbation, emb_train_loss_type, is_adaptive, _, _ = params
+    ds_name, model_name_emb, model_name_vlm, max_perturbation, emb_train_loss_type, is_adaptive, chosen_index, _, _ = params
     lambda_constant = exp_config_train.lambda_constant
 
     attack_config = AttackConfig(
@@ -21,7 +21,7 @@ def extract_attack_config(params) -> AttackConfig:
         model_name_emb=model_name_emb,
         model_name_vlm=model_name_vlm,
         target_answer=exp_config_train.target_answer,
-        chosen_index=exp_config_train.chosen_index,
+        chosen_index=chosen_index,
         max_perturbation=max_perturbation,
         n_gradient_steps=exp_config_train.n_gradient_steps,
         lr_start=exp_config_train.lr_start,
@@ -79,6 +79,7 @@ parameter_collection = product(
     exp_config_train.max_perturbation_list, 
     exp_config_train.emb_train_loss_type_list, 
     exp_config_train.is_adaptive_list,
+    exp_config_train.chosen_index_list,
     exp_config_eval.eval_emb_list,
     exp_config_eval.eval_vlm_list,
 )
@@ -101,7 +102,7 @@ else:
 for i, params in enumerate(parameter_collection):
 
     print("+"*20, f"\nEval {(i+1):4d}/{n_evals}, params -> {params}")
-    ds_name, model_name_emb, model_name_vlm, max_perturbation, emb_train_loss_type, is_adaptive, eval_emb_name, eval_vlm_name = params
+    ds_name, model_name_emb, model_name_vlm, max_perturbation, emb_train_loss_type, is_adaptive, chosen_index, eval_emb_name, eval_vlm_name = params
 
     attack_info_dict = load_adv_image(params)
     image_adv = attack_info_dict['image_adv']
