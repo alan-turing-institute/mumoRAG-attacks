@@ -26,7 +26,6 @@ class AttackConfig:
 
     def create_hash_string(self,):
         # this should include more info, but this suffices for now
-        effective_batch_size = self.max_batch_size_per_iter*self.gradient_acc_steps
         config_str = f"{self.model_name_emb}{self.model_name_vlm}{self.ds_name}{self.chosen_index}{self.target_answer}{self.max_perturbation}{self.emb_train_loss_type}{self.is_adaptive}"
         
         if self.is_adaptive: config_str += f"{self.lambda_constant}"

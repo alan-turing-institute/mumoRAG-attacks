@@ -134,8 +134,8 @@ for i, params in enumerate(parameter_collection):
     # test generation
     if exp_config_eval.do_generation:
         print("=== Evaluating generation ...")
-        metric_dict_test, gs_test = ds.evaluate_generation(vlm, image_adv, exp_config_train.target_answer, metrics=exp_config_eval.gen_metric_list, text_embedder=text_embedder, eval_train=False)
-        metric_dict_train, gs_train = ds.evaluate_generation(vlm, image_adv, exp_config_train.target_answer, metrics=exp_config_eval.gen_metric_list, text_embedder=text_embedder, eval_train=True)
+        metric_dict_test, gs_test = ds.evaluate_generation(vlm, image_adv, exp_config_train.target_answer, metrics=exp_config_eval.gen_metric_list, text_embedder=text_embedder, batch_size=exp_config_eval.gen_batch_size, eval_train=False)
+        metric_dict_train, gs_train = ds.evaluate_generation(vlm, image_adv, exp_config_train.target_answer, metrics=exp_config_eval.gen_metric_list, text_embedder=text_embedder, batch_size=exp_config_eval.gen_batch_size, eval_train=True)
         generation_metric_dict = {"train": metric_dict_train, "test": metric_dict_test}
     
     # save results to JSON format

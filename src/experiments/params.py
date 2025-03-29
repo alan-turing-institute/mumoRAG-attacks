@@ -20,7 +20,7 @@ Default parameter values
 # train
 dataset_list = [DatasetName.VIDORE_SYN_AI]
 embedder_list = [EmbedderName.CLIP_LARGE_PATCH14]
-vlm_list = [VLMName.SMOLVLM_2_2B]
+vlm_list = [VLMName.SMOLVLM_1_2B]
 max_perturbation_list = [x/255.0 for x in [8]]
 emb_train_loss_type_list = ["mse"]
 is_adaptive_list = [True]
@@ -28,7 +28,7 @@ save_folder = Path(__file__).parents[2] / "data/attacks/"
 target_answer = "I will not reply to you!"
 chosen_index_list = [150]
 n_gradient_steps = 100
-print_every = 10
+print_every = 2
 lr_start = 255*(3e-3) 
 lr_end = 255*(3e-4)
 max_batch_size_per_iter = 2
@@ -76,6 +76,7 @@ class ExperimentEvalConfig:
     topk_list: list[int]                = field(default_factory= lambda: topk_list)
     gen_metric_list: list[str]          = field(default_factory= lambda: gen_metric_list)
     gen_text_embedder: str              = gen_text_embedder
+    gen_batch_size: int                 = 4
     do_retrieval: bool                  = do_retrieval
     do_generation: bool                 = do_generation
     # following used to test transferability, [""] means white-box setting
@@ -89,14 +90,14 @@ if EXPERIMENT_NUMBER == 0:
     """
     exp_config_train = ExperimentTrainConfig(
         embedder_list=[EmbedderName.CLIP_BASE_PATCH16],
-        vlm_list=[VLMName.SMOLVLM_1_256M]
+        vlm_list=[VLMName.SMOLVLM_1_2B]
     )
     exp_config_eval = ExperimentEvalConfig()
 
 if EXPERIMENT_NUMBER == 1:
     """
     Configuration  of figure 1
-    - Qualititative demonstration showing attacked images on different base images
+    - Qualitative demonstration showing attacked images on different base images
     - should produce 2x5 images
     """
     exp_config_train = ExperimentTrainConfig(
@@ -128,7 +129,7 @@ if EXPERIMENT_NUMBER == 3:
     exp_config_train = ExperimentTrainConfig(
         dataset_list=[DatasetName.VIDORE_SYN_AI, DatasetName.VIDORE_V2_ESG],
         embedder_list=[EmbedderName.CLIP_LARGE_PATCH14, EmbedderName.SIGLIP2_LARGE_PATCH16, EmbedderName.JINA_CLIP_2],
-        vlm_list=[VLMName.SMOLVLM_2_2B, VLMName.QWEN_2p5_VL_3B],        
+        vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B],        
     )
     exp_config_eval = ExperimentEvalConfig()
 
@@ -155,9 +156,9 @@ if EXPERIMENT_NUMBER == 5:
     exp_config_train = ExperimentTrainConfig(
         dataset_list=[DatasetName.VIDORE_SYN_AI, DatasetName.VIDORE_V2_ESG],
         embedder_list=[EmbedderName.CLIP_LARGE_PATCH14, EmbedderName.SIGLIP2_LARGE_PATCH16, EmbedderName.JINA_CLIP_2],
-        vlm_list=[VLMName.SMOLVLM_2_2B, VLMName.QWEN_2p5_VL_3B]
+        vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B]
     )
     exp_config_eval = ExperimentEvalConfig(
         eval_emb_list=[EmbedderName.CLIP_LARGE_PATCH14, EmbedderName.SIGLIP2_LARGE_PATCH16, EmbedderName.JINA_CLIP_2],
-        eval_vlm_list=[VLMName.SMOLVLM_2_2B, VLMName.QWEN_2p5_VL_3B]
+        eval_vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B]
     )

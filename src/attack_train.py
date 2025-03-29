@@ -21,10 +21,12 @@ parameter_collection = product(
     exp_config_train.chosen_index_list,
 )
 
+parameter_collection = [x for x in parameter_collection]
+n_evals = len(parameter_collection)
 
-for params in parameter_collection:
+for i, params in enumerate(parameter_collection):
     
-    print(params)
+    print("+"*20, f"\nTrain Attack {(i+1):4d}/{n_evals}, params -> {params}")
     ds_name, model_name_emb, model_name_vlm, max_perturbation, emb_train_loss_type, is_adaptive, chosen_index = params
 
     attack_config = AttackConfig(
@@ -83,5 +85,6 @@ for params in parameter_collection:
     # save adv image
     attack_dict = attack_config.to_dict()
     attack_dict["image_adv"] = image_adv.type(torch.uint8)
-    torch.save(attack_dict, exp_config_train.save_folder / attack_config.create_filename())
-    print("Saved adversarial image.")
+    filename = exp_config_train.save_folder / attack_config.create_filename()
+    torch.save(attack_dict, filename)
+    print(f"Saved adversarial image to {filename}.")

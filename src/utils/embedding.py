@@ -59,7 +59,7 @@ class EmbeddingModel:
             self.model = AutoModel.from_pretrained(
                 model_name,
                 torch_dtype=torch.float32 if device == "mps" else "auto").to(device)
-            self.processor = AutoProcessor.from_pretrained(model_name)
+            self.processor = AutoProcessor.from_pretrained(model_name, use_fast=True)
             self.tokenizer = AutoTokenizer.from_pretrained(model_name)
                 
         if model_name == EmbedderName.E5_V:

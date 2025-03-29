@@ -11,7 +11,7 @@ from strenum import StrEnum
 from tqdm import tqdm
 
 from .embedding import EmbeddingModel, EmbedderName
-from .vlm import VLM
+from .vlm import VLM, SMOL_VLMS, QWEN_VLMS
 from .text_embedding import TextEmbeddingModel, TextEmbedderName
 
 
@@ -171,7 +171,7 @@ class ViDoReDataset:
         return metric_dict, retrievals
     
     
-    def evaluate_generation(self, vlm: VLM, image_tensor, target_generation: str, metrics: list[str], text_embedder: TextEmbeddingModel, eval_train=False, print_gen=False):
+    def evaluate_generation(self, vlm: VLM, image_tensor, target_generation: str, metrics: list[str], text_embedder: TextEmbeddingModel, batch_size=None, eval_train=False, print_gen=False):
         """
         By default, we use the test dataset
         """
@@ -180,9 +180,17 @@ class ViDoReDataset:
         metric_dict = {}
 
         queries = self.queries_train if eval_train else self.queries_test
-        generations = vlm.generate(image_tensor, queries, overwrite=True)
-        # extract only the VLM reply
-        generations = [g.split("Assistant:")[-1].strip() for g in generations]
+        if batch_size is None:
+            generations = vlm.generate(image_tensor, queries, overwrite=True)
+        else:
+            generations = []
+            for i in range(math.ceil(len(queries) / batch_size)):
+                queries_batch = queries[i*batch_size:(i+1)*batch_size]
+                generations.extend(vlm.generate(image_tensor, queries_batch, overwrite=True))
+        
+        # extract only the VLM reply (Smol and Qwen need different splittings)
+        split_str = "Assistant:" if vlm.name in SMOL_VLMS else "assistant\n"
+        generations = [g.split(split_str)[-1].strip() for g in generations]
 
         if print_gen: print(generations)
 
