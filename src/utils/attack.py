@@ -3,7 +3,7 @@ import torch.autograd.profiler as profiler
 from .embedding import EmbeddingModel
 from .vlm import VLM
 from .scheduler import LearningRateScheduler
-from .utils import get_memory_consumption
+from .utils import get_memory_consumption, print_memory_consumption
 from .attack_config import AttackConfig
 
 

@@ -5,7 +5,7 @@ from utils.embedding import EmbeddingModel
 from utils.vlm import VLM
 from utils.text_embedding import TextEmbeddingModel
 from utils.dataset import ViDoReDataset
-from utils.attack_config import AttackConfig
+from utils.attack_config import AttackConfig, get_transferability_file_suffix
 from experiments.params import exp_config_train, exp_config_eval
 from itertools import product
 import json
@@ -140,7 +140,7 @@ for i, params in enumerate(parameter_collection):
     
     # save results to JSON format
     metric_dict_full = {"retrieval": retrieval_metric_dict, "generation": generation_metric_dict}
-    with open(exp_config_eval.results_folder / f"metrics_{extract_attack_config(params).create_hash_string()}.json", "w") as file: 
+    with open(exp_config_eval.results_folder / f"metrics_{extract_attack_config(params).create_hash_string()}{get_transferability_file_suffix(exp_config_eval.eval_emb_list, exp_config_eval.eval_vlm_list)}.json", "w") as file: 
         json.dump(metric_dict_full, file)
     print("Saved results.")
     # pprint.pprint(metric_dict_full)

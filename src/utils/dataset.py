@@ -10,7 +10,7 @@ from datasets import load_dataset
 from strenum import StrEnum
 from tqdm import tqdm
 
-from .embedding import EmbeddingModel, EmbedderName
+from .embedding import EmbeddingModel, EmbedderName, COLSMOL_MODELS
 from .vlm import VLM, SMOL_VLMS, QWEN_VLMS
 from .text_embedding import TextEmbeddingModel, TextEmbedderName
 
@@ -128,6 +128,11 @@ class ViDoReDataset:
         """
         creates a [num_queries x num_images] tensor of scores/losses
         """
+        if self.embedder.name in COLSMOL_MODELS or self.embedder.name == EmbedderName.COLPALI_HF:
+            #  from colpali_engine.models import ColPaliProcessor
+            #  processor = ColPaliProcessor.from_pretrained(self.embedder.name)
+             return -1*self.embedder.processor.score_multi_vector(self.query_embeddings, self.image_embeddings)
+
         img_embs = self.image_embeddings.unsqueeze(0).repeat(len(self.queries), 1, 1)
         txt_embs = self.query_embeddings.unsqueeze(1).repeat(1, len(self.images), 1)
         

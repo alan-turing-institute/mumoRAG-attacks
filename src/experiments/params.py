@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 
-# which experiment to run now
+# which experiment to run now?
 EXPERIMENT_NUMBER = 0
 
 
@@ -22,8 +22,8 @@ dataset_list = [DatasetName.VIDORE_SYN_AI]
 embedder_list = [EmbedderName.CLIP_LARGE_PATCH14]
 vlm_list = [VLMName.SMOLVLM_1_2B]
 max_perturbation_list = [x/255.0 for x in [8]]
-emb_train_loss_type_list = ["mse"]
-is_adaptive_list = [True]
+emb_train_loss_type_list = ["cos"]
+is_adaptive_list = [False]
 save_folder = Path(__file__).parents[2] / "data/attacks/"
 target_answer = "I will not reply to you!"
 chosen_index_list = [150]
@@ -89,8 +89,10 @@ if EXPERIMENT_NUMBER == 0:
     testing Configuration
     """
     exp_config_train = ExperimentTrainConfig(
-        embedder_list=[EmbedderName.CLIP_BASE_PATCH16],
-        vlm_list=[VLMName.SMOLVLM_1_2B]
+        embedder_list=[EmbedderName.COLSMOL_256M],
+        vlm_list=[VLMName.SMOLVLM_1_256M],
+        max_batch_size_per_iter = 2,
+        gradient_acc_steps = 4,
     )
     exp_config_eval = ExperimentEvalConfig()
 
@@ -122,43 +124,31 @@ if EXPERIMENT_NUMBER == 3:
     """
     Configuration  of figure 3
     Bar Chart / Big Table: comparing different models
-    - should produce 12 images
+    - should produce 8 images
     - figure shows following metrics: recall_before, recall_after (avg train+test), retrieval_asr_train, retrieval_asr_test, generation_asr_train, generation_asr_test
     - based on results -> we can run it again with higher or smaller max_perturbation    
     """
     exp_config_train = ExperimentTrainConfig(
         dataset_list=[DatasetName.VIDORE_SYN_AI, DatasetName.VIDORE_V2_ESG],
-        embedder_list=[EmbedderName.CLIP_LARGE_PATCH14, EmbedderName.SIGLIP2_LARGE_PATCH16, EmbedderName.JINA_CLIP_2],
+        embedder_list=[EmbedderName.CLIP_LARGE_PATCH14, EmbedderName.JINA_CLIP_2, EmbedderName.COLSMOL_256M],
         vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B],        
     )
     exp_config_eval = ExperimentEvalConfig()
 
+
 if EXPERIMENT_NUMBER == 4:
     """
     Configuration  of figure 4
-    Bar Chart / Big Table: comparing different embedding losses for training the attack
-    - should produce 12 images
-    - figure shows following metrics: recall_before, recall_after (avg train+test), retrieval_asr_train, retrieval_asr_test, generation_asr_train, generation_asr_test    
-    """
-    exp_config_train = ExperimentTrainConfig(
-        embedder_list=[EmbedderName.CLIP_LARGE_PATCH14, EmbedderName.SIGLIP2_LARGE_PATCH16, EmbedderName.JINA_CLIP_2],
-        emb_train_loss_type_list=["mse", "cos"]        
-    )
-    exp_config_eval = ExperimentEvalConfig()
-
-if EXPERIMENT_NUMBER == 5:
-    """
-    Configuration  of figure 5
     Big Table: transferability between models (12 x 12 table, diagonals are white-box attacks) 
-    - should produce 12 x 12 images
+    - should produce 8 x 8 images
     - figure shows following metrics: recall_before, recall_after (avg train+test), retrieval_asr_train, retrieval_asr_test, generation_asr_train, generation_asr_test    
     """
     exp_config_train = ExperimentTrainConfig(
         dataset_list=[DatasetName.VIDORE_SYN_AI, DatasetName.VIDORE_V2_ESG],
-        embedder_list=[EmbedderName.CLIP_LARGE_PATCH14, EmbedderName.SIGLIP2_LARGE_PATCH16, EmbedderName.JINA_CLIP_2],
+        embedder_list=[EmbedderName.CLIP_LARGE_PATCH14, EmbedderName.JINA_CLIP_2, EmbedderName.COLSMOL_256M],
         vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B]
     )
     exp_config_eval = ExperimentEvalConfig(
-        eval_emb_list=[EmbedderName.CLIP_LARGE_PATCH14, EmbedderName.SIGLIP2_LARGE_PATCH16, EmbedderName.JINA_CLIP_2],
+        eval_emb_list=[EmbedderName.CLIP_LARGE_PATCH14, EmbedderName.JINA_CLIP_2, EmbedderName.COLSMOL_256M],
         eval_vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B]
     )

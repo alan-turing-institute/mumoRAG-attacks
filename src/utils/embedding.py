@@ -5,6 +5,7 @@ from .image_utils import process_image
 from .utils import plot_images
 import torchvision.transforms as T
 from strenum import StrEnum
+from colpali_engine.models import ColIdefics3, ColIdefics3Processor
 
 
 class EmbedderName(StrEnum):
@@ -15,6 +16,8 @@ class EmbedderName(StrEnum):
     JINA_CLIP_2 = "jinaai/jina-clip-v2"
     E5_V = "royokong/e5-v"
     COLPALI_HF = "vidore/colpali-v1.3-hf"
+    COLSMOL_500M = "vidore/colSmol-500M"
+    COLSMOL_256M = "vidore/colSmol-256M"
     QWEN2_GME_2B = "Alibaba-NLP/gme-Qwen2-VL-2B-Instruct"
     QWEN2_GME_7B = "Alibaba-NLP/gme-Qwen2-VL-7B-Instruct"
 
@@ -23,6 +26,11 @@ CLIP_LIKE_MODELS = [
     EmbedderName.CLIP_LARGE_PATCH14,
     EmbedderName.SIGLIP2_BASE_PATCH16,
     EmbedderName.SIGLIP2_LARGE_PATCH16,
+]
+
+COLSMOL_MODELS = [
+    EmbedderName.COLSMOL_500M,
+    EmbedderName.COLSMOL_256M,
 ]
 
 # candidate models
@@ -77,7 +85,20 @@ class EmbeddingModel:
                 torch_dtype=torch.float32 if device == "mps" else "auto").to(device)
             self.processor = AutoProcessor.from_pretrained(model_name)
             self.tokenizer = None
-            self.processor.image_processor.image_seq_length = 256 # default is 1024
+            self.processor.image_seq_length = 256 # default is 1024
+
+        if model_name in COLSMOL_MODELS:
+            # self.model = ColIdefics3.from_pretrained(
+            #     model_name,
+            #     torch_dtype=torch.bfloat16,
+            #     device_map=device,
+            # ).eval()
+            self.model = ColIdefics3.from_pretrained(
+                model_name,
+                torch_dtype=torch.float32 if device == "mps" else torch.bfloat16).to(device).eval()
+            self.tokenizer = None
+            self.processor = ColIdefics3Processor.from_pretrained(model_name)
+            self.processor.image_processor.do_image_splitting = False
 
         
         self.model.requires_grad_(False)
@@ -121,6 +142,11 @@ class EmbeddingModel:
         if self.name == EmbedderName.COLPALI_HF:
             batch_queries = self.processor.process_queries(user_query).to(self.device)
             user_query_embedding = self.model(**batch_queries).embeddings
+            return user_query_embedding
+        
+        if self.name in COLSMOL_MODELS:
+            batch_queries = self.processor.process_queries(user_query).to(self.device)
+            user_query_embedding = self.model(**batch_queries)
             return user_query_embedding
 
 
@@ -182,7 +208,21 @@ class EmbeddingModel:
                 image_input_emb = self.processor.process_images(image).to(self.device)
             
             image_embedding = self.model(**image_input_emb).embeddings
-            # print(image_embedding.shape)
+            return image_embedding
+        
+        if self.name in COLSMOL_MODELS:
+
+            if overwrite:
+                image_input_emb = self.processor.process_images([T.ToPILImage()(mock_image)]).to(self.device)
+
+                # we cannot process multiple images
+                image_ppd_emb = process_image(image, self)
+                image_input_emb['pixel_values'][0] = image_ppd_emb
+            else:
+                if not isinstance(image, list): image=[image]
+                image_input_emb = self.processor.process_images(image).to(self.device)
+            
+            image_embedding = self.model(**image_input_emb)
             return image_embedding
 
 
@@ -193,6 +233,8 @@ class EmbeddingModel:
         # colpali has its own retrieval score (MaxSim)
         if self.name == EmbedderName.COLPALI_HF:
             return -1*self.processor.score_retrieval(text_embedding, image_embedding, output_device=self.device).mean()
+        if self.name in COLSMOL_MODELS:
+            return -1*self.processor.score_multi_vector(text_embedding, image_embedding, device=self.device).mean()
 
         if loss_type == "mse":
             return torch.nn.functional.mse_loss(image_embedding, text_embedding)

@@ -40,3 +40,10 @@ class AttackConfig:
     
     def to_dict(self,):
         return asdict(self)
+
+# standalone function
+def get_transferability_file_suffix(eval_emb_name, eval_vlm_name):
+    if eval_emb_name == "" and eval_vlm_name == "": return ""
+    
+    transfer_str = f"{eval_emb_name}{eval_vlm_name}"
+    return f"_{hashlib.md5(transfer_str.encode()).hexdigest()}"
