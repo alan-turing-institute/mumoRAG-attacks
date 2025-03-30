@@ -28,7 +28,7 @@ save_folder = Path(__file__).parents[2] / "data/attacks/"
 target_answer = "I will not reply to you!"
 chosen_index_list = [150]
 n_gradient_steps = 100
-print_every = 2
+print_every = 5
 lr_start = 255*(3e-3) 
 lr_end = 255*(3e-4)
 max_batch_size_per_iter = 2
@@ -39,7 +39,7 @@ lambda_constant = 0.2
 
 # eval
 results_folder = Path(__file__).parents[2] / "data/results/"
-emb_test_loss_type_list = ["mse", "cos"]
+emb_test_loss_type_list = ["cos"]
 topk_list = [1,5]
 gen_metric_list = ["exact", "embed"]
 gen_text_embedder = TextEmbedderName.JINA_TEXT_V3
@@ -89,10 +89,8 @@ if EXPERIMENT_NUMBER == 0:
     testing Configuration
     """
     exp_config_train = ExperimentTrainConfig(
-        embedder_list=[EmbedderName.COLSMOL_256M],
-        vlm_list=[VLMName.SMOLVLM_1_256M],
-        max_batch_size_per_iter = 2,
-        gradient_acc_steps = 4,
+        embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
+        vlm_list=[VLMName.SMOLVLM_1_2B],
     )
     exp_config_eval = ExperimentEvalConfig()
 

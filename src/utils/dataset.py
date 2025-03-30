@@ -163,13 +163,14 @@ class ViDoReDataset:
             correct_retrievals = [any(x in topk.indices[i] for x in self.ground_truth[i]) for i in range(len(self.queries))]
             accuracy_train = sum(correct_retrievals[:self.num_train]) / self.num_train
             accuracy_test = sum(correct_retrievals[self.num_train:]) / self.num_test
+            accuracy = accuracy_train * self.train_ratio + accuracy_test * (1-self.train_ratio)
 
             # if include_adv=False, then will always be zero
             adversarial_retrievals = [self.num_images_orig in topk.indices[i] for i in range(len(self.queries))]
             asr_train = sum(adversarial_retrievals[:self.num_train]) / self.num_train
             asr_test = sum(adversarial_retrievals[self.num_train:]) / self.num_test
 
-            metric_dict[f"loss_{loss_type}_topk_{k}"] = {"acc_train": accuracy_train, "acc_test": accuracy_test, "asr_train": asr_train, "asr_test": asr_test}
+            metric_dict[f"loss_{loss_type}_topk_{k}"] = {"acc": accuracy, "asr_train": asr_train, "asr_test": asr_test}
             # keep only the retrievals for highest k, should include those for small k
             retrievals[f"loss_{loss_type}"] = topk.indices
 

@@ -56,18 +56,12 @@ def get_retrieval_saved_info(metric_dict_before, metric_dict_after):
     retrieval_dict["topk_list"] = exp_config_eval.topk_list
     retrieval_dict["eval_emb_loss"] = exp_config_eval.emb_test_loss_type_list
     
-    retrieval_dict["train"] = {}
-    retrieval_dict["test"] = {}
     for k in metric_dict_before.keys():
-        retrieval_dict['train'][k] = {
-            "recall_before": metric_dict_before[k]["acc_train"],
-            "recall_after": metric_dict_after[k]["acc_train"],
-            "asr": metric_dict_after[k]["asr_train"]
-        }
-        retrieval_dict['test'][k] = {
-            "recall_before": metric_dict_before[k]["acc_test"],
-            "recall_after": metric_dict_after[k]["acc_test"],
-            "asr": metric_dict_after[k]["asr_test"]
+        retrieval_dict[k] = {
+            "recall_before": metric_dict_before[k]["acc"],
+            "recall_after": metric_dict_after[k]["acc"],
+            "asr_train": metric_dict_after[k]["asr_train"],
+            "asr_test": metric_dict_after[k]["asr_test"]
         }
     return retrieval_dict
 
@@ -139,8 +133,8 @@ for i, params in enumerate(parameter_collection):
         generation_metric_dict = {"train": metric_dict_train, "test": metric_dict_test}
     
     # save results to JSON format
-    metric_dict_full = {"retrieval": retrieval_metric_dict, "generation": generation_metric_dict}
+    metric_dict_full = {"retrieval": retrieval_metric_dict, "generation": generation_metric_dict, "attack_config": extract_attack_config(params).to_dict()}
     with open(exp_config_eval.results_folder / f"metrics_{extract_attack_config(params).create_hash_string()}{get_transferability_file_suffix(exp_config_eval.eval_emb_list, exp_config_eval.eval_vlm_list)}.json", "w") as file: 
-        json.dump(metric_dict_full, file)
+        json.dump(metric_dict_full, file, indent=4)
     print("Saved results.")
     # pprint.pprint(metric_dict_full)
