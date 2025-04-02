@@ -18,6 +18,7 @@ class EmbedderName(StrEnum):
     COLPALI_HF = "vidore/colpali-v1.3-hf"
     COLSMOL_500M = "vidore/colSmol-500M"
     COLSMOL_256M = "vidore/colSmol-256M"
+    COLPALI = "vidore/colpali-v1.3"
     QWEN2_GME_2B = "Alibaba-NLP/gme-Qwen2-VL-2B-Instruct"
     QWEN2_GME_7B = "Alibaba-NLP/gme-Qwen2-VL-7B-Instruct"
 
@@ -235,6 +236,8 @@ class EmbeddingModel:
             return -1*self.processor.score_retrieval(text_embedding, image_embedding, output_device=self.device).mean()
         if self.name in COLSMOL_MODELS:
             return -1*self.processor.score_multi_vector(text_embedding, image_embedding, device=self.device).mean()
+            # conventional cosine similarity
+            # return 1 - torch.nn.CosineSimilarity()(image_embedding.mean(dim=1), text_embedding.mean(dim=1)).mean()
 
         if loss_type == "mse":
             return torch.nn.functional.mse_loss(image_embedding, text_embedding)

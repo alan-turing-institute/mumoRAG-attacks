@@ -8,6 +8,7 @@ from utils.dataset import ViDoReDataset, DatasetName
 from utils.attack_config import AttackConfig
 from itertools import product
 from experiments.params import exp_config_train
+import gc
 
 
 device = get_device(prefer_mps=True)
@@ -88,3 +89,7 @@ for i, params in enumerate(parameter_collection):
     filename = exp_config_train.save_folder / attack_config.create_filename()
     torch.save(attack_dict, filename)
     print(f"Saved adversarial image to {filename}.")
+
+
+    del embedder, vlm, ds
+    gc.collect()

@@ -6,12 +6,12 @@ from utils.dataset import DatasetName
 from utils.embedding import EmbedderName
 from utils.text_embedding import TextEmbedderName
 from utils.vlm import VLMName
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 from pathlib import Path
 
 
 # which experiment to run now?
-EXPERIMENT_NUMBER = 0
+EXPERIMENT_NUMBER = -2
 
 
 """
@@ -84,6 +84,90 @@ class ExperimentEvalConfig:
     eval_vlm_list: list[str]            = field(default_factory= lambda: eval_vlm_list)
 
 
+
+if EXPERIMENT_NUMBER == -1:
+    """
+    testing Configuration (same to testing models, but without Qwen-3B)
+    """
+    exp_config_train = ExperimentTrainConfig(
+        dataset_list=[DatasetName.VIDORE_SYN_AI, DatasetName.VIDORE_V2_ESG],
+        embedder_list=[EmbedderName.CLIP_LARGE_PATCH14, EmbedderName.JINA_CLIP_2, EmbedderName.COLSMOL_500M],
+        vlm_list=[VLMName.SMOLVLM_1_256M, VLMName.SMOLVLM_1_500M],
+        max_perturbation_list=[x/255.0 for x in [8, 16]],
+        save_folder = Path(__file__).parents[2] / "data/attacks/mac/",
+        n_gradient_steps=100,
+        print_every=5
+    )
+    exp_config_eval = ExperimentEvalConfig()
+
+if EXPERIMENT_NUMBER == -2:
+    """
+    to test perturbation plot
+    """
+    exp_config_train = ExperimentTrainConfig(
+        dataset_list=[DatasetName.VIDORE_SYN_AI],
+        embedder_list=[EmbedderName.CLIP_LARGE_PATCH14, EmbedderName.JINA_CLIP_2, EmbedderName.COLSMOL_500M],
+        vlm_list=[VLMName.SMOLVLM_1_256M, VLMName.SMOLVLM_1_500M],
+        max_perturbation_list=[x/255.0 for x in [8, 16]],
+        save_folder = Path(__file__).parents[2] / "data/attacks/mac/",
+        n_gradient_steps=100,
+    )
+    exp_config_eval = ExperimentEvalConfig()
+
+if EXPERIMENT_NUMBER == -22:
+    """
+    to test perturbation plot
+    """
+    exp_config_train = ExperimentTrainConfig(
+        dataset_list=[DatasetName.VIDORE_SYN_AI],
+        embedder_list=[EmbedderName.COLSMOL_500M],
+        vlm_list=[VLMName.SMOLVLM_1_256M],
+        max_perturbation_list=[x/255.0 for x in [1, 4, 8, 16, 32, 64, 256]],
+        save_folder = Path(__file__).parents[2] / "data/attacks/mac/",
+        n_gradient_steps=100,
+    )
+    exp_config_eval = ExperimentEvalConfig()
+
+if EXPERIMENT_NUMBER == -3:
+    """
+    to test heatmap
+    """
+    exp_config_train = ExperimentTrainConfig(
+        dataset_list=[DatasetName.VIDORE_SYN_AI],
+        # dataset_list=[DatasetName.VIDORE_V2_ESG],
+        embedder_list=[EmbedderName.CLIP_LARGE_PATCH14, EmbedderName.JINA_CLIP_2, EmbedderName.COLSMOL_500M],
+        vlm_list=[VLMName.SMOLVLM_1_256M, VLMName.SMOLVLM_1_500M],
+        max_perturbation_list=[x/255.0 for x in [8]],
+        save_folder = Path(__file__).parents[2] / "data/attacks/mac/",
+        n_gradient_steps=100,
+    )
+    exp_config_eval = ExperimentEvalConfig()
+
+if EXPERIMENT_NUMBER == -4:
+    """
+    Configuration to test transferability (6x6)
+    """
+    exp_config_train = ExperimentTrainConfig(
+        embedder_list=[EmbedderName.CLIP_LARGE_PATCH14, EmbedderName.JINA_CLIP_2, EmbedderName.COLSMOL_500M],
+        vlm_list=[VLMName.SMOLVLM_1_256M, VLMName.SMOLVLM_1_500M],
+        save_folder = Path(__file__).parents[2] / "data/attacks/mac/"
+    )
+    exp_config_eval = ExperimentEvalConfig(
+        eval_emb_list=[EmbedderName.CLIP_LARGE_PATCH14, EmbedderName.JINA_CLIP_2, EmbedderName.COLSMOL_500M],
+        eval_vlm_list=[VLMName.SMOLVLM_1_256M, VLMName.SMOLVLM_1_500M]
+    )
+if EXPERIMENT_NUMBER == -5:
+    """
+    Configuration  to test showing images
+    - Qualitative demonstration showing non-attacked and attacked images on different base images
+    """
+    exp_config_train = ExperimentTrainConfig(
+        dataset_list=[DatasetName.VIDORE_SYN_AI, DatasetName.VIDORE_V2_ESG],
+        embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
+        vlm_list=[VLMName.SMOLVLM_1_256M],
+        save_folder = Path(__file__).parents[2] / "data/attacks/mac/"
+    )
+    exp_config_eval = ExperimentEvalConfig()
 if EXPERIMENT_NUMBER == 0:
     """
     testing Configuration
