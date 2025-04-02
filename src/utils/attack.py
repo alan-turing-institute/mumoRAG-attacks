@@ -3,7 +3,7 @@ import torch.autograd.profiler as profiler
 from .embedding import EmbeddingModel
 from .vlm import VLM
 from .scheduler import LearningRateScheduler
-from .utils import get_memory_consumption
+from .utils import get_memory_consumption, print_memory_consumption
 from .attack_config import AttackConfig
 
 
@@ -42,7 +42,7 @@ def rag_attack(
     is_adaptive = config.is_adaptive
     lambda_constant = config.lambda_constant
 
-    initial_image = raw_image.clone()
+    initial_image = raw_image.clone().float() if device=="cuda" else raw_image.clone()
     max_perturbation_pixels = max_perturbation*255
     batch_size_per_iter = min(len(user_query), max_batch_size_per_iter)
     n_iter = n_gradient_steps * gradient_acc_steps

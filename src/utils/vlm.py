@@ -8,14 +8,21 @@ from strenum import StrEnum
 class VLMName(StrEnum):
     SMOLVLM_1_256M = "HuggingFaceTB/SmolVLM-256M-Instruct"
     SMOLVLM_1_500M = "HuggingFaceTB/SmolVLM-500M-Instruct"
-    SMOLVLM_2_2B = "HuggingFaceTB/SmolVLM2-2.2B-Instruct"
+    SMOLVLM_1_2B = "HuggingFaceTB/SmolVLM-Instruct" 
+    # SMOLVLM_2_2B = "HuggingFaceTB/SmolVLM2-2.2B-Instruct"
     QWEN_2p5_VL_3B = "Qwen/Qwen2.5-VL-3B-Instruct"
     QWEN_2p5_VL_7B = "Qwen/Qwen2.5-VL-7B-Instruct"
 
 SMOL_VLMS = [
     VLMName.SMOLVLM_1_256M,
     VLMName.SMOLVLM_1_500M,
-    VLMName.SMOLVLM_2_2B,    
+    VLMName.SMOLVLM_1_2B,
+    # VLMName.SMOLVLM_2_2B,    
+]
+
+QWEN_VLMS = [
+    VLMName.QWEN_2p5_VL_3B,
+    VLMName.QWEN_2p5_VL_7B,
 ]
 
 MODEL_NAMES = [

@@ -10,8 +10,9 @@ from datasets import load_dataset
 from strenum import StrEnum
 from tqdm import tqdm
 
-from .embedding import EmbeddingModel, EmbedderName
-from .vlm import VLM
+from .embedding import EmbeddingModel, EmbedderName, COLSMOL_MODELS
+from .vlm import VLM, SMOL_VLMS, QWEN_VLMS
+from .text_embedding import TextEmbeddingModel, TextEmbedderName
 
 
 class DatasetName(StrEnum):
@@ -84,7 +85,7 @@ class ViDoReDataset:
         else:
             self.images[-1] = adv_img
             if self.do_retrieval: self.image_embeddings[-1,:] = self.embedder.compute_img_embedding([adv_img], None)
-        print(f"Added adversarial image embeddings in {time.time()-t:.2f}s")
+        # print(f"Added adversarial image embeddings in {time.time()-t:.2f}s")
     
    
     def attempt_load_embeddings(self,):
@@ -127,6 +128,20 @@ class ViDoReDataset:
         """
         creates a [num_queries x num_images] tensor of scores/losses
         """
+        if self.embedder.name in COLSMOL_MODELS or self.embedder.name == EmbedderName.COLPALI_HF:
+            #  from colpali_engine.models import ColPaliProcessor
+            #  processor = ColPaliProcessor.from_pretrained(self.embedder.name)
+            return -1*self.embedder.processor.score_multi_vector(self.query_embeddings, self.image_embeddings)
+            #[num_images x num_tokens x embed_dim]
+            # conventional cosine similarity
+            # img_embs = self.image_embeddings.unsqueeze(0).repeat(len(self.queries), 1, 1, 1)
+            # txt_embs = self.query_embeddings.unsqueeze(1).repeat(1, len(self.images), 1, 1)
+            # return 1 - torch.nn.functional.cosine_similarity(img_embs.mean(dim=2), txt_embs.mean(dim=2), dim=-1)
+            # less memory hungry
+            # img_embs = self.image_embeddings.mean(dim=1).unsqueeze(0).repeat(len(self.queries), 1, 1)
+            # txt_embs = self.query_embeddings.mean(dim=1).unsqueeze(1).repeat(1, len(self.images), 1)
+            # return 1 - torch.nn.functional.cosine_similarity(img_embs, txt_embs, dim=-1)
+
         img_embs = self.image_embeddings.unsqueeze(0).repeat(len(self.queries), 1, 1)
         txt_embs = self.query_embeddings.unsqueeze(1).repeat(1, len(self.images), 1)
         
@@ -157,36 +172,56 @@ class ViDoReDataset:
             correct_retrievals = [any(x in topk.indices[i] for x in self.ground_truth[i]) for i in range(len(self.queries))]
             accuracy_train = sum(correct_retrievals[:self.num_train]) / self.num_train
             accuracy_test = sum(correct_retrievals[self.num_train:]) / self.num_test
+            accuracy = accuracy_train * self.train_ratio + accuracy_test * (1-self.train_ratio)
 
             # if include_adv=False, then will always be zero
             adversarial_retrievals = [self.num_images_orig in topk.indices[i] for i in range(len(self.queries))]
             asr_train = sum(adversarial_retrievals[:self.num_train]) / self.num_train
             asr_test = sum(adversarial_retrievals[self.num_train:]) / self.num_test
 
-            metric_dict[f"loss_{loss_type}_topk_{k}"] = {"acc_train": accuracy_train, "acc_test": accuracy_test, "asr_train": asr_train, "asr_test": asr_test}
+            metric_dict[f"loss_{loss_type}_topk_{k}"] = {"acc": accuracy, "asr_train": asr_train, "asr_test": asr_test}
             # keep only the retrievals for highest k, should include those for small k
             retrievals[f"loss_{loss_type}"] = topk.indices
 
         return metric_dict, retrievals
     
     
-    def evaluate_generation(self, vlm: VLM, image_tensor, target_generation: str, metric="exact", eval_train=False, print_gen=False):
+    def evaluate_generation(self, vlm: VLM, image_tensor, target_generation: str, metrics: list[str], text_embedder: TextEmbeddingModel, batch_size=None, eval_train=False, print_gen=False):
         """
         By default, we use the test dataset
         """
         t = time.time()
 
+        metric_dict = {}
+
         queries = self.queries_train if eval_train else self.queries_test
-        generations = vlm.generate(image_tensor, queries, overwrite=True)
-        # extract only the VLM reply
-        generations = [g.split("Assistant:")[-1].strip() for g in generations]
+        if batch_size is None:
+            generations = vlm.generate(image_tensor, queries, overwrite=True)
+        else:
+            generations = []
+            for i in range(math.ceil(len(queries) / batch_size)):
+                queries_batch = queries[i*batch_size:(i+1)*batch_size]
+                generations.extend(vlm.generate(image_tensor, queries_batch, overwrite=True))
+        
+        # extract only the VLM reply (Smol and Qwen need different splittings)
+        split_str = "Assistant:" if vlm.name in SMOL_VLMS else "assistant\n"
+        generations = [g.split(split_str)[-1].strip() for g in generations]
 
         if print_gen: print(generations)
 
-        if metric == "exact":
-            correct_generations = [g == target_generation for g in generations]
-        asr = sum(correct_generations) / len(queries)
+        for metric in metrics:
+            # exact match of VLM generation and target answer
+            if metric == "exact":
+                correct_generations = [g == target_generation for g in generations]
+                metric_value = sum(correct_generations) / len(queries)
+            
+            # similarity score between VLM generation and target anser in [0,1]
+            if metric == "embed":
+                similarity = text_embedder.compare_embeddings(generations, target_generation, similarity_metric="cos")
+                metric_value = similarity.mean().item()
+
+            metric_dict[metric] = metric_value
 
         print(f"Evaluated {len(queries)} generations in {time.time()-t:.2f}s")
 
-        return asr, generations
+        return metric_dict, generations

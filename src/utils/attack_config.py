@@ -24,16 +24,26 @@ class AttackConfig:
     lambda_constant: float 
 
 
-    def create_filename(self,):
+    def create_hash_string(self,):
         # this should include more info, but this suffices for now
-        effective_batch_size = self.max_batch_size_per_iter*self.gradient_acc_steps
         config_str = f"{self.model_name_emb}{self.model_name_vlm}{self.ds_name}{self.chosen_index}{self.target_answer}{self.max_perturbation}{self.emb_train_loss_type}{self.is_adaptive}"
         
         if self.is_adaptive: config_str += f"{self.lambda_constant}"
         else: config_str += f"{self.lambda_emb}{self.lambda_vlm}"
         
-        hash_str = hashlib.md5(config_str.encode())
-        return f"adv_img_{hash_str.hexdigest()}.pt"
+        hash_str = hashlib.md5(config_str.encode()).hexdigest()
+        return hash_str
+
+    def create_filename(self,):
+        hash_str = self.create_hash_string()
+        return f"adv_img_{hash_str}.pt"
     
     def to_dict(self,):
         return asdict(self)
+
+# standalone function
+def get_transferability_file_suffix(eval_emb_name, eval_vlm_name):
+    if eval_emb_name == "" and eval_vlm_name == "": return ""
+    
+    transfer_str = f"{eval_emb_name}{eval_vlm_name}"
+    return f"_{hashlib.md5(transfer_str.encode()).hexdigest()}"
