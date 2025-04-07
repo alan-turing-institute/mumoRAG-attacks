@@ -3,7 +3,7 @@ This file includes different configurations for the parameters of the attack and
 """
 
 from utils.dataset import DatasetName
-from utils.embedding import EmbedderName
+from utils.embedding import EmbedderName, COLPALI_MODELS, COLPALI_LOSSES
 from utils.text_embedding import TextEmbedderName
 from utils.vlm import VLMName
 from dataclasses import dataclass, field, asdict
@@ -234,3 +234,10 @@ if EXPERIMENT_NUMBER == 4:
         eval_emb_list=[EmbedderName.CLIP_LARGE_PATCH14, EmbedderName.JINA_CLIP_2, EmbedderName.COLSMOL_256M],
         eval_vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B]
     )
+
+
+def is_loss_comaptible(model_name_emb, loss_type):
+    if (model_name_emb in COLPALI_MODELS and loss_type not in COLPALI_LOSSES) or \
+        (model_name_emb not in COLPALI_MODELS and loss_type in COLPALI_LOSSES):
+        return False
+    return True
