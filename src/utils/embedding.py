@@ -5,11 +5,7 @@ from .image_utils import process_image
 from .utils import plot_images
 import torchvision.transforms as T
 from strenum import StrEnum
-<<<<<<< HEAD
-=======
-from colpali_engine.models import ColIdefics3, ColIdefics3Processor
 from typing import List, Optional, Union
->>>>>>> functionality to compute smoother colpali losses and attacks
 
 
 class EmbedderName(StrEnum):
@@ -85,9 +81,10 @@ MODEL_NAMES = [
 
 class EmbeddingModel:
 
-    def __init__(self, model_name: EmbedderName, device, quantize=False):
+    def __init__(self, model_name, device, quantize=False, colpali_only_images=False):
         self.name = model_name
         self.device = device
+        self.colpali_only_images = colpali_only_images
 
         quantization_config = BitsAndBytesConfig(load_in_4bit=True) if quantize else None
         
@@ -125,10 +122,7 @@ class EmbeddingModel:
             self.tokenizer = None
 
         if model_name in COLSMOL_MODELS:
-<<<<<<< HEAD
             from colpali_engine.models import ColIdefics3, ColIdefics3Processor
-=======
->>>>>>> functionality to compute smoother colpali losses and attacks
             self.model = ColIdefics3.from_pretrained(
                 model_name,
                 torch_dtype=torch.float32 if device == "mps" else torch.bfloat16).to(device).eval()
@@ -240,52 +234,36 @@ class EmbeddingModel:
                 if not isinstance(image, list): image=[image]
                 image_input_emb = self.processor.process_images(image).to(self.device)
             
-            image_embedding = self.model(**image_input_emb)
-            # TODO: uncomment to allow to remove non-image tokens
-            # image_input_emb.input_ids = image_input_emb.input_ids[:,9:-2]
-            # image_input_emb.attention_mask = image_input_emb.attention_mask[:,9:-2]
-            # image_embedding = self.model(input_ids=image_input_emb.input_ids, attention_mask=image_input_emb.attention_mask, pixel_values=image_input_emb.pixel_values, pixel_attention_mask=image_input_emb.pixel_attention_mask)
+            if self.colpali_only_images:
+                # remove non-image tokens
+                # hard-coding indices works for now, but may not for futute versions of colpali
+                image_input_emb.input_ids = image_input_emb.input_ids[:,9:-2]
+                image_input_emb.attention_mask = image_input_emb.attention_mask[:,9:-2]
+                image_embedding = self.model(input_ids=image_input_emb.input_ids, attention_mask=image_input_emb.attention_mask, pixel_values=image_input_emb.pixel_values, pixel_attention_mask=image_input_emb.pixel_attention_mask)
+            else:
+                image_embedding = self.model(**image_input_emb)
             return image_embedding
 
         raise ValueError(f"Not supported model {self.name}!")
 
     def compute_embedding_loss(self, image_embedding, text_embedding, loss_type: str):
         # colpali has its own retrieval score (MaxSim)
-<<<<<<< HEAD
-        if self.name in COLSMOL_MODELS or self.name == EmbedderName.COLPALI:
-            return -1 * self.processor.score_multi_vector(text_embedding, image_embedding, device=self.device).mean()
-            # return 1 - torch.nn.CosineSimilarity()(image_embedding.mean(dim=1), text_embedding.mean(dim=1)).mean()
+        if (self.name in COLPALI_MODELS or self.name == EmbedderName.COLPALI) and loss_type != EmbeddingLoss.COS_AVGEMB:
+            # my version of the scoring function (allowing different losses)
+            return -1*score_multi_vector_modified(text_embedding, image_embedding, device=self.device, loss=loss_type).mean()
 
         match loss_type:
-            case "mse":
+            case EmbeddingLoss.COS_AVGEMB:
+                return 1-torch.nn.CosineSimilarity()(image_embedding.mean(dim=1), text_embedding.mean(dim=1)).mean()
+            case EmbeddingLoss.MSE:
                 return torch.nn.functional.mse_loss(image_embedding, text_embedding)
             case "l2":
                 return torch.nn.functional.pairwise_distance(image_embedding, text_embedding).mean()
             case "l2_nosqrt":
                 return torch.nn.functional.pairwise_distance(image_embedding, text_embedding).pow(2).mean()
-            case "cos":
+            case EmbeddingLoss.COS:
                 # return -(image_embedding @ text_embedding.transpose(0,1)).mean()
                 return 1-torch.nn.CosineSimilarity()(image_embedding, text_embedding).mean()
-=======
-        # if self.name == EmbedderName.COLPALI_HF:
-        #     return -1*self.processor.score_retrieval(text_embedding, image_embedding, output_device=self.device).mean()
-        if self.name in COLPALI_MODELS and loss_type != EmbeddingLoss.COS_AVGEMB:
-            # my version of the scoring function (allowing different losses)
-            return -1*score_multi_vector_modified(text_embedding, image_embedding, device=self.device, loss=loss_type).mean()
-
-        if loss_type == EmbeddingLoss.COS_AVGEMB:
-            return 1-torch.nn.CosineSimilarity()(image_embedding.mean(dim=1), text_embedding.mean(dim=1)).mean()
-
-        if loss_type == EmbeddingLoss.MSE:
-            return torch.nn.functional.mse_loss(image_embedding, text_embedding)
-        elif loss_type == "l2":
-            return torch.nn.functional.pairwise_distance(image_embedding, text_embedding).mean()
-        elif loss_type == "l2_nosqrt":
-            return torch.nn.functional.pairwise_distance(image_embedding, text_embedding).pow(2).mean()
-        elif loss_type == EmbeddingLoss.COS:
-            # return -(image_embedding @ text_embedding.transpose(0,1)).mean()
-            return 1-torch.nn.CosineSimilarity()(image_embedding, text_embedding).mean()
->>>>>>> functionality to compute smoother colpali losses and attacks
 
 """
 Functions

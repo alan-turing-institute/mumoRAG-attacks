@@ -96,6 +96,7 @@ class ViDoReDataset:
 
     def embeddings_filename(self,):
         emb_str = f"{self.ds_name}{self.embedder.name}"
+        if self.embedder.colpali_only_images: emb_str += f"{self.embedder.colpali_only_images}"
         hash_str = hashlib.md5(emb_str.encode()).hexdigest()
         return self.embeddings_folder / f"embeds_{hash_str}.pt"
 
