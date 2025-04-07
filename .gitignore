@@ -5,3 +5,5 @@ __pycache__/
 .ipynb_checkpoints/
 
 .venv
+.mypy_cache
+.ruff_cache

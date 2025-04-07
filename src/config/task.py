@@ -4,7 +4,7 @@ from itertools import product
 from typing import Optional
 
 from utils.dataset import DatasetName
-from utils.embedding import EmbedderName
+from utils.embedding import EmbedderName, EmbeddingLoss, COLPALI_MODELS
 from utils.vlm import VLMName
 from .experiment import ExperimentConfig
 
@@ -16,6 +16,7 @@ class TaskConfig:
     A specific combination of values from ExperimentTrainConfig and ExperimentEvalConfig.
     Useful when saving and loading adversarial images.
     """
+
     ds_name: DatasetName
     model_name_emb: EmbedderName
     model_name_vlm: VLMName
@@ -29,11 +30,12 @@ class TaskConfig:
     gradient_acc_steps: int
     lambda_emb: float
     lambda_vlm: float
-    emb_train_loss_type: str
+    emb_train_loss_type: EmbeddingLoss
     is_adaptive: bool
     lambda_constant: float
-    eval_emb_name: Optional[EmbedderName]
-    eval_vlm_name: Optional[VLMName]
+    eval_emb_name: Optional[EmbedderName] = None
+    eval_vlm_name: Optional[VLMName] = None
+    colpali_only_images: bool = False
 
     def create_hash_string(self):
         # this should include more info, but this suffices for now
@@ -43,9 +45,12 @@ class TaskConfig:
             config_str += f"{self.lambda_constant}"
         else:
             # fixme: this is a hack to make old data work
-            # the default values were ints, despite being typed as float; new config correctly loads it as float 2.0 but generates different hash
+            # the default values were ints, despite being typed as float; new config correctly loads it as float but generates different hash
             # config_str += f"{float(self.lambda_emb)}{float(self.lambda_vlm)}"
             config_str += f"{int(self.lambda_emb) if float(self.lambda_emb).is_integer() else self.lambda_emb}{int(self.lambda_vlm) if float(self.lambda_vlm).is_integer() else self.lambda_vlm}"
+
+        if self.model_name_emb in COLPALI_MODELS and self.colpali_only_images:
+            config_str += f"{self.colpali_only_images}"
         hash_str = hashlib.md5(config_str.encode()).hexdigest()
         return hash_str
 
@@ -76,7 +81,7 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
         exp_config.train.chosen_index_list,
         (exp_config.eval.eval_emb_list if include_eval else None) or [""],
         (exp_config.eval.eval_vlm_list if include_eval else None) or [""],
-        )
+    )
     attack_configs = []
     for params in parameter_collection:
         (
@@ -91,25 +96,28 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
             eval_vlm_name,
         ) = params
 
-        attack_configs.append(TaskConfig(
-            ds_name=ds_name,
-            model_name_emb=model_name_emb,
-            model_name_vlm=model_name_vlm,
-            target_answer=exp_config.train.target_answer,
-            chosen_index=chosen_index,
-            max_perturbation=max_perturbation,
-            n_gradient_steps=exp_config.train.n_gradient_steps,
-            lr_start=exp_config.train.lr_start,
-            lr_end=exp_config.train.lr_end,
-            max_batch_size_per_iter=exp_config.train.max_batch_size_per_iter,
-            gradient_acc_steps=exp_config.train.gradient_acc_steps,
-            lambda_emb=exp_config.train.lambda_emb,
-            lambda_vlm=exp_config.train.lambda_vlm,
-            emb_train_loss_type=emb_train_loss_type,
-            is_adaptive=is_adaptive,
-            lambda_constant=exp_config.train.lambda_constant,
-            eval_emb_name=eval_emb_name,
-            eval_vlm_name=eval_vlm_name,
-        ))
+        attack_configs.append(
+            TaskConfig(
+                ds_name=ds_name,
+                model_name_emb=model_name_emb,
+                model_name_vlm=model_name_vlm,
+                target_answer=exp_config.train.target_answer,
+                chosen_index=chosen_index,
+                max_perturbation=max_perturbation,
+                n_gradient_steps=exp_config.train.n_gradient_steps,
+                lr_start=exp_config.train.lr_start,
+                lr_end=exp_config.train.lr_end,
+                max_batch_size_per_iter=exp_config.train.max_batch_size_per_iter,
+                gradient_acc_steps=exp_config.train.gradient_acc_steps,
+                lambda_emb=exp_config.train.lambda_emb,
+                lambda_vlm=exp_config.train.lambda_vlm,
+                emb_train_loss_type=emb_train_loss_type,
+                is_adaptive=is_adaptive,
+                lambda_constant=exp_config.train.lambda_constant,
+                eval_emb_name=eval_emb_name,
+                eval_vlm_name=eval_vlm_name,
+                colpali_only_images=exp_config.train.colpali_only_images,
+            )
+        )
 
     return attack_configs
