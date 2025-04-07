@@ -5,12 +5,12 @@ import hydra
 import torchvision.transforms as T
 from omegaconf import OmegaConf
 
-from config.task import TaskConfig, get_transferability_file_suffix, generate_task_configs
+from config.task import get_transferability_file_suffix, generate_task_configs
 from config.eval import ExperimentEvalConfig
 from config.experiment import ExperimentConfig
-from config.train import ExperimentTrainConfig
 from experiments import DEFAULT_EXPERIMENT
 from utils.cache import load_vlm, load_embedder_and_dataset, load_text_embedder
+from utils.embedding import is_loss_compatible
 from utils.image_utils import load_adv_image
 from utils.logger import logger
 from utils.utils import get_device
@@ -57,6 +57,9 @@ def run(exp_config: ExperimentConfig):
         text_embedder = None
 
     for i, task_config in enumerate(task_configs):
+        if not is_loss_compatible(task_config.model_name_emb, task_config.emb_train_loss_type):
+            continue
+
         logger.info(f"{'+' * 20}\nEval {(i + 1):4d}/{n_evals}, task_config -> {task_config.to_dict()}")
         image_adv = load_adv_image(task_config, exp_config.train)
 
@@ -74,14 +77,16 @@ def run(exp_config: ExperimentConfig):
         if exp_config.eval.do_retrieval:
             logger.info("=== Evaluating retrieval ...")
             ds.add_adv_image(T.ToPILImage()(image_adv / 255))
+            # remove incompatible losses
+            emb_test_loss_type_list_compatible = [loss for loss in exp_config.eval.emb_test_loss_type_list if is_loss_compatible(model_name_emb, loss)]
             metric_dict_before, retrievals_before = ds.evaluate_retrieval(
                 ks=exp_config.eval.topk_list,
-                loss_types=exp_config.eval.emb_test_loss_type_list,
+                loss_types=emb_test_loss_type_list_compatible,
                 include_adv=False,
             )
             metric_dict_after, retrievals_after = ds.evaluate_retrieval(
                 ks=exp_config.eval.topk_list,
-                loss_types=exp_config.eval.emb_test_loss_type_list,
+                loss_types=emb_test_loss_type_list_compatible,
                 include_adv=True,
             )
             retrieval_metric_dict = get_retrieval_saved_info(
