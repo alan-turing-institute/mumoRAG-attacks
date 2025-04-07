@@ -1,5 +1,6 @@
 from dataclasses import dataclass, asdict
 import hashlib
+from .embedding import COLPALI_MODELS
 
 @dataclass
 class AttackConfig:
@@ -22,6 +23,7 @@ class AttackConfig:
     emb_train_loss_type: str
     is_adaptive: bool
     lambda_constant: float 
+    colpali_only_images: bool
 
 
     def create_hash_string(self,):
@@ -30,6 +32,9 @@ class AttackConfig:
         
         if self.is_adaptive: config_str += f"{self.lambda_constant}"
         else: config_str += f"{self.lambda_emb}{self.lambda_vlm}"
+
+        if self.model_name_emb in COLPALI_MODELS and self.colpali_only_images: 
+            config_str += f"{self.colpali_only_images}"
         
         hash_str = hashlib.md5(config_str.encode()).hexdigest()
         return hash_str

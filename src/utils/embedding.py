@@ -78,9 +78,10 @@ MODEL_NAMES = [
 
 class EmbeddingModel:
 
-    def __init__(self, model_name, device, quantize=False):
+    def __init__(self, model_name, device, quantize=False, colpali_only_images=False):
         self.name = model_name
         self.device = device
+        self.colpali_only_images = colpali_only_images
 
         quantization_config = BitsAndBytesConfig(load_in_4bit=True) if quantize else None
         
@@ -241,11 +242,14 @@ class EmbeddingModel:
                 if not isinstance(image, list): image=[image]
                 image_input_emb = self.processor.process_images(image).to(self.device)
             
-            image_embedding = self.model(**image_input_emb)
-            # TODO: uncomment to allow to remove non-image tokens
-            # image_input_emb.input_ids = image_input_emb.input_ids[:,9:-2]
-            # image_input_emb.attention_mask = image_input_emb.attention_mask[:,9:-2]
-            # image_embedding = self.model(input_ids=image_input_emb.input_ids, attention_mask=image_input_emb.attention_mask, pixel_values=image_input_emb.pixel_values, pixel_attention_mask=image_input_emb.pixel_attention_mask)
+            if self.colpali_only_images:
+                # remove non-image tokens
+                # hard-coding indices works for now, but may not for futute versions of colpali
+                image_input_emb.input_ids = image_input_emb.input_ids[:,9:-2]
+                image_input_emb.attention_mask = image_input_emb.attention_mask[:,9:-2]
+                image_embedding = self.model(input_ids=image_input_emb.input_ids, attention_mask=image_input_emb.attention_mask, pixel_values=image_input_emb.pixel_values, pixel_attention_mask=image_input_emb.pixel_attention_mask)
+            else:
+                image_embedding = self.model(**image_input_emb)
             return image_embedding
 
 
