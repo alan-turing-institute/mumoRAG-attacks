@@ -10,7 +10,7 @@ from datasets import load_dataset
 from strenum import StrEnum
 from tqdm import tqdm
 
-from .embedding import EmbeddingModel, EmbedderName, COLSMOL_MODELS
+from .embedding import EmbeddingModel, EmbedderName, EmbeddingLoss, COLPALI_MODELS, score_multi_vector_modified
 from .vlm import VLM, SMOL_VLMS, QWEN_VLMS
 from .text_embedding import TextEmbeddingModel, TextEmbedderName
 
@@ -124,33 +124,26 @@ class ViDoReDataset:
         print("Saved computed embeddings to disk.")
     
     
-    def create_retriever_score_table(self, loss_type: Literal["mse", "cos"] = "mse"):
+    def create_retriever_score_table(self, loss_type: EmbeddingLoss):
         """
         creates a [num_queries x num_images] tensor of scores/losses
         """
-        if self.embedder.name in COLSMOL_MODELS or self.embedder.name == EmbedderName.COLPALI:
-             return -1 * self.embedder.processor.score_multi_vector(self.query_embeddings, self.image_embeddings)
-            #[num_images x num_tokens x embed_dim]
-            # conventional cosine similarity
-            # img_embs = self.image_embeddings.unsqueeze(0).repeat(len(self.queries), 1, 1, 1)
-            # txt_embs = self.query_embeddings.unsqueeze(1).repeat(1, len(self.images), 1, 1)
-            # return 1 - torch.nn.functional.cosine_similarity(img_embs.mean(dim=2), txt_embs.mean(dim=2), dim=-1)
-            # less memory hungry
-            # img_embs = self.image_embeddings.mean(dim=1).unsqueeze(0).repeat(len(self.queries), 1, 1)
-            # txt_embs = self.query_embeddings.mean(dim=1).unsqueeze(1).repeat(1, len(self.images), 1)
-            # return 1 - torch.nn.functional.cosine_similarity(img_embs, txt_embs, dim=-1)
+        if self.embedder.name in COLPALI_MODELS and loss_type != EmbeddingLoss.COS_AVGEMB:
+            return -1*score_multi_vector_modified(qs=self.query_embeddings, ps=self.image_embeddings, loss=loss_type)
+
+        if loss_type == EmbeddingLoss.COS_AVGEMB:
+            img_embs = self.image_embeddings.mean(dim=1).unsqueeze(0).repeat(len(self.queries), 1, 1)
+            txt_embs = self.query_embeddings.mean(dim=1).unsqueeze(1).repeat(1, len(self.images), 1)
+            return 1 - torch.nn.functional.cosine_similarity(img_embs, txt_embs, dim=-1)
 
         img_embs = self.image_embeddings.unsqueeze(0).repeat(len(self.queries), 1, 1)
         txt_embs = self.query_embeddings.unsqueeze(1).repeat(1, len(self.images), 1)
-        
-        match loss_type:
-            case "mse":
-                losses = torch.nn.functional.mse_loss(txt_embs, img_embs, reduction="none")
-                losses = torch.mean(losses, dim=-1)
-            case "cos":
-                losses = 1-torch.nn.functional.cosine_similarity(txt_embs, img_embs, dim=-1)
-            case _:
-                raise ValueError(f"Unknown loss type: {loss_type}")
+
+        if loss_type == EmbeddingLoss.MSE:
+            losses = torch.nn.functional.mse_loss(txt_embs, img_embs, reduction="none")
+            losses = torch.mean(losses, dim=-1)
+        elif loss_type == EmbeddingLoss.COS:
+            losses = 1-torch.nn.functional.cosine_similarity(txt_embs, img_embs, dim=-1)
         return losses
 
     

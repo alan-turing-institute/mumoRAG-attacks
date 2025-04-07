@@ -3,7 +3,7 @@ This file includes different configurations for the parameters of the attack and
 """
 
 from utils.dataset import DatasetName
-from utils.embedding import EmbedderName
+from utils.embedding import EmbedderName, COLPALI_MODELS, COLPALI_LOSSES
 from utils.text_embedding import TextEmbedderName
 from utils.vlm import VLMName
 from dataclasses import dataclass, field

@@ -7,7 +7,7 @@ from utils.vlm import VLM, VLMName
 from utils.dataset import ViDoReDataset, DatasetName
 from utils.attack_config import AttackConfig
 from itertools import product
-from experiments.params import exp_config_train
+from experiments.params import exp_config_train, is_loss_comaptible
 import gc
 
 
@@ -27,8 +27,11 @@ n_evals = len(parameter_collection)
 
 for i, params in enumerate(parameter_collection):
     
-    print("+"*20, f"\nTrain Attack {(i+1):4d}/{n_evals}, params -> {params}")
     ds_name, model_name_emb, model_name_vlm, max_perturbation, emb_train_loss_type, is_adaptive, chosen_index = params
+
+    if not is_loss_comaptible(model_name_emb, emb_train_loss_type): continue
+
+    print("+"*20, f"\nTrain Attack {(i+1):4d}/{n_evals}, params -> {params}")
 
     attack_config = AttackConfig(
         ds_name=ds_name,

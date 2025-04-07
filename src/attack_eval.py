@@ -11,7 +11,10 @@ from utils.vlm import VLM
 from utils.text_embedding import TextEmbeddingModel
 from utils.dataset import ViDoReDataset
 from utils.attack_config import AttackConfig, get_transferability_file_suffix
-from experiments.params import exp_config_train, exp_config_eval
+from experiments.params import exp_config_train, exp_config_eval, is_loss_comaptible
+from itertools import product
+import json
+import pprint
 
 
 def extract_attack_config(params) -> AttackConfig:
@@ -102,9 +105,12 @@ if __name__ == "__main__":
     old_model_name_vlm = None
 
     for i, params in enumerate(parameter_collection):
+        ds_name, model_name_emb, model_name_vlm, max_perturbation, emb_train_loss_type, is_adaptive, chosen_index, eval_emb_name, eval_vlm_name = params
+
+        if not is_loss_comaptible(model_name_emb, emb_train_loss_type): continue
 
         print("+"*20, f"\nEval {(i+1):4d}/{n_evals}, params -> {params}")
-        ds_name, model_name_emb, model_name_vlm, max_perturbation, emb_train_loss_type, is_adaptive, chosen_index, eval_emb_name, eval_vlm_name = params
+        
         attack_info_dict = load_adv_image(params, exp_config_train)
         image_adv = attack_info_dict['image_adv']
         
@@ -139,9 +145,11 @@ if __name__ == "__main__":
         # test retrieval
         if exp_config_eval.do_retrieval:
             print("=== Evaluating retrieval ...")
-            ds.add_adv_image(T.ToPILImage()(image_adv / 255))
-            metric_dict_before, retrievals_before = ds.evaluate_retrieval(ks=exp_config_eval.topk_list, loss_types=exp_config_eval.emb_test_loss_type_list, include_adv=False)
-            metric_dict_after, retrievals_after = ds.evaluate_retrieval(ks=exp_config_eval.topk_list, loss_types=exp_config_eval.emb_test_loss_type_list, include_adv=True)
+            ds.add_adv_image(T.ToPILImage()(image_adv/255))
+            # remove incompatible losses
+            emb_test_loss_type_list_compatible = [loss for loss in exp_config_eval.emb_test_loss_type_list if is_loss_comaptible(model_name_emb, loss)]
+            metric_dict_before, retrievals_before = ds.evaluate_retrieval(ks=exp_config_eval.topk_list, loss_types=emb_test_loss_type_list_compatible, include_adv=False)
+            metric_dict_after, retrievals_after = ds.evaluate_retrieval(ks=exp_config_eval.topk_list, loss_types=emb_test_loss_type_list_compatible, include_adv=True)
             retrieval_metric_dict = get_retrieval_saved_info(metric_dict_before, metric_dict_after)
 
         generation_metric_dict = None
