@@ -65,7 +65,6 @@ for i, params in enumerate(parameter_collection):
     chosen_image = ds.images[chosen_index]
     chosen_image = chosen_image.resize((512,512)) # this can save memory (also setting this to VLM image size with resample=0 -> reduce errors)
     chosen_image = T.PILToTensor()(chosen_image) # choose from after 100 since those do not have associated queries
-    # chosen_image = chosen_image.type(vlm.model.dtype)
     chosen_image = chosen_image.float()
     initial_chosen_image = chosen_image.clone()
 

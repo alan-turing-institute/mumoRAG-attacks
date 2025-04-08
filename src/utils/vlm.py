@@ -185,8 +185,7 @@ class VLM():
             out = self.model(**inputs_vlm, use_cache=False, output_attentions=False, output_hidden_states=False)
             return out
 
-        quit(f"Not supported model {self.name}!")
-
+        raise ValueError(f"Not supported model {self.name}!")
 
 
     def compute_gen_loss(self, vlm_output, target_tokens):

@@ -69,7 +69,7 @@ class ViDoReDataset:
                 self.attempt_load_embeddings()
             except FileNotFoundError: 
                 print("Precomputing Embeddings ...")
-                batch_size = 4 if self.embedder.name == EmbedderName.COLPALI_HF else 16
+                batch_size = 4 if self.embedder.name == EmbedderName.COLPALI else 16
                 with torch.no_grad():
                     self.compute_embeddings(batch_size=batch_size)
 
@@ -128,10 +128,8 @@ class ViDoReDataset:
         """
         creates a [num_queries x num_images] tensor of scores/losses
         """
-        if self.embedder.name in COLSMOL_MODELS or self.embedder.name == EmbedderName.COLPALI_HF:
-            #  from colpali_engine.models import ColPaliProcessor
-            #  processor = ColPaliProcessor.from_pretrained(self.embedder.name)
-            return -1*self.embedder.processor.score_multi_vector(self.query_embeddings, self.image_embeddings)
+        if self.embedder.name in COLSMOL_MODELS or self.embedder.name == EmbedderName.COLPALI:
+             return -1 * self.embedder.processor.score_multi_vector(self.query_embeddings, self.image_embeddings)
             #[num_images x num_tokens x embed_dim]
             # conventional cosine similarity
             # img_embs = self.image_embeddings.unsqueeze(0).repeat(len(self.queries), 1, 1, 1)
@@ -145,11 +143,14 @@ class ViDoReDataset:
         img_embs = self.image_embeddings.unsqueeze(0).repeat(len(self.queries), 1, 1)
         txt_embs = self.query_embeddings.unsqueeze(1).repeat(1, len(self.images), 1)
         
-        if loss_type == "mse":
-            losses = torch.nn.functional.mse_loss(txt_embs, img_embs, reduction="none")
-            losses = torch.mean(losses, dim=-1)
-        elif loss_type == "cos":
-            losses = 1-torch.nn.functional.cosine_similarity(txt_embs, img_embs, dim=-1)
+        match loss_type:
+            case "mse":
+                losses = torch.nn.functional.mse_loss(txt_embs, img_embs, reduction="none")
+                losses = torch.mean(losses, dim=-1)
+            case "cos":
+                losses = 1-torch.nn.functional.cosine_similarity(txt_embs, img_embs, dim=-1)
+            case _:
+                raise ValueError(f"Unknown loss type: {loss_type}")
         return losses
 
     
