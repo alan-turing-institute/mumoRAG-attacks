@@ -1,159 +1,141 @@
-import gc
 import json
-from itertools import product
+from typing import Any
 
-import torch
+import hydra
 import torchvision.transforms as T
+from omegaconf import OmegaConf
 
+from config.task import TaskConfig, get_transferability_file_suffix, generate_task_configs
+from config.eval import ExperimentEvalConfig
+from config.experiment import ExperimentConfig
+from config.train import ExperimentTrainConfig
+from experiments import DEFAULT_EXPERIMENT
+from utils.cache import load_vlm, load_embedder_and_dataset, load_text_embedder
+from utils.image_utils import load_adv_image
+from utils.logger import logger
 from utils.utils import get_device
-from utils.embedding import EmbeddingModel
-from utils.vlm import VLM
-from utils.text_embedding import TextEmbeddingModel
-from utils.dataset import ViDoReDataset
-from utils.attack_config import AttackConfig, get_transferability_file_suffix
-from experiments.params import exp_config_train, exp_config_eval
 
 
-def extract_attack_config(params) -> AttackConfig:
-    ds_name, model_name_emb, model_name_vlm, max_perturbation, emb_train_loss_type, is_adaptive, chosen_index, _, _ = params
-    lambda_constant = exp_config_train.lambda_constant
-
-    attack_config = AttackConfig(
-        ds_name=ds_name,
-        model_name_emb=model_name_emb,
-        model_name_vlm=model_name_vlm,
-        target_answer=exp_config_train.target_answer,
-        chosen_index=chosen_index,
-        max_perturbation=max_perturbation,
-        n_gradient_steps=exp_config_train.n_gradient_steps,
-        lr_start=exp_config_train.lr_start,
-        lr_end=exp_config_train.lr_end,
-        max_batch_size_per_iter=exp_config_train.max_batch_size_per_iter,
-        gradient_acc_steps=exp_config_train.gradient_acc_steps,
-        lambda_emb=exp_config_train.lambda_emb,
-        lambda_vlm=exp_config_train.lambda_vlm,
-        emb_train_loss_type=emb_train_loss_type,
-        is_adaptive=is_adaptive,
-        lambda_constant=lambda_constant,
-    )
-
-    return attack_config
-
-def load_adv_image(params, exp_config_train) -> torch.tensor:
-    attack_config = extract_attack_config(params)
-    # load adversarial image
-    filename = exp_config_train.save_folder / attack_config.create_filename()
-    try:
-        attack_info_dict = torch.load(filename, weights_only=False)
-    except FileNotFoundError:
-        raise ValueError(f"Error! Could not find file: {filename}! You need to train an attack with this configuration first")
-
-    return attack_info_dict
-
-
-
-def get_retrieval_saved_info(metric_dict_before, metric_dict_after):
-    retrieval_dict = {}
-    retrieval_dict["topk_list"] = exp_config_eval.topk_list
-    retrieval_dict["eval_emb_loss"] = exp_config_eval.emb_test_loss_type_list
+def get_retrieval_saved_info(
+    exp_config_eval: ExperimentEvalConfig, metric_dict_before, metric_dict_after
+):
+    retrieval_dict: dict[str, Any] = {
+        "topk_list": exp_config_eval.topk_list,
+        "eval_emb_loss": exp_config_eval.emb_test_loss_type_list,
+    }
 
     for k in metric_dict_before.keys():
         retrieval_dict[k] = {
             "recall_before": metric_dict_before[k]["acc"],
             "recall_after": metric_dict_after[k]["acc"],
             "asr_train": metric_dict_after[k]["asr_train"],
-            "asr_test": metric_dict_after[k]["asr_test"]
+            "asr_test": metric_dict_after[k]["asr_test"],
         }
     return retrieval_dict
 
 
-if __name__ == "__main__":
-    parameter_collection = product(
-        exp_config_train.dataset_list, 
-        exp_config_train.embedder_list, 
-        exp_config_train.vlm_list, 
-        exp_config_train.max_perturbation_list, 
-        exp_config_train.emb_train_loss_type_list, 
-        exp_config_train.is_adaptive_list,
-        exp_config_train.chosen_index_list,
-        exp_config_eval.eval_emb_list,
-        exp_config_eval.eval_vlm_list,
-    )
-    parameter_collection = [x for x in parameter_collection]
-    n_evals = len(parameter_collection)
+@hydra.main(
+    version_base=None, config_path="pkg://experiments", config_name=DEFAULT_EXPERIMENT
+)
+def run(exp_config: ExperimentConfig):
     device = get_device(prefer_mps=True)
+    task_configs = generate_task_configs(exp_config, include_eval=True)
+    n_evals = len(task_configs)
 
-
-    # first we just make sure that all required files are on disk, so that we dont waste time
+    # first we just make sure that all required files are on disk, so that we don't waste time
     # this will raise an error if there are missing file(s)
-    for params in parameter_collection:
-        _ = load_adv_image(params, exp_config_train)
+    for task_config in task_configs:
+        _ = load_adv_image(task_config, exp_config.train)
 
     # load text embedding model in case we need it for evaluation
-    if "embed" in exp_config_eval.gen_metric_list:
-        text_embedder = TextEmbeddingModel(exp_config_eval.gen_text_embedder, device=device)
+    if "embed" in exp_config.eval.gen_metric_list:
+        text_embedder = load_text_embedder(
+            exp_config.eval.gen_text_embedder, device=device
+        )
     else:
+        load_text_embedder.cache_clear()
         text_embedder = None
-    ds = None
-    old_ds_name = None
-    embedder = None
-    old_model_name_emb = None
-    vlm = None
-    old_model_name_vlm = None
 
-    for i, params in enumerate(parameter_collection):
-
-        print("+"*20, f"\nEval {(i+1):4d}/{n_evals}, params -> {params}")
-        ds_name, model_name_emb, model_name_vlm, max_perturbation, emb_train_loss_type, is_adaptive, chosen_index, eval_emb_name, eval_vlm_name = params
-        attack_info_dict = load_adv_image(params, exp_config_train)
-        image_adv = attack_info_dict['image_adv']
-        
+    for i, task_config in enumerate(task_configs):
+        logger.info(f"{'+' * 20}\nEval {(i + 1):4d}/{n_evals}, task_config -> {task_config.to_dict()}")
+        image_adv = load_adv_image(task_config, exp_config.train)
 
         # update model names in case we test transferability
-        model_name_emb = model_name_emb if eval_emb_name=="" else eval_emb_name
-        model_name_vlm = model_name_vlm if eval_vlm_name=="" else eval_vlm_name
+        model_name_emb = task_config.eval_emb_name if task_config.eval_emb_name else task_config.model_name_emb
+        model_name_vlm = task_config.eval_vlm_name if task_config.eval_vlm_name else task_config.model_name_vlm
 
-        # TODO: we dont need to load the models and datasets every time if not changed
-        # load embedding model and VLM
-        if old_model_name_emb != model_name_emb:
-            old_model_name_emb = model_name_emb
-            print(f"Embedding: loading {model_name_emb}")
-            embedder = EmbeddingModel(model_name_emb, device)
-            ds = None  # invalidate the dataset
-            gc.collect()
-        if old_model_name_vlm != model_name_vlm:
-            old_model_name_vlm = model_name_vlm
-            print(f"VLM: loading {model_name_vlm}")
-            vlm = VLM(model_name_vlm, device)
-            gc.collect()
-        print("Loaded models.")
-
-        if not ds or old_ds_name != ds_name:
-            old_ds_name = ds_name
-            print(f"Dataset: loading {ds_name} with {model_name_emb}")
-            ds = ViDoReDataset(ds_name, do_retrieval=exp_config_eval.do_retrieval, embedder=embedder)
-            gc.collect()
-        print("Loaded dataset.")
+        vlm = load_vlm(model_name_vlm, device)
+        embedder, ds = load_embedder_and_dataset(
+            task_config.ds_name, model_name_emb, exp_config.eval.do_retrieval, device
+        )
 
         retrieval_metric_dict = None
         # test retrieval
-        if exp_config_eval.do_retrieval:
-            print("=== Evaluating retrieval ...")
+        if exp_config.eval.do_retrieval:
+            logger.info("=== Evaluating retrieval ...")
             ds.add_adv_image(T.ToPILImage()(image_adv / 255))
-            metric_dict_before, retrievals_before = ds.evaluate_retrieval(ks=exp_config_eval.topk_list, loss_types=exp_config_eval.emb_test_loss_type_list, include_adv=False)
-            metric_dict_after, retrievals_after = ds.evaluate_retrieval(ks=exp_config_eval.topk_list, loss_types=exp_config_eval.emb_test_loss_type_list, include_adv=True)
-            retrieval_metric_dict = get_retrieval_saved_info(metric_dict_before, metric_dict_after)
+            metric_dict_before, retrievals_before = ds.evaluate_retrieval(
+                ks=exp_config.eval.topk_list,
+                loss_types=exp_config.eval.emb_test_loss_type_list,
+                include_adv=False,
+            )
+            metric_dict_after, retrievals_after = ds.evaluate_retrieval(
+                ks=exp_config.eval.topk_list,
+                loss_types=exp_config.eval.emb_test_loss_type_list,
+                include_adv=True,
+            )
+            retrieval_metric_dict = get_retrieval_saved_info(
+                OmegaConf.to_object(exp_config.eval),
+                metric_dict_before,
+                metric_dict_after,
+            )
 
         generation_metric_dict = None
         # test generation
-        if exp_config_eval.do_generation:
-            print("=== Evaluating generation ...")
-            metric_dict_test, gs_test = ds.evaluate_generation(vlm, image_adv, exp_config_train.target_answer, metrics=exp_config_eval.gen_metric_list, text_embedder=text_embedder, batch_size=exp_config_eval.gen_batch_size, eval_train=False)
-            metric_dict_train, gs_train = ds.evaluate_generation(vlm, image_adv, exp_config_train.target_answer, metrics=exp_config_eval.gen_metric_list, text_embedder=text_embedder, batch_size=exp_config_eval.gen_batch_size, eval_train=True)
-            generation_metric_dict = {"train": metric_dict_train, "test": metric_dict_test}
-        
+        if exp_config.eval.do_generation:
+            logger.info("=== Evaluating generation ...")
+            metric_dict_test, gs_test = ds.evaluate_generation(
+                vlm,
+                image_adv,
+                exp_config.train.target_answer,
+                metrics=exp_config.eval.gen_metric_list,
+                text_embedder=text_embedder,
+                batch_size=exp_config.eval.gen_batch_size,
+                eval_train=False,
+            )
+            metric_dict_train, gs_train = ds.evaluate_generation(
+                vlm,
+                image_adv,
+                exp_config.train.target_answer,
+                metrics=exp_config.eval.gen_metric_list,
+                text_embedder=text_embedder,
+                batch_size=exp_config.eval.gen_batch_size,
+                eval_train=True,
+            )
+            generation_metric_dict = {
+                "train": metric_dict_train,
+                "test": metric_dict_test,
+            }
+
+
         # save results to JSON format
-        metric_dict_full = {"retrieval": retrieval_metric_dict, "generation": generation_metric_dict, "attack_config": extract_attack_config(params).to_dict(), "eval_emb_name": eval_emb_name, "eval_vlm_name": eval_vlm_name}
-        with open(exp_config_eval.results_folder / f"metrics_{extract_attack_config(params).create_hash_string()}{get_transferability_file_suffix(eval_emb_name, eval_vlm_name)}.json", "w") as file: 
+        metric_dict_full = {
+            "retrieval": retrieval_metric_dict,
+            "generation": generation_metric_dict,
+            "attack_config": task_config.to_dict(),
+        }
+        results_filename = (
+            exp_config.eval.results_folder
+            / f"metrics_{task_config.create_hash_string()}{get_transferability_file_suffix(task_config.eval_emb_name, task_config.eval_vlm_name)}.json"
+        )
+
+        with open(
+            results_filename,
+            "w",
+        ) as file:
             json.dump(metric_dict_full, file, indent=4)
-        print("Saved results.")
+        logger.info(f"Saved results to {results_filename}")
+
+
+if __name__ == "__main__":
+    run()

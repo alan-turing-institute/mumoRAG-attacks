@@ -1,3 +1,5 @@
+from typing import TYPE_CHECKING
+
 import torch
 from transformers import AutoProcessor, LlavaNextProcessor
 import torchvision.transforms as T
@@ -5,6 +7,12 @@ import torch.nn.functional as F
 import torchvision.transforms.v2.functional as Tv2F
 from enum import IntEnum
 from transformers.models.qwen2_vl.image_processing_qwen2_vl import smart_resize
+
+from .logger import logger
+
+if TYPE_CHECKING:
+    from config.task import TaskConfig
+    from config.train import ExperimentTrainConfig
 
 """
 Meaning of resample ints fetched from https://github.com/python-pillow/Pillow/blob/main/src/PIL/Image.py#L164
@@ -109,10 +117,10 @@ def is_image_processing_close(image: torch.tensor, processor):
     else:
         image_p_hf = processor(images=[image], return_tensors="pt")['pixel_values']
     image_p_me = process_image(image, processor)
-    print(f"MSE: {torch.nn.functional.mse_loss(image_p_me, image_p_hf)}")
-    print(f"Linf: {(image_p_hf - image_p_me).norm(p=float('inf'))}")
-    print(f"L1: {(image_p_hf - image_p_me).norm(p=1)}")
-    print(f"L1: {torch.nn.functional.l1_loss(image_p_hf, image_p_me)}")
+    logger.info(f"MSE: {torch.nn.functional.mse_loss(image_p_me, image_p_hf)}")
+    logger.info(f"Linf: {(image_p_hf - image_p_me).norm(p=float('inf'))}")
+    logger.info(f"L1: {(image_p_hf - image_p_me).norm(p=1)}")
+    logger.info(f"L1: {torch.nn.functional.l1_loss(image_p_hf, image_p_me)}")
 
 
 if __name__ == "__main__":
@@ -140,11 +148,21 @@ if __name__ == "__main__":
 
     if len(image_p_hf.shape) == 5: image_p_hf = image_p_hf[0][0]
     if len(image_p_hf.shape) == 4: image_p_hf = image_p_hf[0]
-    print(f"Size orig: {image_tensor.shape}, Size HF: {image_p_hf.shape}, Size ME: {image_p_me.shape}")
-    print(f"MSE: {torch.nn.functional.mse_loss(image_p_me, image_p_hf)}")
-    print(f"Linf: {(image_p_hf - image_p_me).norm(p=float('inf'))}")
-    print(f"Diff: {(image_p_hf - image_p_me)[0][:4,:4]}")
-    print(f"Part of mine: {image_p_me[0,:4,:4]}")
-    print(f"Grad HF: {image_p_hf.requires_grad}, Grad ME: {image_p_me.requires_grad}")
+    logger.info(f"Size orig: {image_tensor.shape}, Size HF: {image_p_hf.shape}, Size ME: {image_p_me.shape}")
+    logger.info(f"MSE: {torch.nn.functional.mse_loss(image_p_me, image_p_hf)}")
+    logger.info(f"Linf: {(image_p_hf - image_p_me).norm(p=float('inf'))}")
+    logger.info(f"Diff: {(image_p_hf - image_p_me)[0][:4,:4]}")
+    logger.info(f"Part of mine: {image_p_me[0,:4,:4]}")
+    logger.info(f"Grad HF: {image_p_hf.requires_grad}, Grad ME: {image_p_me.requires_grad}")
     # plot_images([T.ToPILImage()(image_p_hf/2+0.5), T.ToPILImage()(image_p_me/2+0.5)], n_subplots=2)
     plot_images([T.ToPILImage()(image_p_hf/255), T.ToPILImage()(image_p_me/255)], n_subplots=2)
+
+
+def load_adv_image(task_config: "TaskConfig", exp_config_train: "ExperimentTrainConfig") -> torch.tensor:
+    filename = exp_config_train.save_folder / task_config.create_filename()
+    try:
+        return torch.load(filename, weights_only=False)["image_adv"]
+    except FileNotFoundError:
+        raise ValueError(
+            f"Error! Could not find file: {filename}! You need to train an attack with this configuration first"
+        )

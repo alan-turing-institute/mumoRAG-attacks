@@ -5,14 +5,8 @@ import matplotlib.pyplot as plt
 from collections import defaultdict
 from datasets import Dataset
 
+from .logger import logger
 
-def attempt_load_pt(filename: str):
-    try:
-        loaded_obj = torch.load(filename, weights_only=False) 
-    except:
-        # print(f"Warning! Could not find file: {filename}!")
-        return None
-    return loaded_obj
 
 def get_device(prefer_mps=False):
     if torch.cuda.is_available():
@@ -26,15 +20,19 @@ def get_memory_consumption(device):
         return torch.mps.current_allocated_memory()/1e9
     elif device == "cuda":
         return torch.cuda.memory_allocated(0)/1e9
+    raise NotImplementedError
 
 def print_memory_consumption(device):
     if device == "mps":
         allocated_ram = torch.mps.current_allocated_memory()
-        print(f"Allocated RAM: {allocated_ram/1e9:.2f} GB")
+        logger.info(f"Allocated RAM: {allocated_ram/1e9:.2f} GB")
+        return
     elif device == "cuda":
         allocated_ram = torch.cuda.memory_allocated(0)
         max_allocated_ram = torch.cuda.max_memory_allocated(0)
-        print(f"Current allocated RAM: {allocated_ram/1e9:.2f} GB, max: {max_allocated_ram/1e9:.2f} GB")
+        logger.info(f"Current allocated RAM: {allocated_ram/1e9:.2f} GB, max: {max_allocated_ram/1e9:.2f} GB")
+        return
+    raise NotImplementedError
 
 
 # converts all pdfs in the specified folder to a list of images (one per page) 

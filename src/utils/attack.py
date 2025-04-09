@@ -1,32 +1,33 @@
 import torch
-import torch.autograd.profiler as profiler
+
+from config.task import TaskConfig
 from .embedding import EmbeddingModel
-from .vlm import VLM
 from .scheduler import LearningRateScheduler
-from .utils import get_memory_consumption, print_memory_consumption
-from .attack_config import AttackConfig
+from .utils import get_memory_consumption
+from .vlm import VLM
+from .logger import logger
 
 
 
 def rag_attack(
-        raw_image: torch.tensor, 
+        raw_image: torch.tensor,
         embedder: EmbeddingModel,
         vlm: VLM,
-        user_query: list, # but maybe string also
-        config: AttackConfig,
+        user_query: str | list[str],
+        config: TaskConfig,
         print_every: int,
         device: str):
     """
     Simulates an attack against the full RAG pipeline.
     The input image is jointly optimized w.r.t. the retriever and the VLM outputs
-    
+
     NOTE:
-    1. max_batch_size_per_iter is the batch size per iteration 
+    1. max_batch_size_per_iter is the batch size per iteration
     1. effective batch_size = batch_size_per_iter * gradient_acc_steps
     2. n_gradient_steps is the number of gradient updates
     3. total number of iterations = n_gradient_steps * gradient_acc_steps
 
-    OBSERVATION: 
+    OBSERVATION:
     1. Using batch_size=1 with gradient accumulation is much more effective than using larger batch_size. No idea why?
     """
     # extract config variables
@@ -82,7 +83,7 @@ def rag_attack(
             # retrieval loss function
             image_embedding = embedder.compute_img_embedding(raw_image, initial_image, overwrite=True)
             loss_emb = embedder.compute_embedding_loss(image_embedding, user_query_embedding_batch, emb_loss_type)
-    
+
 
         if lambda_vlm > 0:
             # generation loss function
@@ -92,11 +93,11 @@ def rag_attack(
         # update loss coefficients if we use the adaptive attack
         if i==0 and is_adaptive and lambda_emb>0 and lambda_vlm>0:
             lambda_emb, lambda_vlm = adaptive_attack_coefficients(loss_emb, loss_vlm, lambda_constant)
-        
+
         # total loss function
         total_loss = lambda_emb * loss_emb + lambda_vlm * loss_vlm
-        if i==0 or ((i+1)/gradient_acc_steps)%print_every==0: 
-            print(f"Iter {(i//gradient_acc_steps)+1:4d}/{n_gradient_steps}, RAM usage -> {get_memory_consumption(device):.2f} GB, Losses -> Embedding: {loss_emb.item():.8f}, VLM: {loss_vlm.item():.8f}, Total: {total_loss.item():.8f}, Lambdas -> Embedding: {lambda_emb:.2f}, VLM: {lambda_vlm:.2f}")
+        if i==0 or ((i+1)/gradient_acc_steps)%print_every==0:
+            logger.info(f"Iter {(i//gradient_acc_steps)+1:4d}/{n_gradient_steps}, RAM usage -> {get_memory_consumption(device):.2f} GB, Losses -> Embedding: {loss_emb.item():.8f}, VLM: {loss_vlm.item():.8f}, Total: {total_loss.item():.8f}, Lambdas -> Embedding: {lambda_emb:.2f}, VLM: {lambda_vlm:.2f}")
 
         # backpropagation
         grads += torch.autograd.grad(total_loss, raw_image)[0]
@@ -107,25 +108,25 @@ def rag_attack(
 
             # get learning rate from scheduler
             lr = lr_scheduler.get_lr(i//gradient_acc_steps)
-            
+
             # optimization step
             with torch.no_grad():
                 raw_image = attack_step_bim(raw_image, grads, lr, max_perturbation_pixels, initial_image)
-            
+
             # zero the gradient
             grads = torch.zeros_like(raw_image)
-            
+
         # -- stop indenting here and uncomment next line to profile timing issues --
-        # print(prof.key_averages().table(sort_by="cpu_time_total"))
-        
+        # logger.info(prof.key_averages().table(sort_by="cpu_time_total"))
+
     return raw_image
 
 
 def attack_step_bim(
-        raw_image: torch.tensor, 
-        grads: torch.tensor, 
-        lr: float, 
-        max_perturbation_pixels: int, 
+        raw_image: torch.tensor,
+        grads: torch.tensor,
+        lr: float,
+        max_perturbation_pixels: int,
         initial_image: torch.tensor):
     """
     Implement the basic iterative method attack (FGSM but iterative)
@@ -136,7 +137,7 @@ def attack_step_bim(
     torch.clip(raw_image, min=initial_image-max_perturbation_pixels, max=initial_image+max_perturbation_pixels, out=raw_image)
     # clip to make sure we stay within allowed RGB values
     torch.clip(raw_image, min=0, max=255, out=raw_image)
-    
+
     return raw_image
 
 @torch.no_grad()
