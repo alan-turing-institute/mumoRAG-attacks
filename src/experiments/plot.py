@@ -89,6 +89,36 @@ def shorten_model_name(model_name):
 def shorten_model_name_str(model_name: str):
     return MODEL_NICKNAME_DICT.get(model_name, -1) if MODEL_NICKNAME_DICT.get(model_name, -1) != -1 else model_name
 
+# def create_heatmap_matrices(): 
+
+def plot_heatmap(num_plots, metric_tables: np.array, xaxis, yaxis, xlabel: str, ylabel: str, titles):
+    fig, axs = plt.subplots(1, num_plots, figsize=(12,5))
+    for plt_idx in range(num_plots):
+        values = metric_tables[plt_idx].T
+        im = axs[plt_idx].imshow(values, cmap="autumn")
+
+        # Show all ticks and label them with the respective list entries
+        axs[plt_idx].set_xticks(range(len(xaxis)), labels=shorten_model_name(xaxis),
+                                rotation=45, ha="right", rotation_mode="anchor")
+        axs[plt_idx].set_yticks(range(len(yaxis)), labels=shorten_model_name(yaxis),
+                                rotation=45, ha="right", rotation_mode="anchor")
+
+        # Loop over data dimensions and create text annotations.
+        for i in range(len(yaxis)):
+            for j in range(len(xaxis)):
+                text = axs[plt_idx].text(j, i, f"{values[i, j]:.3f}",
+                            ha="center", va="center", color="k")
+        axs[plt_idx].set_title(titles[plt_idx])
+        axs[plt_idx].set_ylabel(ylabel)
+        axs[plt_idx].set_xlabel(xlabel)
+        cbar = axs[plt_idx].figure.colorbar(im, ax=axs[plt_idx])
+        # cbar.ax.set_ylabel("", rotation=-90, va="bottom")
+    # fig.suptitle(f'DS: {ds_name}', fontsize=12)
+    fig.tight_layout()
+    plt.show()
+
+
+
 def get_metrics(exp_config_eval, params: tuple, metrics_to_show):
     
     ds_name, model_name_emb, model_name_vlm, max_perturbation, emb_train_loss_type, is_adaptive, chosen_index, eval_emb_name, eval_vlm_name = params
@@ -142,14 +172,6 @@ def plot_metrics_vs_perturbation(exp_config_train, exp_config_eval, metrics_to_s
             plot_dict_x[i][label].append(max_perturbation*255)
             plot_dict_y[i][label].append(metric)
     
-    # fig, axs = plt.subplots(1,len(metrics_to_show), figsize=(12,5))
-    # for i in range(len(metrics_to_show)):
-    #     for label in plot_dict_x[i].keys():
-    #         axs[i].plot(plot_dict_x[i][label], plot_dict_y[i][label], label=label)
-    #         # axs[i].set_title(titles[i])
-    #         axs[i].set_xlabel("Maximum Allowed Perturbation (/255)")
-    #         axs[i].set_ylabel(titles[i])
-    # axs[-1].legend(loc='upper right', bbox_to_anchor=(0.8, -0.15), ncols=3)
     markers = ["o", "v", "s", "x", "+"]
     fig, ax = plt.subplots(1,1, figsize=(6,3))
     for label in plot_dict_x[i].keys():
@@ -180,7 +202,7 @@ def plot_model_heatmap(exp_config_train, exp_config_eval, ds_idx, metrics_to_sho
     vlms = exp_config_train.vlm_list
     ds_name = exp_config_train.dataset_list[ds_idx]
 
-    # pipulate matrices to be used as heatmap
+    # populate matrices to be used as heatmap
     metric_tables = [np.zeros((len(embs), len(vlms))) for _ in range(num_plots)]
     for emb_idx, model_name_emb in enumerate(embs):
         for vlm_idx, model_name_vlm in enumerate(vlms):
@@ -191,30 +213,7 @@ def plot_model_heatmap(exp_config_train, exp_config_eval, ds_idx, metrics_to_sho
                 metric_tables[m_idx][emb_idx][vlm_idx] = metric
             
     # show heatmaps
-    fig, axs = plt.subplots(1, num_plots, figsize=(12,5))
-    for plt_idx in range(num_plots):
-        values = metric_tables[plt_idx].T
-        im = axs[plt_idx].imshow(values, cmap="autumn")
-
-        # Show all ticks and label them with the respective list entries
-        axs[plt_idx].set_xticks(range(len(embs)), labels=shorten_model_name(embs),
-                                rotation=45, ha="right", rotation_mode="anchor")
-        axs[plt_idx].set_yticks(range(len(vlms)), labels=shorten_model_name(vlms),
-                                rotation=45, ha="right", rotation_mode="anchor")
-
-        # Loop over data dimensions and create text annotations.
-        for i in range(len(vlms)):
-            for j in range(len(embs)):
-                text = axs[plt_idx].text(j, i, f"{values[i, j]:.3f}",
-                            ha="center", va="center", color="k")
-        axs[plt_idx].set_title(titles[plt_idx])
-        axs[plt_idx].set_ylabel("VLM (Generator)")
-        axs[plt_idx].set_xlabel("Embedding Model (Retriever)")
-        cbar = axs[plt_idx].figure.colorbar(im, ax=axs[plt_idx])
-        # cbar.ax.set_ylabel("", rotation=-90, va="bottom")
-    fig.suptitle(f'DS: {ds_name}', fontsize=12)
-    fig.tight_layout()
-    plt.show()
+    plot_heatmap(num_plots=num_plots, metric_tables=metric_tables, xaxis=embs, yaxis=vlms, xlabel="Embedding Model (Retriever)", ylabel="VLM (Generator)", titles=titles)
 
 
 
@@ -242,30 +241,7 @@ def plot_transferability(exp_config_train, exp_config_eval, metrics_to_show):
             for m_idx, metric in enumerate(metrics):
                 metric_tables[m_idx][train_idx][test_idx] = metric
     
-    # show heatmaps
-    fig, axs = plt.subplots(1, num_plots, figsize=(12,5))
-    for plt_idx in range(num_plots):
-        values = metric_tables[plt_idx].T
-        im = axs[plt_idx].imshow(values, cmap="autumn")
-
-        # Show all ticks and label them with the respective list entries
-        axs[plt_idx].set_xticks(range(len(train_axis_list)), labels=shorten_model_name(train_axis_list),
-                                rotation=45, ha="right", rotation_mode="anchor")
-        axs[plt_idx].set_yticks(range(len(test_axis_list)), labels=shorten_model_name(test_axis_list),
-                                rotation=45, ha="right", rotation_mode="anchor")
-
-        # Loop over data dimensions and create text annotations.
-        for i in range(len(test_axis_list)):
-            for j in range(len(train_axis_list)):
-                text = axs[plt_idx].text(j, i, f"{values[i, j]:.2f}",
-                            ha="center", va="center", color="k")
-        axs[plt_idx].set_title(titles[plt_idx])
-        axs[plt_idx].set_ylabel("Testing Models")
-        axs[plt_idx].set_xlabel("Training Models")
-        cbar = axs[plt_idx].figure.colorbar(im, ax=axs[plt_idx])
-        # cbar.ax.set_ylabel("", rotation=-90, va="bottom")
-    fig.tight_layout()
-    plt.show()
+    plot_heatmap(num_plots=num_plots, metric_tables=metric_tables, xaxis=train_axis_list, yaxis=test_axis_list, xlabel="Training Models", ylabel="Testing Models", titles=titles)
 
 
 def plot_images_side_by_side(exp_config_train, exp_config_eval, metrics_to_show):
@@ -289,33 +265,14 @@ def plot_images_side_by_side(exp_config_train, exp_config_eval, metrics_to_show)
             image_adv = T.ToPILImage()(attack_info_dict['image_adv'])
 
             images = [image_clean, image_adv]
-            # fig = plot_images([image_clean, image_adv], n_subplots=2)
             fig, axes = plt.subplots(1, len(images), figsize=(12, 6))
 
             for i, ax in enumerate(axes.flat):
                 img = images[i]
                 ax.imshow(img)
-                # ax.axis("off")
                 ax.set_xticks([])
                 ax.set_yticks([])
             plt.tight_layout()
-            # plt.show()
+            
             metrics_str  = " , ".join([f"{t}: {m}" for m, t in zip(metrics, titles)])
-            # fig.suptitle(f'DS: {ds_name}, image: {chosen_index}\nEmbedder: {model_name_emb}\nVLM: {model_name_vlm}\n{metrics_str}', fontsize=16)
             print(f"DS: {ds_name}, image: {chosen_index}\nEmbedder: {model_name_emb}\nVLM: {model_name_vlm}\n{metrics_str}")
-
-
-
-
-            
-
-
-
-
-
-
-            
-
-
-
-
