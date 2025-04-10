@@ -83,6 +83,12 @@ class ExperimentEvalConfig:
     eval_emb_list: list[str]            = field(default_factory= lambda: eval_emb_list)
     eval_vlm_list: list[str]            = field(default_factory= lambda: eval_vlm_list)
 
+
+def is_loss_compatible(model_name_emb, loss):
+    if (model_name_emb in COLPALI_MODELS and loss not in COLPALI_LOSSES) or (model_name_emb not in COLPALI_MODELS and loss in COLPALI_LOSSES):
+        return False
+    return True
+
 match EXPERIMENT_NUMBER:
     case -1:
         """
