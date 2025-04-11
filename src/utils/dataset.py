@@ -1,7 +1,7 @@
 import hashlib
 import itertools
 import time
-from typing import Literal, Optional
+from typing import Optional
 
 import math
 import torch
@@ -10,7 +10,7 @@ from strenum import StrEnum
 from tqdm import tqdm
 
 from config import EMBEDDINGS_FOLDER
-from .embedding import EmbeddingModel, EmbedderName, COLSMOL_MODELS
+from .embedding import EmbeddingModel, EmbedderName, EmbeddingLoss, COLPALI_MODELS, score_multi_vector_modified
 from .vlm import VLM, SMOL_VLMS
 from .text_embedding import TextEmbeddingModel
 from .logger import logger
@@ -98,6 +98,7 @@ class ViDoReDataset:
     @property
     def embeddings_filename(self):
         emb_str = f"{self.ds_name}{self.embedder.name}"
+        if self.embedder.colpali_only_images: emb_str += f"{self.embedder.colpali_only_images}"
         hash_str = hashlib.md5(emb_str.encode()).hexdigest()
         return self.embeddings_folder / f"embeds_{hash_str}.pt"
 
@@ -126,37 +127,32 @@ class ViDoReDataset:
         logger.info(f"Saved computed embeddings to disk {self.embeddings_filename}")
     
     
-    def create_retriever_score_table(self, loss_type: Literal["mse", "cos"] = "mse"):
+    def create_retriever_score_table(self, loss_type: EmbeddingLoss):
         """
         creates a [num_queries x num_images] tensor of scores/losses
         """
-        if self.embedder.name in COLSMOL_MODELS or self.embedder.name == EmbedderName.COLPALI:
-             return -1 * self.embedder.processor.score_multi_vector(self.query_embeddings, self.image_embeddings)
-            #[num_images x num_tokens x embed_dim]
-            # conventional cosine similarity
-            # img_embs = self.image_embeddings.unsqueeze(0).repeat(len(self.queries), 1, 1, 1)
-            # txt_embs = self.query_embeddings.unsqueeze(1).repeat(1, len(self.images), 1, 1)
-            # return 1 - torch.nn.functional.cosine_similarity(img_embs.mean(dim=2), txt_embs.mean(dim=2), dim=-1)
-            # less memory hungry
-            # img_embs = self.image_embeddings.mean(dim=1).unsqueeze(0).repeat(len(self.queries), 1, 1)
-            # txt_embs = self.query_embeddings.mean(dim=1).unsqueeze(1).repeat(1, len(self.images), 1)
-            # return 1 - torch.nn.functional.cosine_similarity(img_embs, txt_embs, dim=-1)
+        if self.embedder.name in COLPALI_MODELS and loss_type != EmbeddingLoss.COS_AVGEMB:
+            return -1 * score_multi_vector_modified(qs=self.query_embeddings, ps=self.image_embeddings, loss=loss_type)
+
+        if loss_type == EmbeddingLoss.COS_AVGEMB:
+            img_embs = self.image_embeddings.mean(dim=1).unsqueeze(0).repeat(len(self.queries), 1, 1)
+            txt_embs = self.query_embeddings.mean(dim=1).unsqueeze(1).repeat(1, len(self.images), 1)
+            return 1 - torch.nn.functional.cosine_similarity(img_embs, txt_embs, dim=-1)
 
         img_embs = self.image_embeddings.unsqueeze(0).repeat(len(self.queries), 1, 1)
         txt_embs = self.query_embeddings.unsqueeze(1).repeat(1, len(self.images), 1)
-        
+
         match loss_type:
-            case "mse":
+            case EmbeddingLoss.MSE:
                 losses = torch.nn.functional.mse_loss(txt_embs, img_embs, reduction="none")
-                losses = torch.mean(losses, dim=-1)
-            case "cos":
-                losses = 1-torch.nn.functional.cosine_similarity(txt_embs, img_embs, dim=-1)
+                return torch.mean(losses, dim=-1)
+            case EmbeddingLoss.COS:
+                return 1 - torch.nn.functional.cosine_similarity(txt_embs, img_embs, dim=-1)
             case _:
                 raise ValueError(f"Unknown loss type: {loss_type}")
-        return losses
 
-    
-    def evaluate_retrieval(self, ks: list[int], loss_types: list[str], include_adv=True):
+
+    def evaluate_retrieval(self, ks: list[int], loss_types: list[EmbeddingLoss], include_adv=True):
         """
         Accuracy@k: whether the top-k retrieved images include the ground truth image
         """
@@ -195,8 +191,6 @@ class ViDoReDataset:
         """
         t = time.time()
 
-        metric_dict = {}
-
         queries = self.queries_train if eval_train else self.queries_test
         if batch_size is None:
             generations = vlm.generate(image_tensor, queries, overwrite=True)
@@ -212,18 +206,17 @@ class ViDoReDataset:
 
         if print_gen: logger.info(generations)
 
-        for metric in metrics:
-            # exact match of VLM generation and target answer
-            if metric == "exact":
-                correct_generations = [g == target_generation for g in generations]
-                metric_value = sum(correct_generations) / len(queries)
-            
-            # similarity score between VLM generation and target answer in [0,1]
-            if metric == "embed":
-                similarity = text_embedder.compare_embeddings(generations, target_generation, similarity_metric="cos")
-                metric_value = similarity.mean().item()
+        metric_dict = {}
 
-            metric_dict[metric] = metric_value
+        if "exact" in metrics:
+            # exact match of VLM generation and target answer
+            correct_generations = [g == target_generation for g in generations]
+            metric_dict["exact"] = sum(correct_generations) / len(queries)
+            
+        if "embed" in metrics:
+            # similarity score between VLM generation and target answer in [0,1]
+            similarity = text_embedder.compare_embeddings(generations, target_generation, similarity_metric="cos")
+            metric_dict["embed"] = similarity.mean().item()
 
         logger.info(f"Evaluated {len(queries)} generations in {time.time()-t:.2f}s")
 

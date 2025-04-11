@@ -19,16 +19,16 @@ def load_vlm(model_name_vlm: VLMName, device: str) -> VLM:
 
 
 @lru_cache(maxsize=1)
-def _load_embedder(model_name_emb: EmbedderName, device: str) -> EmbeddingModel:
+def _load_embedder(model_name_emb: EmbedderName, quantize: bool, colpali_only_images: bool, device: str) -> EmbeddingModel:
     logger.info(f"Embedding: loading {model_name_emb}")
-    return EmbeddingModel(model_name_emb, device)
+    return EmbeddingModel(model_name_emb, device, quantize=quantize, colpali_only_images=colpali_only_images)
 
 
 @lru_cache(maxsize=1)
 def load_embedder_and_dataset(
-    ds_name: DatasetName, model_name_emb: EmbedderName, do_retrieval: bool, device: str
+    ds_name: DatasetName, model_name_emb: EmbedderName, do_retrieval: bool, quantize: bool, colpali_only_images: bool, device: str
 ) -> Tuple[EmbeddingModel, ViDoReDataset]:
     logger.info(f"Dataset: loading {ds_name} with {model_name_emb}")
-    embedder = _load_embedder(model_name_emb, device)
+    embedder = _load_embedder(model_name_emb, quantize=quantize, colpali_only_images=colpali_only_images, device=device)
     dataset = ViDoReDataset(ds_name, do_retrieval=do_retrieval, embedder=embedder)
     return embedder, dataset

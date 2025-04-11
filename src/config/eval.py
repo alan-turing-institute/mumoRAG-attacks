@@ -4,14 +4,14 @@ from typing import Optional
 
 from utils.text_embedding import TextEmbedderName
 from utils.vlm import VLMName
-from utils.embedding import EmbedderName
+from utils.embedding import EmbedderName, EmbeddingLoss
 from . import RESULTS_FOLDER
 
 
 @dataclass
 class ExperimentEvalConfig:
     results_folder: Path = RESULTS_FOLDER
-    emb_test_loss_type_list: list[str] = field(default_factory=lambda: ["cos"])
+    emb_test_loss_type_list: list[EmbeddingLoss] = field(default_factory=lambda: [EmbeddingLoss.COS])
     topk_list: list[int] = field(default_factory=lambda: [1, 5])
     gen_metric_list: list[str] = field(default_factory=lambda: ["exact", "embed"])
     gen_text_embedder: TextEmbedderName = TextEmbedderName.JINA_TEXT_V3

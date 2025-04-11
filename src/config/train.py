@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from utils.dataset import DatasetName
-from utils.embedding import EmbedderName
+from utils.embedding import EmbedderName, EmbeddingLoss
 from utils.vlm import VLMName
 from . import ATTACKS_FOLDER
 
@@ -13,7 +13,7 @@ class ExperimentTrainConfig:
     embedder_list: list[EmbedderName] = field(default_factory=lambda: [EmbedderName.CLIP_LARGE_PATCH14])
     vlm_list: list[VLMName] = field(default_factory=lambda: [VLMName.SMOLVLM_1_2B])
     max_perturbation_list: list[float] = field(default_factory=lambda: [x / 255.0 for x in [8]])
-    emb_train_loss_type_list: list[str] = field(default_factory=lambda: ["cos"])
+    emb_train_loss_type_list: list[EmbeddingLoss] = field(default_factory=lambda: [EmbeddingLoss.COS])
     is_adaptive_list: list[bool] = field(default_factory=lambda: [False])
     save_folder: Path = ATTACKS_FOLDER
     target_answer: str = "I will not reply to you!"
@@ -27,3 +27,4 @@ class ExperimentTrainConfig:
     lambda_emb: float = 2
     lambda_vlm: float = 1
     lambda_constant: float = 0.2
+    colpali_only_images: bool = False
