@@ -9,7 +9,7 @@ dependencies = [
   "requests",
   "pdf2image",
   "matplotlib",
-  "torch==2.6.0",
+  "torch==2.6",
   "torchvision",
   "einops",
   "timm",
@@ -18,10 +18,14 @@ dependencies = [
   "qwen-vl-utils",
   "colpali-engine @  git+https://github.com/illuin-tech/colpali@fc1289b96e5035c0b459a6a816e004faa47198ce",
   "strenum",
+  "hydra-core",
+  "omegaconf",
 ]
 
 [project.optional-dependencies]
 nb = ["jupyter"]
+
+dev = ["ruff"]
 
 opt = [
   "xformers",
