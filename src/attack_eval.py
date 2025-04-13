@@ -71,12 +71,13 @@ def run(exp_config: ExperimentConfig):
         embedder, ds = load_embedder_and_dataset(
             task_config.ds_name,
             task_config.model_name_emb,
-            do_retrieval=False,
+            do_retrieval=exp_config.eval.do_retrieval,
             quantize=False,
             colpali_only_images=exp_config.train.colpali_only_images,
             device=device,
         )
 
+        retrievals_train, retrievals_test = None, None
         retrieval_metric_dict = None
         # test retrieval
         if exp_config.eval.do_retrieval:
@@ -99,6 +100,8 @@ def run(exp_config: ExperimentConfig):
                 metric_dict_before,
                 metric_dict_after,
             )
+            retrievals_train = {k: v["train"] for k,v in retrievals_after.items()}
+            retrievals_test = {k: v["test"] for k,v in retrievals_after.items()}
 
         generation_metric_dict = None
         # test generation
@@ -112,6 +115,8 @@ def run(exp_config: ExperimentConfig):
                 text_embedder=text_embedder,
                 batch_size=exp_config.eval.gen_batch_size,
                 eval_train=False,
+                retrievals=retrievals_test,
+                generation_topk=exp_config.eval.gen_topk
             )
             metric_dict_train, gs_train = ds.evaluate_generation(
                 vlm,
@@ -121,6 +126,8 @@ def run(exp_config: ExperimentConfig):
                 text_embedder=text_embedder,
                 batch_size=exp_config.eval.gen_batch_size,
                 eval_train=True,
+                retrievals=retrievals_train,
+                generation_topk=exp_config.eval.gen_topk
             )
             generation_metric_dict = {
                 "train": metric_dict_train,

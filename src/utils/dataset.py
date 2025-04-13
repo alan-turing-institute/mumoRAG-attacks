@@ -2,6 +2,7 @@ import hashlib
 import itertools
 import time
 from typing import Optional
+from collections import defaultdict
 
 import math
 import torch
@@ -180,25 +181,30 @@ class ViDoReDataset:
 
             metric_dict[f"loss_{loss_type}_topk_{k}"] = {"acc": accuracy, "asr_train": asr_train, "asr_test": asr_test}
             # keep only the retrievals for highest k, should include those for small k
-            retrievals[f"loss_{loss_type}"] = topk.indices
+            retrievals[f"loss_{loss_type}"] = {"train": topk.indices[:self.num_train], "test": topk.indices[self.num_train:]}
 
         return metric_dict, retrievals
     
     
-    def evaluate_generation(self, vlm: VLM, image_tensor, target_generation: str, metrics: list[str], text_embedder: TextEmbeddingModel, batch_size=None, eval_train=False, print_gen=False):
+    def evaluate_generation(self, vlm: VLM, image_tensor, target_generation: str, metrics: list[str], text_embedder: TextEmbeddingModel, batch_size=None, eval_train=False, print_gen=False, retrievals=None, generation_topk=-1):
         """
         By default, we use the test dataset
         """
         t = time.time()
 
         queries = self.queries_train if eval_train else self.queries_test
+
+        retrieved_images, adv_indices = self.retreived_idx_to_img(retrieved_indices=retrievals[list(retrievals.keys())[0]], topk=generation_topk)
+
         if batch_size is None:
-            generations = vlm.generate(image_tensor, queries, overwrite=True)
+            generations = vlm.generate(image_tensor, queries, overwrite=True, retrieved_images=retrieved_images, adv_indices=adv_indices)
         else:
             generations = []
-            for i in range(math.ceil(len(queries) / batch_size)):
+            for i in tqdm(range(math.ceil(len(queries) / batch_size))):
                 queries_batch = queries[i*batch_size:(i+1)*batch_size]
-                generations.extend(vlm.generate(image_tensor, queries_batch, overwrite=True))
+                retrieved_images_batch = retrieved_images[i*batch_size:(i+1)*batch_size]
+                adv_indices_batch = adv_indices[i*batch_size:(i+1)*batch_size]
+                generations.extend(vlm.generate(image_tensor, queries_batch, overwrite=True, retrieved_images=retrieved_images_batch, adv_indices=adv_indices_batch))
         
         # extract only the VLM reply (Smol and Qwen need different splittings)
         split_str = "Assistant:" if vlm.name in SMOL_VLMS else "assistant\n"
@@ -206,18 +212,42 @@ class ViDoReDataset:
 
         if print_gen: logger.info(generations)
 
-        metric_dict = {}
+        metric_dict = defaultdict(dict)
+        keyname = f"gen_topk_{generation_topk}"
 
         if "exact" in metrics:
             # exact match of VLM generation and target answer
             correct_generations = [g == target_generation for g in generations]
-            metric_dict["exact"] = sum(correct_generations) / len(queries)
+            metric_dict[keyname]["exact"] = sum(correct_generations) / len(queries)
             
         if "embed" in metrics:
             # similarity score between VLM generation and target answer in [0,1]
             similarity = text_embedder.compare_embeddings(generations, target_generation, similarity_metric="cos")
-            metric_dict["embed"] = similarity.mean().item()
+            metric_dict[keyname]["embed"] = similarity.mean().item()
 
         logger.info(f"Evaluated {len(queries)} generations in {time.time()-t:.2f}s")
 
         return metric_dict, generations
+    
+
+    def retreived_idx_to_img(self, retrieved_indices: torch.tensor, topk: int):
+        if topk == -1:
+            # ignore retrieval results, and assume adversarial image is always retrieved
+            n_queries = retrieved_indices.shape[0]
+            retrieved_images = [[self.images[self.num_images_orig]] for _ in range(n_queries)]
+            adv_indices = [0 for _ in range(n_queries)]
+        else:
+            # use top retrieved images
+            retrieved_images = [
+                [
+                    self.images[i] for i in indices_per_query[:topk]
+                ] 
+                for indices_per_query in retrieved_indices
+            ]
+            # where is the adversarial image located within the top-k?
+            adv_indices = [
+                indices_per_query[:topk].tolist().index(self.num_images_orig) if self.num_images_orig in indices_per_query[:topk] else -1 
+                for indices_per_query in retrieved_indices
+        ]
+
+        return retrieved_images, adv_indices
