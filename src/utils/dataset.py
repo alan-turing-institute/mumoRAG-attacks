@@ -186,46 +186,47 @@ class ViDoReDataset:
         return metric_dict, retrievals
     
     
-    def evaluate_generation(self, vlm: VLM, image_tensor, target_generation: str, metrics: list[str], text_embedder: TextEmbeddingModel, batch_size=None, eval_train=False, print_gen=False, retrievals=None, generation_topk=-1):
+    def evaluate_generation(self, vlm: VLM, image_tensor, target_generation: str, metrics: list[str], text_embedder: TextEmbeddingModel, retrievals: dict, generation_topk_list: list[int], batch_size=None, eval_train=False, print_gen=False):
         """
         By default, we use the test dataset
         """
-        t = time.time()
 
         queries = self.queries_train if eval_train else self.queries_test
-
-        retrieved_images, adv_indices = self.retreived_idx_to_img(retrieved_indices=retrievals[list(retrievals.keys())[0]], topk=generation_topk)
-
-        if batch_size is None:
-            generations = vlm.generate(image_tensor, queries, overwrite=True, retrieved_images=retrieved_images, adv_indices=adv_indices)
-        else:
-            generations = []
-            for i in tqdm(range(math.ceil(len(queries) / batch_size))):
-                queries_batch = queries[i*batch_size:(i+1)*batch_size]
-                retrieved_images_batch = retrieved_images[i*batch_size:(i+1)*batch_size]
-                adv_indices_batch = adv_indices[i*batch_size:(i+1)*batch_size]
-                generations.extend(vlm.generate(image_tensor, queries_batch, overwrite=True, retrieved_images=retrieved_images_batch, adv_indices=adv_indices_batch))
-        
-        # extract only the VLM reply (Smol and Qwen need different splittings)
-        split_str = "Assistant:" if vlm.name in SMOL_VLMS else "assistant\n"
-        generations = [g.split(split_str)[-1].strip() for g in generations]
-
-        if print_gen: logger.info(generations)
-
         metric_dict = defaultdict(dict)
-        keyname = f"gen_topk_{generation_topk}"
 
-        if "exact" in metrics:
-            # exact match of VLM generation and target answer
-            correct_generations = [g == target_generation for g in generations]
-            metric_dict[keyname]["exact"] = sum(correct_generations) / len(queries)
+        for generation_topk in generation_topk_list:
+
+            logger.info(f'Generating responses to {"train" if eval_train else "test"} set queries: using top ({generation_topk}) retrieved images')
+
+            retrieved_images, adv_indices = self.retreived_idx_to_img(retrieved_indices=retrievals[list(retrievals.keys())[0]], topk=generation_topk)
+
+            if batch_size is None:
+                generations = vlm.generate(image_tensor, queries, overwrite=True, retrieved_images=retrieved_images, adv_indices=adv_indices)
+            else:
+                generations = []
+                for i in tqdm(range(math.ceil(len(queries) / batch_size))):
+                    queries_batch = queries[i*batch_size:(i+1)*batch_size]
+                    retrieved_images_batch = retrieved_images[i*batch_size:(i+1)*batch_size]
+                    adv_indices_batch = adv_indices[i*batch_size:(i+1)*batch_size]
+                    generations.extend(vlm.generate(image_tensor, queries_batch, overwrite=True, retrieved_images=retrieved_images_batch, adv_indices=adv_indices_batch))
             
-        if "embed" in metrics:
-            # similarity score between VLM generation and target answer in [0,1]
-            similarity = text_embedder.compare_embeddings(generations, target_generation, similarity_metric="cos")
-            metric_dict[keyname]["embed"] = similarity.mean().item()
+            # extract only the VLM reply (Smol and Qwen need different splittings)
+            split_str = "Assistant:" if vlm.name in SMOL_VLMS else "assistant\n"
+            generations = [g.split(split_str)[-1].strip() for g in generations]
 
-        logger.info(f"Evaluated {len(queries)} generations in {time.time()-t:.2f}s")
+            if print_gen: logger.info(generations)
+
+            keyname = f"gen_topk_{generation_topk}"
+
+            if "exact" in metrics:
+                # exact match of VLM generation and target answer
+                correct_generations = [g == target_generation for g in generations]
+                metric_dict[keyname]["exact"] = sum(correct_generations) / len(queries)
+                
+            if "embed" in metrics:
+                # similarity score between VLM generation and target answer in [0,1]
+                similarity = text_embedder.compare_embeddings(generations, target_generation, similarity_metric="cos")
+                metric_dict[keyname]["embed"] = similarity.mean().item()
 
         return metric_dict, generations
     

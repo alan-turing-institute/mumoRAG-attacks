@@ -60,7 +60,7 @@ def run(exp_config: ExperimentConfig):
         if not is_loss_compatible(task_config.model_name_emb, task_config.emb_train_loss_type):
             continue
 
-        logger.info(f"{'+' * 20}\nEval {(i + 1):4d}/{n_evals}, task_config -> {task_config.to_dict()}")
+        logger.info(f"Eval {(i + 1):4d}/{n_evals}, task_config -> {task_config.to_dict()}\n{'='*20}")
         image_adv = load_adv_image(task_config, exp_config.train)
 
         # update model names in case we test transferability
@@ -113,10 +113,10 @@ def run(exp_config: ExperimentConfig):
                 exp_config.train.target_answer,
                 metrics=exp_config.eval.gen_metric_list,
                 text_embedder=text_embedder,
+                retrievals=retrievals_test,
+                generation_topk_list=exp_config.eval.gen_topk_list,
                 batch_size=exp_config.eval.gen_batch_size,
                 eval_train=False,
-                retrievals=retrievals_test,
-                generation_topk=exp_config.eval.gen_topk
             )
             metric_dict_train, gs_train = ds.evaluate_generation(
                 vlm,
@@ -124,10 +124,10 @@ def run(exp_config: ExperimentConfig):
                 exp_config.train.target_answer,
                 metrics=exp_config.eval.gen_metric_list,
                 text_embedder=text_embedder,
+                retrievals=retrievals_train,
+                generation_topk_list=exp_config.eval.gen_topk_list,
                 batch_size=exp_config.eval.gen_batch_size,
                 eval_train=True,
-                retrievals=retrievals_train,
-                generation_topk=exp_config.eval.gen_topk
             )
             generation_metric_dict = {
                 "train": metric_dict_train,

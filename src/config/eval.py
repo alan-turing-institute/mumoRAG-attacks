@@ -18,7 +18,7 @@ class ExperimentEvalConfig:
     gen_batch_size: int                             = 4
     do_retrieval: bool                              = True
     do_generation: bool                             = True
-    gen_topk: int                                   = -1 # (-1) means we assume adversaial image always retrieved
+    gen_topk_list: list[int]                        = field(default_factory=lambda: [-1]) # (-1) means we assume adversaial image always retrieved
     # following used to test transferability, None means white-box setting
     eval_emb_list: Optional[list[EmbedderName]]     = None
     eval_vlm_list: Optional[list[VLMName]]          = None

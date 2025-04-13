@@ -26,7 +26,7 @@ configstore.store(
             vlm_list=[VLMName.SMOLVLM_1_256M],
         ),
         eval=ExperimentEvalConfig(
-            gen_topk=2,
+            gen_topk_list=[-1, 1, 2]
         )
     ),
 )
