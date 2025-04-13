@@ -28,3 +28,4 @@ class ExperimentTrainConfig:
     lambda_vlm: float                               = 1
     lambda_constant: float                          = 0.2
     colpali_only_images: bool                       = False
+    gen_topk_list: list[int]                        = field(default_factory=lambda: [1])

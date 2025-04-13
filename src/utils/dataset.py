@@ -3,6 +3,7 @@ import itertools
 import time
 from typing import Optional
 from collections import defaultdict
+import random
 
 import math
 import torch
@@ -252,3 +253,6 @@ class ViDoReDataset:
         ]
 
         return retrieved_images, adv_indices
+    
+    def sample_attack_images(self, n_images: int):
+        return random.sample(self.images, k=n_images-1) # (n-1) because the malicious image must be included

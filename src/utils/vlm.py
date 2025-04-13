@@ -108,6 +108,7 @@ class VLM():
     def get_training_prompt(self, 
             user_query: str, # list or str 
             target_generation: str, 
+            n_images: int
         ):
         """
         builds the prompt skeleton for the VLM including the image placeholder, the user query, and the required response
@@ -118,10 +119,7 @@ class VLM():
             [
                 {
                     "role": "user",
-                    "content": [
-                        {"type": "image"},
-                        {"type": "text", "text": user_query[i]}
-                    ]
+                    "content": [{"type": "image"} for _ in range(n_images)] + [{"type": "text", "text": user_query[i]}]
                 },
                 {
                     "role": "assistant",
@@ -162,7 +160,7 @@ class VLM():
         
         return generated_texts
 
-    def forward(self, image, mock_images, prompt, overwrite: bool = False):
+    def forward(self, image, mock_images, prompt, context_images = None, adv_indices: list = None, overwrite: bool = False):
         """
         Important:
         padding_side should be set to "left", otherwise this will interfere with the attack optimization
@@ -171,15 +169,20 @@ class VLM():
         if isinstance(prompt, str): prompt = [prompt]
         if self.name in SMOL_VLMS:
             if overwrite:
-                inputs_vlm = self.processor(text=prompt, images=mock_images, return_tensors="pt", truncation=True, padding=True, padding_side="left").to(self.device) # here we feed the initial image since we are overwriting it anyway
-                image_ppd_vlm = process_image(image, self)
-                inputs_vlm['pixel_values'] = image_ppd_vlm.unsqueeze(0).unsqueeze(0).repeat(len(prompt),1,1,1,1).to(self.device)
+                image_ppd = process_image(image, self)
+                # inputs_vlm = self.processor(text=prompt, images=mock_images, return_tensors="pt", truncation=True, padding=True, padding_side="left").to(self.device) # here we feed the initial image since we are overwriting it anyway
+                # inputs_vlm['pixel_values'] = image_ppd_vlm.unsqueeze(0).unsqueeze(0).repeat(len(prompt),1,1,1,1).to(self.device)
+                inputs_vlm = self.processor(text=prompt, images=context_images, return_tensors="pt", truncation=True, padding=True, padding_side="left").to(self.device) 
+                for i, adv_idx in enumerate(adv_indices):
+                    inputs_vlm['pixel_values'][i][adv_idx] = image_ppd
             else:
                 inputs_vlm = self.processor(text=prompt, images=[image for _ in range(len(prompt))], return_tensors="pt", truncation=True, padding=True, padding_side="left").to(self.device) # here we feed the initial image since we are overwriting it anyway
         
         if self.name in QWEN_VLMS:
             # it seems that qwen implements their preprocessors in pytorch --> differentiable (no need to overwrite image)
-            inputs_vlm = self.processor(text=prompt, images=[image for _ in range(len(prompt))], return_tensors="pt", truncation=True, padding=True, padding_side="left").to(self.device)
+            retrieved_images_pt = self.create_topk_image_list_pt(image, context_images, adv_indices)
+            inputs_vlm = self.processor(text=prompt, images=retrieved_images_pt, return_tensors="pt", truncation=True, padding=True, padding_side="left").to(self.device)
+            # inputs_vlm = self.processor(text=prompt, images=[image for _ in range(len(prompt))], return_tensors="pt", truncation=True, padding=True, padding_side="left").to(self.device)
         
         if inputs_vlm:
             out = self.model(**inputs_vlm, use_cache=False, output_attentions=False, output_hidden_states=False)
@@ -201,4 +204,3 @@ class VLM():
         for i in range(len(retrieved_images)):
             topk_images_pt[i][adv_indices[i]] = adv_image
         return topk_images_pt
-       
