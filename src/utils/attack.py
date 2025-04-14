@@ -90,7 +90,7 @@ def rag_attack(
 
         if lambda_vlm > 0:
             # generation loss function
-            context_images, adv_indices = prepare_context_images(attack_images, T.ToPILImage()(raw_image), batch_size_per_iter)
+            context_images, adv_indices = prepare_context_images(attack_images, T.ToPILImage()(raw_image), batch_size_per_iter, config.gen_topk)
             out = vlm.forward(raw_image, mock_images, full_text_vlm_prompt_batch, context_images, adv_indices, overwrite=True)
             loss_vlm = vlm.compute_gen_loss(out, target_tokens)
 
@@ -151,7 +151,7 @@ def adaptive_attack_coefficients(loss_emb, loss_vlm, lambda_constant):
 
     return lambda_emb, lambda_vlm
 
-def prepare_context_images(attack_images, mock_image_pil, batch_size_per_iter):
+def prepare_context_images(attack_images, mock_image_pil, batch_size_per_iter, gen_topk):
     """
     Randomly selects the order of images in the context for each element in the batch
     Returns:
@@ -161,12 +161,12 @@ def prepare_context_images(attack_images, mock_image_pil, batch_size_per_iter):
     context_images, adv_indices = [], []
     
     for  i in range(batch_size_per_iter):
-        n_samples = len(attack_images)
+        n_samples = gen_topk-1
         adv_idx = random.randint(0, n_samples)
-        shuffled_images = random.sample(attack_images, k=n_samples)
-        shuffled_images.insert(adv_idx, mock_image_pil)
+        sampled_images = random.sample(attack_images, k=n_samples)
+        sampled_images.insert(adv_idx, mock_image_pil)
         
-        context_images.append(shuffled_images)
+        context_images.append(sampled_images)
         adv_indices.append(adv_idx)
 
     return context_images, adv_indices

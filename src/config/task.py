@@ -37,10 +37,11 @@ class TaskConfig:
     eval_vlm_name: Optional[VLMName] = None
     colpali_only_images: bool = False
     gen_topk: int = 1
+    kb_compromised_fraction: float = 0.1
 
     def create_hash_string(self):
         # this should include more info, but this suffices for now
-        config_str = f"{self.model_name_emb}{self.model_name_vlm}{self.ds_name}{self.chosen_index}{self.target_answer}{self.max_perturbation}{self.emb_train_loss_type}{self.is_adaptive}{self.gen_topk}"
+        config_str = f"{self.model_name_emb}{self.model_name_vlm}{self.ds_name}{self.chosen_index}{self.target_answer}{self.max_perturbation}{self.emb_train_loss_type}{self.is_adaptive}{self.gen_topk}{self.kb_compromised_fraction}"
 
         if self.is_adaptive:
             config_str += f"{self.lambda_constant}"
@@ -120,7 +121,8 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
                 eval_emb_name=eval_emb_name,
                 eval_vlm_name=eval_vlm_name,
                 colpali_only_images=exp_config.train.colpali_only_images,
-                gen_topk=gen_topk
+                gen_topk=gen_topk,
+                kb_compromised_fraction=exp_config.train.kb_compromised_fraction
             )
         )
 

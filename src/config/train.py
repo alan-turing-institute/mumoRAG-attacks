@@ -29,3 +29,4 @@ class ExperimentTrainConfig:
     lambda_constant: float                          = 0.2
     colpali_only_images: bool                       = False
     gen_topk_list: list[int]                        = field(default_factory=lambda: [1])
+    kb_compromised_fraction: float                  = 0.1

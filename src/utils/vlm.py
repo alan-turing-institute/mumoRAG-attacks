@@ -12,6 +12,7 @@ class VLMName(StrEnum):
     # SMOLVLM_2_2B = "HuggingFaceTB/SmolVLM2-2.2B-Instruct"
     QWEN_2p5_VL_3B = "Qwen/Qwen2.5-VL-3B-Instruct"
     QWEN_2p5_VL_7B = "Qwen/Qwen2.5-VL-7B-Instruct"
+    LLAVA_ONEVISION_0p5B = "llava-hf/llava-onevision-qwen2-0.5b-ov-hf"
 
 SMOL_VLMS = [
     VLMName.SMOLVLM_1_256M,
@@ -23,6 +24,12 @@ SMOL_VLMS = [
 QWEN_VLMS = [
     VLMName.QWEN_2p5_VL_3B,
     VLMName.QWEN_2p5_VL_7B,
+]
+
+VLMS_WITH_FAST_PROCESSOR = [
+    VLMName.QWEN_2p5_VL_3B,
+    VLMName.QWEN_2p5_VL_7B,
+    VLMName.LLAVA_ONEVISION_0p5B,
 ]
 
 MODEL_NAMES = [
@@ -142,7 +149,7 @@ class VLM():
         topk_used = len(retrieved_images[0])
         test_prompts = [self.get_test_prompt(query, n_images=topk_used) for query in user_queries]
         
-        if self.name in QWEN_VLMS:
+        if self.name in VLMS_WITH_FAST_PROCESSOR:
             # TODO: Not tested with large k due to OOM exceptions
             retrieved_images_pt = self.create_topk_image_list_pt(image, retrieved_images, adv_indices)
             inputs = self.processor(text=test_prompts, images=retrieved_images_pt, return_tensors="pt", padding=True, padding_side="left").to(self.device)
@@ -178,7 +185,7 @@ class VLM():
             else:
                 inputs_vlm = self.processor(text=prompt, images=[image for _ in range(len(prompt))], return_tensors="pt", truncation=True, padding=True, padding_side="left").to(self.device) # here we feed the initial image since we are overwriting it anyway
         
-        if self.name in QWEN_VLMS:
+        if self.name in VLMS_WITH_FAST_PROCESSOR:
             # it seems that qwen implements their preprocessors in pytorch --> differentiable (no need to overwrite image)
             retrieved_images_pt = self.create_topk_image_list_pt(image, context_images, adv_indices)
             inputs_vlm = self.processor(text=prompt, images=retrieved_images_pt, return_tensors="pt", truncation=True, padding=True, padding_side="left").to(self.device)

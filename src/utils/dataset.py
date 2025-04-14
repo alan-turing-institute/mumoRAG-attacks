@@ -254,5 +254,6 @@ class ViDoReDataset:
 
         return retrieved_images, adv_indices
     
-    def sample_attack_images(self, n_images: int):
+    def sample_images_from_ds(self, fraction: float):
+        n_images = math.floor(fraction * self.num_images_orig)
         return random.sample(self.images, k=n_images)
