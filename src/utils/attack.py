@@ -133,7 +133,7 @@ def attack_step_pgd(
         max_perturbation_pixels: int,
         initial_image: torch.tensor):
     """
-    Implement the projected gradient descent (PGD) attack proposed by Madry et. al (2018) 
+    Implement the projected gradient descent (PGD) attack proposed by Madry et al. (2018) 
     """
     # take step
     raw_image -= lr * torch.sign(grads)

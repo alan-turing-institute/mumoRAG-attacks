@@ -199,7 +199,7 @@ class ViDoReDataset:
 
             logger.info(f'Generating responses to {"train" if eval_train else "test"} set queries: using top ({generation_topk}) retrieved images')
 
-            retrieved_images, adv_indices = self.retreived_idx_to_img(retrieved_indices=retrievals[list(retrievals.keys())[0]], topk=generation_topk)
+            retrieved_images, adv_indices = self.retrieved_idx_to_img(retrieved_indices=retrievals[list(retrievals.keys())[0]], topk=generation_topk)
 
             if batch_size is None:
                 generations = vlm.generate(image_tensor, queries, overwrite=True, retrieved_images=retrieved_images, adv_indices=adv_indices)
@@ -232,7 +232,7 @@ class ViDoReDataset:
         return metric_dict, generations
     
 
-    def retreived_idx_to_img(self, retrieved_indices: torch.tensor, topk: int):
+    def retrieved_idx_to_img(self, retrieved_indices: torch.tensor, topk: int):
         if topk == -1:
             # ignore retrieval results, and assume adversarial image is always retrieved
             n_queries = retrieved_indices.shape[0]
@@ -255,4 +255,4 @@ class ViDoReDataset:
         return retrieved_images, adv_indices
     
     def sample_attack_images(self, n_images: int):
-        return random.sample(self.images, k=n_images-1) # (n-1) because the malicious image must be included
+        return random.sample(self.images, k=n_images)

@@ -33,7 +33,7 @@ def run(exp_config: ExperimentConfig):
         )
 
         query_strings = ds.queries_train
-        attack_images = ds.sample_attack_images(n_images=task_config.gen_topk) # images included by the attacker in the VLM context
+        attack_images = ds.sample_attack_images(n_images=task_config.gen_topk-1) # images included by the attacker in the VLM context (n-1 because the malicious image must be included)
 
         # choose attacked image
         chosen_image = ds.images[task_config.chosen_index]
