@@ -91,7 +91,7 @@ def rag_attack(
         if lambda_vlm > 0:
             # generation loss function
             context_images, adv_indices = prepare_context_images(attack_images, T.ToPILImage()(raw_image), batch_size_per_iter, config.gen_topk)
-            out = vlm.forward(raw_image, mock_images, full_text_vlm_prompt_batch, context_images, adv_indices, overwrite=True)
+            out = vlm.forward(raw_image, full_text_vlm_prompt_batch, context_images, adv_indices, overwrite=True)
             loss_vlm = vlm.compute_gen_loss(out, target_tokens)
 
         # update loss coefficients if we use the adaptive attack

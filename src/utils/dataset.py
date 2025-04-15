@@ -200,16 +200,18 @@ class ViDoReDataset:
             logger.info(f'Generating responses to {"train" if eval_train else "test"} set queries: using top ({generation_topk}) retrieved images')
 
             retrieved_images, adv_indices = self.retrieved_idx_to_img(retrieved_indices=retrievals[list(retrievals.keys())[0]], topk=generation_topk)
+            prompts = [vlm.get_test_prompt(query, n_images=len(retrieved_images[0])) for query in queries]
 
             if batch_size is None:
-                generations = vlm.generate(image_tensor, queries, overwrite=True, retrieved_images=retrieved_images, adv_indices=adv_indices)
+                generations = vlm.generate(image_tensor, prompts, context_images=retrieved_images, adv_indices=adv_indices, overwrite=True)
             else:
                 generations = []
                 for i in tqdm(range(math.ceil(len(queries) / batch_size))):
-                    queries_batch = queries[i*batch_size:(i+1)*batch_size]
+                    # queries_batch = queries[i*batch_size:(i+1)*batch_size]
+                    prompts_batch = prompts[i*batch_size:(i+1)*batch_size]
                     retrieved_images_batch = retrieved_images[i*batch_size:(i+1)*batch_size]
                     adv_indices_batch = adv_indices[i*batch_size:(i+1)*batch_size]
-                    generations.extend(vlm.generate(image_tensor, queries_batch, overwrite=True, retrieved_images=retrieved_images_batch, adv_indices=adv_indices_batch))
+                    generations.extend(vlm.generate(image_tensor, prompts_batch, context_images=retrieved_images_batch, adv_indices=adv_indices_batch, overwrite=True))
             
             # extract only the VLM reply (Smol and Qwen need different splittings)
             split_str = "Assistant:" if vlm.name in SMOL_VLMS else "assistant\n"
