@@ -33,6 +33,7 @@ def run(exp_config: ExperimentConfig):
         )
 
         query_strings = ds.queries_train
+        attack_images = ds.sample_images_from_ds(fraction=task_config.kb_compromised_fraction) # images included by the attacker in the VLM context (n-1 because the malicious image must be included)
 
         # choose attacked image
         chosen_image = ds.images[task_config.chosen_index]
@@ -48,6 +49,7 @@ def run(exp_config: ExperimentConfig):
             vlm=vlm,
             user_query=query_strings,
             config=task_config,
+            attack_images=attack_images,
             print_every=exp_config.train.print_every,
             device=device
         )

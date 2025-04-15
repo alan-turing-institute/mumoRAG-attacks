@@ -60,7 +60,7 @@ def run(exp_config: ExperimentConfig):
         if not is_loss_compatible(task_config.model_name_emb, task_config.emb_train_loss_type):
             continue
 
-        logger.info(f"{'+' * 20}\nEval {(i + 1):4d}/{n_evals}, task_config -> {task_config.to_dict()}")
+        logger.info(f"Eval {(i + 1):4d}/{n_evals}, task_config -> {task_config.to_dict()}\n{'='*20}")
         image_adv = load_adv_image(task_config, exp_config.train)
 
         # update model names in case we test transferability
@@ -71,12 +71,13 @@ def run(exp_config: ExperimentConfig):
         embedder, ds = load_embedder_and_dataset(
             task_config.ds_name,
             task_config.model_name_emb,
-            do_retrieval=False,
+            do_retrieval=exp_config.eval.do_retrieval,
             quantize=False,
             colpali_only_images=exp_config.train.colpali_only_images,
             device=device,
         )
 
+        retrievals_train, retrievals_test = None, None
         retrieval_metric_dict = None
         # test retrieval
         if exp_config.eval.do_retrieval:
@@ -99,6 +100,8 @@ def run(exp_config: ExperimentConfig):
                 metric_dict_before,
                 metric_dict_after,
             )
+            retrievals_train = {k: v["train"] for k,v in retrievals_after.items()}
+            retrievals_test = {k: v["test"] for k,v in retrievals_after.items()}
 
         generation_metric_dict = None
         # test generation
@@ -110,6 +113,8 @@ def run(exp_config: ExperimentConfig):
                 exp_config.train.target_answer,
                 metrics=exp_config.eval.gen_metric_list,
                 text_embedder=text_embedder,
+                retrievals=retrievals_test,
+                generation_topk_list=exp_config.eval.gen_topk_list,
                 batch_size=exp_config.eval.gen_batch_size,
                 eval_train=False,
             )
@@ -119,6 +124,8 @@ def run(exp_config: ExperimentConfig):
                 exp_config.train.target_answer,
                 metrics=exp_config.eval.gen_metric_list,
                 text_embedder=text_embedder,
+                retrievals=retrievals_train,
+                generation_topk_list=exp_config.eval.gen_topk_list,
                 batch_size=exp_config.eval.gen_batch_size,
                 eval_train=True,
             )

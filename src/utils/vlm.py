@@ -12,6 +12,7 @@ class VLMName(StrEnum):
     # SMOLVLM_2_2B = "HuggingFaceTB/SmolVLM2-2.2B-Instruct"
     QWEN_2p5_VL_3B = "Qwen/Qwen2.5-VL-3B-Instruct"
     QWEN_2p5_VL_7B = "Qwen/Qwen2.5-VL-7B-Instruct"
+    LLAVA_ONEVISION_0p5B = "llava-hf/llava-onevision-qwen2-0.5b-ov-hf"
 
 SMOL_VLMS = [
     VLMName.SMOLVLM_1_256M,
@@ -23,6 +24,12 @@ SMOL_VLMS = [
 QWEN_VLMS = [
     VLMName.QWEN_2p5_VL_3B,
     VLMName.QWEN_2p5_VL_7B,
+]
+
+VLMS_WITH_FAST_PROCESSOR = [
+    VLMName.QWEN_2p5_VL_3B,
+    VLMName.QWEN_2p5_VL_7B,
+    VLMName.LLAVA_ONEVISION_0p5B,
 ]
 
 MODEL_NAMES = [
@@ -73,15 +80,12 @@ class VLM():
         self.model.eval()
     
     
-    def get_test_prompt(self, user_query: str):
+    def get_test_prompt(self, user_query: str, n_images: int = 1):
         messages = [
             {
                 "role": "user",
-                "content": [
-                    {"type": "image"},
-                    {"type": "text", "text": user_query}
-                ]
-            },
+                "content": [{"type": "image"} for _ in range(n_images)] + [{"type": "text", "text": user_query}]
+            }
         ]
         prompt = self.processor.apply_chat_template(messages, add_generation_prompt=True)
         return prompt
@@ -111,6 +115,7 @@ class VLM():
     def get_training_prompt(self, 
             user_query: str, # list or str 
             target_generation: str, 
+            n_images: int
         ):
         """
         builds the prompt skeleton for the VLM including the image placeholder, the user query, and the required response
@@ -121,10 +126,7 @@ class VLM():
             [
                 {
                     "role": "user",
-                    "content": [
-                        {"type": "image"},
-                        {"type": "text", "text": user_query[i]}
-                    ]
+                    "content": [{"type": "image"} for _ in range(n_images)] + [{"type": "text", "text": user_query[i]}]
                 },
                 {
                     "role": "assistant",
@@ -141,28 +143,31 @@ class VLM():
         return prompt, target_tokens
     
     @torch.no_grad()
-    def generate(self, image: torch.tensor, user_queries, overwrite: bool = False):
+    def generate(self, image: torch.tensor, user_queries, overwrite: bool = False, retrieved_images = None, adv_indices: list = None):
         self.model.eval()
         if isinstance(user_queries, str): user_queries = [user_queries]
-        test_prompts = [self.get_test_prompt(query) for query in user_queries]
+        topk_used = len(retrieved_images[0])
+        test_prompts = [self.get_test_prompt(query, n_images=topk_used) for query in user_queries]
         
-        if self.name == "Qwen/Qwen2.5-VL-3B-Instruct":
-            inputs = self.processor(text=test_prompts, images=[image for _ in range(len(user_queries))], return_tensors="pt", padding=True, padding_side="left").to(self.device)
+        if self.name in VLMS_WITH_FAST_PROCESSOR:
+            # TODO: Not tested with large k due to OOM exceptions
+            retrieved_images_pt = self.create_topk_image_list_pt(image, retrieved_images, adv_indices)
+            inputs = self.processor(text=test_prompts, images=retrieved_images_pt, return_tensors="pt", padding=True, padding_side="left").to(self.device)
         else:            
-            images = [T.ToPILImage()(image) for _ in range(len(user_queries))]
-            inputs = self.processor(text=test_prompts, images=images, return_tensors="pt", padding=True, padding_side="left").to(self.device)
-            
+            inputs = self.processor(text=test_prompts, images=retrieved_images, return_tensors="pt", padding=True, padding_side="left").to(self.device)
+
             if overwrite:
                 image_ppd = process_image(image, self)
-                for i in range(inputs['pixel_values'].shape[0]):
-                    inputs['pixel_values'][i][0] = image_ppd
+                for i, adv_idx in enumerate(adv_indices):
+                    if adv_idx != -1:
+                        inputs['pixel_values'][i][adv_idx] = image_ppd
         
         generated_ids = self.model.generate(**inputs, max_new_tokens=30, do_sample=True, temperature=0.5)
         generated_texts = self.processor.batch_decode(generated_ids, skip_special_tokens=True)
         
         return generated_texts
 
-    def forward(self, image, mock_images, prompt, overwrite: bool = False):
+    def forward(self, image, mock_images, prompt, context_images = None, adv_indices: list = None, overwrite: bool = False):
         """
         Important:
         padding_side should be set to "left", otherwise this will interfere with the attack optimization
@@ -171,15 +176,20 @@ class VLM():
         if isinstance(prompt, str): prompt = [prompt]
         if self.name in SMOL_VLMS:
             if overwrite:
-                inputs_vlm = self.processor(text=prompt, images=mock_images, return_tensors="pt", truncation=True, padding=True, padding_side="left").to(self.device) # here we feed the initial image since we are overwriting it anyway
-                image_ppd_vlm = process_image(image, self)
-                inputs_vlm['pixel_values'] = image_ppd_vlm.unsqueeze(0).unsqueeze(0).repeat(len(prompt),1,1,1,1).to(self.device)
+                image_ppd = process_image(image, self)
+                # inputs_vlm = self.processor(text=prompt, images=mock_images, return_tensors="pt", truncation=True, padding=True, padding_side="left").to(self.device) # here we feed the initial image since we are overwriting it anyway
+                # inputs_vlm['pixel_values'] = image_ppd_vlm.unsqueeze(0).unsqueeze(0).repeat(len(prompt),1,1,1,1).to(self.device)
+                inputs_vlm = self.processor(text=prompt, images=context_images, return_tensors="pt", truncation=True, padding=True, padding_side="left").to(self.device) 
+                for i, adv_idx in enumerate(adv_indices):
+                    inputs_vlm['pixel_values'][i][adv_idx] = image_ppd
             else:
                 inputs_vlm = self.processor(text=prompt, images=[image for _ in range(len(prompt))], return_tensors="pt", truncation=True, padding=True, padding_side="left").to(self.device) # here we feed the initial image since we are overwriting it anyway
         
-        if self.name == "Qwen/Qwen2.5-VL-3B-Instruct":
+        if self.name in VLMS_WITH_FAST_PROCESSOR:
             # it seems that qwen implements their preprocessors in pytorch --> differentiable (no need to overwrite image)
-            inputs_vlm = self.processor(text=prompt, images=[image for _ in range(len(prompt))], return_tensors="pt", truncation=True, padding=True, padding_side="left").to(self.device)
+            retrieved_images_pt = self.create_topk_image_list_pt(image, context_images, adv_indices)
+            inputs_vlm = self.processor(text=prompt, images=retrieved_images_pt, return_tensors="pt", truncation=True, padding=True, padding_side="left").to(self.device)
+            # inputs_vlm = self.processor(text=prompt, images=[image for _ in range(len(prompt))], return_tensors="pt", truncation=True, padding=True, padding_side="left").to(self.device)
         
         if inputs_vlm:
             out = self.model(**inputs_vlm, use_cache=False, output_attentions=False, output_hidden_states=False)
@@ -192,3 +202,12 @@ class VLM():
         logits_to_optimize = vlm_output.logits[:,-len(target_tokens)-1:-1,:].transpose(1,2)
         target_tokens = target_tokens.unsqueeze(0).repeat(logits_to_optimize.shape[0], 1)
         return torch.nn.CrossEntropyLoss()(logits_to_optimize, target_tokens)
+    
+    def create_topk_image_list_pt(self, adv_image: torch.tensor, retrieved_images: list[list], adv_indices: int):
+        topk_images_pt = [
+            [T.PILToTensor()(img) for img in imgs_per_query]
+            for imgs_per_query in retrieved_images
+        ]
+        for i in range(len(retrieved_images)):
+            topk_images_pt[i][adv_indices[i]] = adv_image
+        return topk_images_pt

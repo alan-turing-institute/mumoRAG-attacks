@@ -1,4 +1,6 @@
 import torch
+import random
+import torchvision.transforms as T
 
 from config.task import TaskConfig
 from .embedding import EmbeddingModel
@@ -15,6 +17,7 @@ def rag_attack(
         vlm: VLM,
         user_query: str | list[str],
         config: TaskConfig,
+        attack_images: list,
         print_every: int,
         device: str):
     """
@@ -42,6 +45,7 @@ def rag_attack(
     emb_loss_type = config.emb_train_loss_type
     is_adaptive = config.is_adaptive
     lambda_constant = config.lambda_constant
+    gen_topk = config.gen_topk
 
     initial_image = raw_image.clone().float() if device == "cuda" else raw_image.clone()
     max_perturbation_pixels = max_perturbation*255
@@ -56,9 +60,8 @@ def rag_attack(
 
     # VLM processing
     if lambda_vlm > 0:
-        full_text_vlm_prompt, target_tokens = vlm.get_training_prompt(user_query, target_answer)
+        full_text_vlm_prompt, target_tokens = vlm.get_training_prompt(user_query, target_answer, gen_topk)
         mock_images = [initial_image for _ in range(batch_size_per_iter)]
-        # TODO: maybe here create the whole model_inputs list (to save time)
 
 
     # initial values for loss
@@ -87,7 +90,8 @@ def rag_attack(
 
         if lambda_vlm > 0:
             # generation loss function
-            out = vlm.forward(raw_image, mock_images, full_text_vlm_prompt_batch, overwrite=True)
+            context_images, adv_indices = prepare_context_images(attack_images, T.ToPILImage()(raw_image), batch_size_per_iter, config.gen_topk)
+            out = vlm.forward(raw_image, mock_images, full_text_vlm_prompt_batch, context_images, adv_indices, overwrite=True)
             loss_vlm = vlm.compute_gen_loss(out, target_tokens)
 
         # update loss coefficients if we use the adaptive attack
@@ -111,7 +115,7 @@ def rag_attack(
 
             # optimization step
             with torch.no_grad():
-                raw_image = attack_step_bim(raw_image, grads, lr, max_perturbation_pixels, initial_image)
+                raw_image = attack_step_pgd(raw_image, grads, lr, max_perturbation_pixels, initial_image)
 
             # zero the gradient
             grads = torch.zeros_like(raw_image)
@@ -122,14 +126,14 @@ def rag_attack(
     return raw_image
 
 
-def attack_step_bim(
+def attack_step_pgd(
         raw_image: torch.tensor,
         grads: torch.tensor,
         lr: float,
         max_perturbation_pixels: int,
         initial_image: torch.tensor):
     """
-    Implement the basic iterative method attack (FGSM but iterative)
+    Implement the projected gradient descent (PGD) attack proposed by Madry et al. (2018) 
     """
     # take step
     raw_image -= lr * torch.sign(grads)
@@ -146,3 +150,23 @@ def adaptive_attack_coefficients(loss_emb, loss_vlm, lambda_constant):
     lambda_emb = lambda_constant * abs(loss_vlm) / abs(loss_emb)
 
     return lambda_emb, lambda_vlm
+
+def prepare_context_images(attack_images, mock_image_pil, batch_size_per_iter, gen_topk):
+    """
+    Randomly selects the order of images in the context for each element in the batch
+    Returns:
+        context_images: list[list[PIL.Image]] --> [batch_size x topk]
+        adv_indices: list[int] -> [batch_size]
+    """
+    context_images, adv_indices = [], []
+    
+    for  i in range(batch_size_per_iter):
+        n_samples = gen_topk-1
+        adv_idx = random.randint(0, n_samples)
+        sampled_images = random.sample(attack_images, k=n_samples)
+        sampled_images.insert(adv_idx, mock_image_pil)
+        
+        context_images.append(sampled_images)
+        adv_indices.append(adv_idx)
+
+    return context_images, adv_indices

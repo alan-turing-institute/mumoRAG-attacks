@@ -22,9 +22,14 @@ configstore.store(
     name="testing",
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
-            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
-            vlm_list=[VLMName.SMOLVLM_1_2B],
+            embedder_list=[EmbedderName.CLIP_BASE_PATCH16],
+            vlm_list=[VLMName.SMOLVLM_1_256M],
+            gen_topk_list=[2, 1],
+            kb_compromised_fraction=0.1
         ),
+        eval=ExperimentEvalConfig(
+            gen_topk_list=[-1, 1, 2]
+        )
     ),
 )
 
