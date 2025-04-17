@@ -7,9 +7,9 @@ from hydra.core.config_store import ConfigStore
 from config.eval import ExperimentEvalConfig
 from config.experiment import ExperimentConfig
 from config.train import ExperimentTrainConfig
-from utils.dataset import DatasetName
-from utils.embedding import EmbedderName
-from utils.vlm import VLMName
+from wrappers.embedding import EmbedderName
+from wrappers.vlm import VLMName
+from wrappers.dataset import DatasetName
 
 DEFAULT_EXPERIMENT = "testing"
 

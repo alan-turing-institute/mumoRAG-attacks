@@ -5,15 +5,15 @@ import hydra
 import torchvision.transforms as T
 from omegaconf import OmegaConf
 
-from config.task import get_transferability_file_suffix, generate_task_configs
 from config.eval import ExperimentEvalConfig
 from config.experiment import ExperimentConfig
+from config.task import get_transferability_file_suffix, generate_task_configs
 from experiments import DEFAULT_EXPERIMENT
-from utils.cache import load_vlm, load_embedder_and_dataset, load_text_embedder
-from utils.embedding import is_loss_compatible
 from utils.image_utils import load_adv_image
 from utils.logger import logger
 from utils.utils import get_device
+from wrappers.cache import get_vlm, get_text_embedder, get_dataset, get_embedded_dataset
+from wrappers.embedding import is_loss_compatible
 
 
 def get_retrieval_saved_info(
@@ -49,11 +49,11 @@ def run(exp_config: ExperimentConfig):
 
     # load text embedding model in case we need it for evaluation
     if "embed" in exp_config.eval.gen_metric_list:
-        text_embedder = load_text_embedder(
+        text_embedder = get_text_embedder(
             exp_config.eval.gen_text_embedder, device=device
         )
     else:
-        load_text_embedder.cache_clear()
+        get_text_embedder.cache_clear()
         text_embedder = None
 
     for i, task_config in enumerate(task_configs):
@@ -67,30 +67,30 @@ def run(exp_config: ExperimentConfig):
         model_name_emb = task_config.eval_emb_name if task_config.eval_emb_name else task_config.model_name_emb
         model_name_vlm = task_config.eval_vlm_name if task_config.eval_vlm_name else task_config.model_name_vlm
 
-        vlm = load_vlm(model_name_vlm, device)
-        embedder, ds = load_embedder_and_dataset(
-            task_config.ds_name,
-            task_config.model_name_emb,
-            do_retrieval=exp_config.eval.do_retrieval,
-            quantize=False,
-            colpali_only_images=exp_config.train.colpali_only_images,
-            device=device,
-        )
+        vlm = get_vlm(model_name_vlm, device)
+        ds = get_dataset(task_config.ds_name)
 
         retrievals_train, retrievals_test = None, None
         retrieval_metric_dict = None
         # test retrieval
         if exp_config.eval.do_retrieval:
             logger.info("=== Evaluating retrieval ...")
-            ds.add_adv_image(T.ToPILImage()(image_adv / 255))
+            embedded_ds = get_embedded_dataset(
+                dataset=ds,
+                model_name_emb=task_config.model_name_emb,
+                quantize=False,
+                colpali_only_images=exp_config.train.colpali_only_images,
+                device=device,
+            )
+            embedded_ds.add_adv_image(T.ToPILImage()(image_adv / 255))
             # remove incompatible losses
             emb_test_loss_type_list_compatible = [loss for loss in exp_config.eval.emb_test_loss_type_list if is_loss_compatible(model_name_emb, loss)]
-            metric_dict_before, retrievals_before = ds.evaluate_retrieval(
+            metric_dict_before, retrievals_before = embedded_ds.evaluate_retrieval(
                 ks=exp_config.eval.topk_list,
                 loss_types=emb_test_loss_type_list_compatible,
                 include_adv=False,
             )
-            metric_dict_after, retrievals_after = ds.evaluate_retrieval(
+            metric_dict_after, retrievals_after = embedded_ds.evaluate_retrieval(
                 ks=exp_config.eval.topk_list,
                 loss_types=emb_test_loss_type_list_compatible,
                 include_adv=True,

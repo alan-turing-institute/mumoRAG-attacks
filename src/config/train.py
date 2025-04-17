@@ -1,9 +1,9 @@
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from utils.dataset import DatasetName
-from utils.embedding import EmbedderName, EmbeddingLoss
-from utils.vlm import VLMName
+from wrappers.embedding import EmbedderName, EmbeddingLoss
+from wrappers.vlm import VLMName
+from wrappers.dataset import DatasetName
 from . import ATTACKS_FOLDER
 
 

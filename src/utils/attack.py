@@ -3,10 +3,10 @@ import random
 import torchvision.transforms as T
 
 from config.task import TaskConfig
-from .embedding import EmbeddingModel
+from wrappers.embedding import EmbeddingModel
 from .scheduler import LearningRateScheduler
 from .utils import get_memory_consumption
-from .vlm import VLM
+from wrappers.vlm import VLM
 from .logger import logger
 
 

@@ -62,7 +62,6 @@ def plot_images(images, n_subplots):
 
 # creates a huggingface dataset given a dict of pdfs, each pdf is a list of images
 def create_hf_dataset(images: dict):
-
     ds_dict = defaultdict(list)
     for i, pdf in images.items():
         for j, image in enumerate(pdf):

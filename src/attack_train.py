@@ -2,14 +2,14 @@ import hydra
 import torch
 import torchvision.transforms as T
 
-from config.task import generate_task_configs
 from config.experiment import ExperimentConfig
+from config.task import generate_task_configs
 from experiments import DEFAULT_EXPERIMENT
 from utils.attack import rag_attack
-from utils.cache import load_vlm, load_embedder_and_dataset
-from utils.embedding import is_loss_compatible
-from utils.utils import get_device
 from utils.logger import logger
+from utils.utils import get_device
+from wrappers.cache import get_vlm, get_dataset, get_embedder
+from wrappers.embedding import is_loss_compatible
 
 
 @hydra.main(version_base=None, config_path="pkg://experiments", config_name=DEFAULT_EXPERIMENT)
@@ -22,11 +22,10 @@ def run(exp_config: ExperimentConfig):
         if not is_loss_compatible(task_config.model_name_emb, task_config.emb_train_loss_type): continue
         logger.info(f"{'+' * 20}\nTrain Attack {(i + 1):4d}/{n_evals}, task_config -> {task_config.to_dict()}")
 
-        vlm = load_vlm(task_config.model_name_vlm, device)
-        embedder, ds = load_embedder_and_dataset(
-            task_config.ds_name,
+        vlm = get_vlm(task_config.model_name_vlm, device)
+        ds = get_dataset(task_config.ds_name)
+        embedder = get_embedder(
             task_config.model_name_emb,
-            do_retrieval=False,
             quantize=False,
             colpali_only_images=exp_config.train.colpali_only_images,
             device=device,

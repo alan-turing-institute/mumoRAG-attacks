@@ -3,9 +3,9 @@ import hashlib
 from itertools import product
 from typing import Optional
 
-from utils.dataset import DatasetName
-from utils.embedding import EmbedderName, EmbeddingLoss, COLPALI_MODELS
-from utils.vlm import VLMName
+from wrappers.embedding import EmbedderName, EmbeddingLoss, COLPALI_MODELS
+from wrappers.vlm import VLMName
+from wrappers.dataset import DatasetName
 from .experiment import ExperimentConfig
 
 
@@ -44,12 +44,9 @@ class TaskConfig:
         config_str = f"{self.model_name_emb}{self.model_name_vlm}{self.ds_name}{self.chosen_index}{self.target_answer}{self.max_perturbation}{self.emb_train_loss_type}{self.is_adaptive}{self.gen_topk}{self.kb_compromised_fraction}"
 
         if self.is_adaptive:
-            config_str += f"{self.lambda_constant}"
+            config_str += f"{float(self.lambda_constant)}"
         else:
-            # fixme: this is a hack to make old data work
-            # the default values were ints, despite being typed as float; new config correctly loads it as float but generates different hash
-            # config_str += f"{float(self.lambda_emb)}{float(self.lambda_vlm)}"
-            config_str += f"{int(self.lambda_emb) if float(self.lambda_emb).is_integer() else self.lambda_emb}{int(self.lambda_vlm) if float(self.lambda_vlm).is_integer() else self.lambda_vlm}"
+            config_str += f"{float(self.lambda_emb)}{float(self.lambda_vlm)}"
 
         if self.model_name_emb in COLPALI_MODELS and self.colpali_only_images:
             config_str += f"{self.colpali_only_images}"
