@@ -148,7 +148,7 @@ class VLM:
     def generate(self, image: torch.tensor, user_queries, overwrite: bool = False, retrieved_images = None, adv_indices: list = None):
         self.model.eval()
         if isinstance(user_queries, str): user_queries = [user_queries]
-        topk_used = len(retrieved_images[0]) # todo: this fails with default None value
+        topk_used = len(retrieved_images[0])
         test_prompts = [self.get_test_prompt(query, n_images=topk_used) for query in user_queries]
         
         if self.name in VLMS_WITH_FAST_PROCESSOR:

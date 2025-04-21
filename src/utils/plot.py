@@ -12,10 +12,10 @@ from torchvision import transforms as T
 from config.task import get_transferability_file_suffix, generate_task_configs, TaskConfig
 from config.experiment import ExperimentConfig
 from .image_utils import load_adv_image
-from .dataset import ViDoReDataset
 from wrappers.embedding import EmbedderName
 from wrappers.vlm import VLMName
 from .logger import logger
+from wrappers.cache import get_dataset
 
 
 class MetricIdx(IntEnum):
@@ -247,7 +247,7 @@ def plot_images_side_by_side(exp_config, metrics_to_show):
     ds_names = exp_config.train.dataset_list
 
     for ds_idx, ds_name in enumerate(ds_names):
-        ds = ViDoReDataset(ds_name, do_retrieval=False)
+        ds = get_dataset(ds_name)
         for img_idx, chosen_index in enumerate(chosen_indices):
             task_config = replace(task_config,
                 ds_name=ds_name,

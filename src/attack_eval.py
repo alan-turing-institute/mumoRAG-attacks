@@ -1,5 +1,6 @@
 import json
 from typing import Any
+from pprint import pformat
 
 import hydra
 import torchvision.transforms as T
@@ -16,9 +17,7 @@ from wrappers.cache import get_vlm, get_text_embedder, get_dataset, get_embedded
 from wrappers.embedding import is_loss_compatible
 
 
-def get_retrieval_saved_info(
-    exp_config_eval: ExperimentEvalConfig, metric_dict_before, metric_dict_after
-):
+def get_retrieval_saved_info(exp_config_eval: ExperimentEvalConfig, metric_dict_before, metric_dict_after):
     retrieval_dict: dict[str, Any] = {
         "topk_list": exp_config_eval.topk_list,
         "eval_emb_loss": exp_config_eval.emb_test_loss_type_list,
@@ -34,9 +33,6 @@ def get_retrieval_saved_info(
     return retrieval_dict
 
 
-@hydra.main(
-    version_base=None, config_path="pkg://experiments", config_name=DEFAULT_EXPERIMENT
-)
 def run(exp_config: ExperimentConfig):
     device = get_device(prefer_mps=True)
     task_configs = generate_task_configs(exp_config, include_eval=True)
@@ -49,9 +45,7 @@ def run(exp_config: ExperimentConfig):
 
     # load text embedding model in case we need it for evaluation
     if "embed" in exp_config.eval.gen_metric_list:
-        text_embedder = get_text_embedder(
-            exp_config.eval.gen_text_embedder, device=device
-        )
+        text_embedder = get_text_embedder(exp_config.eval.gen_text_embedder, device=device)
     else:
         get_text_embedder.cache_clear()
         text_embedder = None
@@ -60,7 +54,7 @@ def run(exp_config: ExperimentConfig):
         if not is_loss_compatible(task_config.model_name_emb, task_config.emb_train_loss_type):
             continue
 
-        logger.info(f"Eval {(i + 1):4d}/{n_evals}, task_config -> {task_config.to_dict()}\n{'='*20}")
+        logger.info(f"Eval {(i + 1):4d}/{n_evals}, task_config -> {pformat(task_config.to_dict(), indent=4)}\n{'=' * 20}")
         image_adv = load_adv_image(task_config, exp_config.train)
 
         # update model names in case we test transferability
@@ -100,8 +94,8 @@ def run(exp_config: ExperimentConfig):
                 metric_dict_before,
                 metric_dict_after,
             )
-            retrievals_train = {k: v["train"] for k,v in retrievals_after.items()}
-            retrievals_test = {k: v["test"] for k,v in retrievals_after.items()}
+            retrievals_train = {k: v["train"] for k, v in retrievals_after.items()}
+            retrievals_test = {k: v["test"] for k, v in retrievals_after.items()}
 
         generation_metric_dict = None
         # test generation
@@ -134,7 +128,6 @@ def run(exp_config: ExperimentConfig):
                 "test": metric_dict_test,
             }
 
-
         # save results to JSON format
         metric_dict_full = {
             "retrieval": retrieval_metric_dict,
@@ -154,5 +147,10 @@ def run(exp_config: ExperimentConfig):
         logger.info(f"Saved results to {results_filename}")
 
 
+@hydra.main(version_base=None, config_path="pkg://experiments", config_name=DEFAULT_EXPERIMENT)
+def main(exp_config: ExperimentConfig):
+    run(exp_config)
+
+
 if __name__ == "__main__":
-    run()
+    main()

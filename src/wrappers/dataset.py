@@ -123,7 +123,7 @@ class Dataset:
                 similarity = text_embedder.compare_embeddings(generations, target_generation, similarity_metric="cos")
                 metric_dict[keyname]["embed"] = similarity.mean().item()
 
-        return metric_dict, generations  # todo: this gets reassigned in the loop, so this is only the last loop, is that ok?
+        return metric_dict, generations
 
     def retrieved_idx_to_img(self, retrieved_indices: torch.tensor, topk: int):
         if topk == -1:
