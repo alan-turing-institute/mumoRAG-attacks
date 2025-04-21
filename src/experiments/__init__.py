@@ -10,6 +10,7 @@ from config.train import ExperimentTrainConfig
 from utils.dataset import DatasetName
 from utils.embedding import EmbedderName
 from utils.vlm import VLMName
+from utils.judge import JudgeMetric
 
 DEFAULT_EXPERIMENT = "testing"
 
@@ -27,7 +28,9 @@ configstore.store(
             gen_topk_list=[2],
         ),
         eval=ExperimentEvalConfig(
-            gen_topk_list=[-1, 1, 2]
+            gen_topk_list=[1],
+            eval_jdg_list=[VLMName.SMOLVLM_1_2B],
+            eval_jdg_metric_list=[JudgeMetric.IMAGE_FAITHFULNESS]
         )
     ),
 )

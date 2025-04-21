@@ -9,7 +9,7 @@ from config.task import get_transferability_file_suffix, generate_task_configs
 from config.eval import ExperimentEvalConfig
 from config.experiment import ExperimentConfig
 from experiments import DEFAULT_EXPERIMENT
-from utils.cache import load_vlm, load_embedder_and_dataset, load_text_embedder
+from utils.cache import load_vlm, load_embedder_and_dataset, load_text_embedder, load_judge
 from utils.embedding import is_loss_compatible
 from utils.image_utils import load_adv_image
 from utils.logger import logger
@@ -66,8 +66,11 @@ def run(exp_config: ExperimentConfig):
         # update model names in case we test transferability
         model_name_emb = task_config.eval_emb_name if task_config.eval_emb_name else task_config.model_name_emb
         model_name_vlm = task_config.eval_vlm_name if task_config.eval_vlm_name else task_config.model_name_vlm
+        model_name_jdg = task_config.eval_jdg_name
 
         vlm = load_vlm(model_name_vlm, device)
+        if exp_config.eval.do_judge:
+            judge = load_judge(model_name_jdg, device)
         embedder, ds = load_embedder_and_dataset(
             task_config.ds_name,
             task_config.model_name_emb,
@@ -107,7 +110,7 @@ def run(exp_config: ExperimentConfig):
         # test generation
         if exp_config.eval.do_generation:
             logger.info("=== Evaluating generation ...")
-            metric_dict_test, gs_test = ds.evaluate_generation(
+            metric_vlm_dict_test, gs_vlm_dict_test = ds.evaluate_generation(
                 vlm,
                 image_adv,
                 exp_config.train.target_answer,
@@ -118,7 +121,7 @@ def run(exp_config: ExperimentConfig):
                 batch_size=exp_config.eval.gen_batch_size,
                 eval_train=False,
             )
-            metric_dict_train, gs_train = ds.evaluate_generation(
+            metric_vlm_dict_train, gs_vlm_dict_train = ds.evaluate_generation(
                 vlm,
                 image_adv,
                 exp_config.train.target_answer,
@@ -130,8 +133,36 @@ def run(exp_config: ExperimentConfig):
                 eval_train=True,
             )
             generation_metric_dict = {
-                "train": metric_dict_train,
-                "test": metric_dict_test,
+                "train": metric_vlm_dict_train,
+                "test": metric_vlm_dict_test,
+            }
+
+        if exp_config.eval.do_judge:
+            logger.info("=== Evaluating using Judge ...")
+
+            metric_jdg_dict_test, generation_jdg_dict_test = ds.evaluate_using_judge(
+                judge,
+                image_adv,
+                judge_metrics=exp_config.eval.eval_jdg_metric_list,
+                retrievals=retrievals_test,
+                generation_vlm_dict=gs_vlm_dict_test,
+                generation_topk_list=exp_config.eval.gen_topk_list,
+                batch_size=exp_config.eval.gen_batch_size,
+                eval_train=False,
+            )
+            metric_jdg_dict_train, generation_jdg_dict_train = ds.evaluate_using_judge(
+                judge,
+                image_adv,
+                judge_metrics=exp_config.eval.eval_jdg_metric_list,
+                retrievals=retrievals_train,
+                generation_vlm_dict=gs_vlm_dict_train,
+                generation_topk_list=exp_config.eval.gen_topk_list,
+                batch_size=exp_config.eval.gen_batch_size,
+                eval_train=True,
+            )
+            judge_metric_dict = {
+                "train": metric_jdg_dict_train,
+                "test": metric_jdg_dict_test,
             }
 
 
@@ -139,11 +170,12 @@ def run(exp_config: ExperimentConfig):
         metric_dict_full = {
             "retrieval": retrieval_metric_dict,
             "generation": generation_metric_dict,
+            "judge": judge_metric_dict,
             "attack_config": task_config.to_dict(),
         }
         results_filename = (
             exp_config.eval.results_folder
-            / f"metrics_{task_config.create_hash_string()}{get_transferability_file_suffix(task_config.eval_emb_name, task_config.eval_vlm_name)}.json"
+            / f"metrics_{task_config.create_hash_string()}{get_transferability_file_suffix(task_config.eval_emb_name, task_config.eval_vlm_name, task_config.eval_jdg_name)}.json"
         )
 
         with open(
