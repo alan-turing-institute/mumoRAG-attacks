@@ -1,8 +1,10 @@
-from transformers import AutoModel, AutoProcessor, AutoTokenizer, AutoModelForVision2Seq, BitsAndBytesConfig
 import torch
 import torchvision.transforms as T
-from .image_utils import process_image
 from strenum import StrEnum
+from transformers import AutoProcessor, AutoModelForVision2Seq, BitsAndBytesConfig
+
+from utils.image_utils import process_image
+
 
 # candidate models
 class VLMName(StrEnum):
@@ -51,7 +53,7 @@ MODEL_NAMES = [
 
 
 
-class VLM():
+class VLM:
     """
     Contains functionalities for both Generator VLMs and Judge VLMs
     """
@@ -181,10 +183,10 @@ class VLM():
         target_tokens = target_tokens.unsqueeze(0).repeat(logits_to_optimize.shape[0], 1)
         return torch.nn.CrossEntropyLoss()(logits_to_optimize, target_tokens)
     
-    def create_topk_image_list_pt(self, adv_image: torch.tensor, retrieved_images: list[list], adv_indices: int):
+    def create_topk_image_list_pt(self, adv_image: torch.tensor, retrieved_images: list[list], adv_indices: list[int]):
         topk_images_pt = [
-            [T.PILToTensor()(img) for img in imgs_per_query]
-            for imgs_per_query in retrieved_images
+            [T.PILToTensor()(img) for img in images_per_query]
+            for images_per_query in retrieved_images
         ]
         for i in range(len(retrieved_images)):
             topk_images_pt[i][adv_indices[i]] = adv_image

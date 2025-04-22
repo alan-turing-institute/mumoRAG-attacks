@@ -2,9 +2,10 @@
 This class is responsible for text embedding models used to evaluate the similarity between the VLM generated responses and the adversary's target answer
 """
 
+import torch
 from strenum import StrEnum
 from transformers import AutoModel
-import torch
+
 
 class TextEmbedderName(StrEnum):
     JINA_TEXT_V3 = "jinaai/jina-embeddings-v3"

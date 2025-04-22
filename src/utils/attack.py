@@ -1,13 +1,15 @@
-import torch
 import random
+
+import torch
 import torchvision.transforms as T
 
 from config.task import TaskConfig
-from .embedding import EmbeddingModel
+from wrappers.embedding import EmbeddingModel
+from wrappers.judge import JudgeVLM
+from wrappers.vlm import VLM
+
 from .scheduler import LearningRateScheduler
 from .utils import get_memory_consumption
-from .vlm import VLM
-from .judge import JudgeVLM
 from .logger import logger
 
 
@@ -78,11 +80,11 @@ def rag_attack(
         raw_image.requires_grad = True
 
         # sample minibatch
-        samples_idx = torch.randint(0, len(user_query), (batch_size_per_iter,)).type(torch.LongTensor)
+        samples_idx = torch.randint(0, len(user_query), (batch_size_per_iter,))
         if lambda_emb > 0: user_query_embedding_batch = user_query_embedding[samples_idx,:]
         if lambda_vlm > 0: full_text_vlm_prompt_batch = [full_text_vlm_prompt[i] for i in samples_idx]
         if lambda_jdg > 0: 
-            samples_jdg_idx = torch.randint(0, len(user_query)*len(jdg_metric_list), (batch_size_per_iter,)).type(torch.LongTensor)
+            samples_jdg_idx = torch.randint(0, len(user_query)*len(jdg_metric_list), (batch_size_per_iter,))
             full_text_jdg_prompt_batch = [full_text_jdg_prompt[i] for i in samples_jdg_idx]
 
         # -- if code is slow uncomment the following line and indent the following code --

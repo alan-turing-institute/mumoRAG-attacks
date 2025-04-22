@@ -12,10 +12,10 @@ from torchvision import transforms as T
 from config.task import get_transferability_file_suffix, generate_task_configs, TaskConfig
 from config.experiment import ExperimentConfig
 from .image_utils import load_adv_image
-from .dataset import ViDoReDataset
-from .embedding import EmbedderName
-from .vlm import VLMName
+from wrappers.embedding import EmbedderName
+from wrappers.vlm import VLMName
 from .logger import logger
+from wrappers.cache import get_dataset
 
 
 class MetricIdx(IntEnum):
@@ -141,7 +141,7 @@ def get_metrics(exp_config: ExperimentConfig, task_config: TaskConfig, metrics_t
 
 def plot_metrics_vs_perturbation(exp_config: ExperimentConfig, metrics_to_show):
     """
-    This function generates several plots, one plot per dataset
+    This function generates several plots, one plot per wrappers
     Each curve corresponds to one tuple (embedder, vlm)
     """
     if metrics_to_show is None: metrics_to_show = [i for i in range(len(METRIC_NAMES))]
@@ -177,7 +177,7 @@ def plot_metrics_vs_perturbation(exp_config: ExperimentConfig, metrics_to_show):
 
 def plot_model_heatmap(exp_config, ds_idx, metrics_to_show = None):
     """
-    This function generates one heatmap per dataset
+    This function generates one heatmap per wrappers
     x-axis -> embedder models
     """
     if metrics_to_show is None: metrics_to_show = [i for i in range(len(METRIC_NAMES))]
@@ -247,7 +247,7 @@ def plot_images_side_by_side(exp_config, metrics_to_show):
     ds_names = exp_config.train.dataset_list
 
     for ds_idx, ds_name in enumerate(ds_names):
-        ds = ViDoReDataset(ds_name, do_retrieval=False)
+        ds = get_dataset(ds_name)
         for img_idx, chosen_index in enumerate(chosen_indices):
             task_config = replace(task_config,
                 ds_name=ds_name,

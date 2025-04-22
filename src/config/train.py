@@ -1,10 +1,11 @@
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from utils.dataset import DatasetName
-from utils.embedding import EmbedderName, EmbeddingLoss
-from utils.vlm import VLMName
-from utils.judge import JudgeMetric
+from wrappers.dataset import DatasetName
+from wrappers.embedding import EmbedderName, EmbeddingLoss
+from wrappers.judge import JudgeMetric
+from wrappers.vlm import VLMName
+
 from . import ATTACKS_FOLDER
 
 

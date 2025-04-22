@@ -2,10 +2,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
-from utils.text_embedding import TextEmbedderName
-from utils.vlm import VLMName
-from utils.embedding import EmbedderName, EmbeddingLoss
-from utils.judge import JudgeMetric
+from wrappers.embedding import EmbedderName, EmbeddingLoss
+from wrappers.judge import JudgeMetric
+from wrappers.text_embedding import TextEmbedderName
+from wrappers.vlm import VLMName
+
 from . import RESULTS_FOLDER
 
 

@@ -16,7 +16,7 @@ dependencies = [
   "sentencepiece",
   "protobuf",
   "qwen-vl-utils",
-  "colpali-engine @  git+https://github.com/illuin-tech/colpali@fc1289b96e5035c0b459a6a816e004faa47198ce",
+  "colpali-engine>=0.3.10",
   "strenum",
   "hydra-core",
   "omegaconf",
@@ -25,7 +25,13 @@ dependencies = [
 [project.optional-dependencies]
 nb = ["jupyter"]
 
-dev = ["ruff"]
+dev = [
+  "ruff",
+]
+
+test = [
+  "pytest"
+]
 
 opt = [
   "xformers",
@@ -53,3 +59,10 @@ explicit = true
 name = "pytorch-cu118"
 url = "https://download.pytorch.org/whl/cu118"
 explicit = true
+
+[tool.pytest.ini_options]
+log_cli = true
+log_cli_level = "INFO"
+
+[tool.ruff]
+line-length = 140

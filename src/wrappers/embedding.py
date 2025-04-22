@@ -6,8 +6,8 @@ import torchvision.transforms as T
 from strenum import StrEnum
 from transformers import AutoModel, AutoModelForImageTextToText, AutoTokenizer, AutoProcessor, BitsAndBytesConfig
 
-from .image_utils import process_image
-from .utils import plot_images
+from utils.image_utils import process_image
+from utils.utils import plot_images
 
 
 class EmbedderName(StrEnum):
@@ -284,6 +284,8 @@ class EmbeddingModel:
             case EmbeddingLoss.COS:
                 # return -(image_embedding @ text_embedding.transpose(0,1)).mean()
                 return 1 - torch.nn.CosineSimilarity()(image_embedding, text_embedding).mean()
+            case _:
+                raise ValueError(f"Unknown loss type {loss_type}!")
 
 
 """

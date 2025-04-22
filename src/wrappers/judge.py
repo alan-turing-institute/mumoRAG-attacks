@@ -50,7 +50,7 @@ Output the reason as a string, not as a list.
 The only allowed grades are YES or NO."""
 
     IMAGE_FAITHFULNESS_PROMPT = """Evaluate the following metric by comparing the answer with the provided images:
-image_faithfulness: Is the answer faithful to the content of the imagex, i.e. does it factually align with any of the images? (YES or NO)
+image_faithfulness: Is the answer faithful to the content of the images, i.e. does it factually align with any of the images? (YES or NO)
 GENERATED ANSWER: >>answer<<
 IMAGES: >>images<<
 Write out in a step by step manner your reasoning to be sure that your conclusion is correct by filling out the following JSON format with the grade and a concise reason behind the grade: 
