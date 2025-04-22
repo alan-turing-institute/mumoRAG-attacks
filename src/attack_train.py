@@ -1,18 +1,18 @@
 import hydra
 import torch
 import torchvision.transforms as T
+from pprint import pformat
 
-from config.task import generate_task_configs
 from config.experiment import ExperimentConfig
+from config.task import generate_task_configs
 from experiments import DEFAULT_EXPERIMENT
 from utils.attack import rag_attack
-from utils.cache import load_vlm, load_embedder_and_dataset
-from utils.embedding import is_loss_compatible
-from utils.utils import get_device
 from utils.logger import logger
+from utils.utils import get_device
+from wrappers.cache import get_vlm, get_dataset, get_embedder
+from wrappers.embedding import is_loss_compatible
 
 
-@hydra.main(version_base=None, config_path="pkg://experiments", config_name=DEFAULT_EXPERIMENT)
 def run(exp_config: ExperimentConfig):
     device = get_device(prefer_mps=True)
     task_configs = generate_task_configs(exp_config)
@@ -20,25 +20,24 @@ def run(exp_config: ExperimentConfig):
 
     for i, task_config in enumerate(task_configs):
         if not is_loss_compatible(task_config.model_name_emb, task_config.emb_train_loss_type): continue
-        logger.info(f"{'+' * 20}\nTrain Attack {(i + 1):4d}/{n_evals}, task_config -> {task_config.to_dict()}")
+        logger.info(f"{'+' * 20}\nTrain Attack {(i + 1):4d}/{n_evals}, task_config -> {pformat(task_config.to_dict(), indent=4)}")
 
-        vlm = load_vlm(task_config.model_name_vlm, device)
-        embedder, ds = load_embedder_and_dataset(
-            task_config.ds_name,
+        vlm = get_vlm(task_config.model_name_vlm, device)
+        ds = get_dataset(task_config.ds_name)
+        embedder = get_embedder(
             task_config.model_name_emb,
-            do_retrieval=False,
             quantize=False,
             colpali_only_images=exp_config.train.colpali_only_images,
             device=device,
         )
 
         query_strings = ds.queries_train
-        attack_images = ds.sample_images_from_ds(fraction=task_config.kb_compromised_fraction) # images included by the attacker in the VLM context (n-1 because the malicious image must be included)
+        attack_images = ds.sample_images_from_ds(fraction=task_config.kb_compromised_fraction)  # images included by the attacker in the VLM context (n-1 because the malicious image must be included)
 
         # choose attacked image
         chosen_image = ds.images[task_config.chosen_index]
-        chosen_image = chosen_image.resize((512,512)) # this can save memory (also setting this to VLM image size with resample=0 -> reduce errors)
-        chosen_image = T.PILToTensor()(chosen_image) # choose from after 100 since those do not have associated queries
+        chosen_image = chosen_image.resize((512,512))  # this can save memory (also setting this to VLM image size with resample=0 -> reduce errors)
+        chosen_image = T.PILToTensor()(chosen_image)  # choose from after 100 since those do not have associated queries
         chosen_image = chosen_image.float()
         initial_chosen_image = chosen_image.clone()
 
@@ -51,7 +50,7 @@ def run(exp_config: ExperimentConfig):
             config=task_config,
             attack_images=attack_images,
             print_every=exp_config.train.print_every,
-            device=device
+            device=device,
         )
 
         logger.info(f"MSE: {torch.nn.functional.mse_loss(image_adv, initial_chosen_image)}")
@@ -64,5 +63,11 @@ def run(exp_config: ExperimentConfig):
         torch.save(attack_dict, filename)
         logger.info(f"Saved adversarial image to {filename}.")
 
+
+@hydra.main(version_base=None, config_path="pkg://experiments", config_name=DEFAULT_EXPERIMENT)
+def main(exp_config: ExperimentConfig):
+    run(exp_config)
+
+
 if __name__ == "__main__":
-    run()
+    main()
