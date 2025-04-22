@@ -159,7 +159,6 @@ def run(exp_config: ExperimentConfig):
             }
 
         # save results to JSON format
-        task_config.train_jdg_metric_list = OmegaConf.to_container(task_config.train_jdg_metric_list) # JSON serialization error if we don't do this
         metric_dict_full = {
             "retrieval": retrieval_metric_dict,
             "generation": generation_metric_dict,

@@ -4,6 +4,7 @@ This file includes different configurations for the parameters of the attack and
 
 from hydra import compose, initialize
 from hydra.core.config_store import ConfigStore
+from omegaconf import OmegaConf
 
 from config.eval import ExperimentEvalConfig
 from config.experiment import ExperimentConfig
@@ -22,11 +23,7 @@ configstore = ConfigStore.instance()
 def load_config(name):
     with initialize(version_base=None, config_path="pkg://experiments"):
         cfg = compose(config_name=name)
-    return ExperimentConfig(
-        train=ExperimentTrainConfig(**cfg["train"]),
-        eval=ExperimentEvalConfig(**cfg["eval"]),
-    )
-
+    return OmegaConf.to_object(cfg)
 
 """
 testing Configuration
