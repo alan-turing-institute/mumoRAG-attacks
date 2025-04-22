@@ -273,10 +273,10 @@ class ViDoReDataset:
 
 
     def extract_judge_score(self, generations_jdg):
-        num_yes = sum(["YES" in g for g in generations_jdg])
-        num_no = sum(["NO" in g for g in generations_jdg])
+        num_y = sum([("YES" in g) and not ("NO" in g) for g in generations_jdg])
+        num_n = sum([("NO" in g) and not ("YES" in g) for g in generations_jdg])
         try:
-            score = num_yes / (num_yes + num_no)
+            score = num_y / (num_y + num_n)
         except ZeroDivisionError:
             score = -1
         return score

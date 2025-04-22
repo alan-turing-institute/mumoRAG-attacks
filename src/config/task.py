@@ -6,6 +6,7 @@ from typing import Optional
 from utils.dataset import DatasetName
 from utils.embedding import EmbedderName, EmbeddingLoss, COLPALI_MODELS
 from utils.vlm import VLMName
+from utils.judge import JudgeMetric
 from .experiment import ExperimentConfig
 
 
@@ -20,7 +21,7 @@ class TaskConfig:
     ds_name: DatasetName
     model_name_emb: EmbedderName
     model_name_vlm: VLMName
-    target_answer: str
+    target_answer_vlm: str
     chosen_index: int
     max_perturbation: float
     n_gradient_steps: int
@@ -33,6 +34,10 @@ class TaskConfig:
     emb_train_loss_type: EmbeddingLoss
     is_adaptive: bool
     lambda_constant: float
+    model_name_jdg: VLMName
+    lambda_jdg: float
+    target_answer_jdg: str
+    train_jdg_metric_list: list[JudgeMetric]
     eval_emb_name: Optional[EmbedderName] = None
     eval_vlm_name: Optional[VLMName] = None
     eval_jdg_name: Optional[VLMName] = None
@@ -42,7 +47,7 @@ class TaskConfig:
 
     def create_hash_string(self):
         # this should include more info, but this suffices for now
-        config_str = f"{self.model_name_emb}{self.model_name_vlm}{self.ds_name}{self.chosen_index}{self.target_answer}{self.max_perturbation}{self.emb_train_loss_type}{self.is_adaptive}{self.gen_topk}{self.kb_compromised_fraction}"
+        config_str = f"{self.model_name_emb}{self.model_name_vlm}{self.ds_name}{self.chosen_index}{self.target_answer_vlm}{self.max_perturbation}{self.emb_train_loss_type}{self.is_adaptive}{self.gen_topk}{self.kb_compromised_fraction}"
 
         if self.is_adaptive:
             config_str += f"{self.lambda_constant}"
@@ -54,6 +59,11 @@ class TaskConfig:
 
         if self.model_name_emb in COLPALI_MODELS and self.colpali_only_images:
             config_str += f"{self.colpali_only_images}"
+
+        if self.lambda_jdg > 0:
+            jdg_metric_str = "".join(self.train_jdg_metric_list)
+            config_str += f"{self.model_name_jdg}{self.lambda_jdg}{self.target_answer_jdg}{jdg_metric_str}"
+
         hash_str = hashlib.md5(config_str.encode()).hexdigest()
         return hash_str
 
@@ -77,6 +87,7 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
     parameter_collection = product(
         exp_config.train.dataset_list,
         exp_config.train.embedder_list,
+        exp_config.train.judge_list,
         exp_config.train.vlm_list,
         exp_config.train.max_perturbation_list,
         exp_config.train.emb_train_loss_type_list,
@@ -93,6 +104,7 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
             ds_name,
             model_name_emb,
             model_name_vlm,
+            model_name_jdg,
             max_perturbation,
             emb_train_loss_type,
             is_adaptive,
@@ -108,7 +120,7 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
                 ds_name=ds_name,
                 model_name_emb=model_name_emb,
                 model_name_vlm=model_name_vlm,
-                target_answer=exp_config.train.target_answer,
+                target_answer_vlm=exp_config.train.target_answer_vlm,
                 chosen_index=chosen_index,
                 max_perturbation=max_perturbation,
                 n_gradient_steps=exp_config.train.n_gradient_steps,
@@ -126,7 +138,11 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
                 eval_jdg_name=eval_jdg_name,
                 colpali_only_images=exp_config.train.colpali_only_images,
                 gen_topk=gen_topk,
-                kb_compromised_fraction=exp_config.train.kb_compromised_fraction
+                kb_compromised_fraction=exp_config.train.kb_compromised_fraction,
+                model_name_jdg=model_name_jdg,
+                lambda_jdg=exp_config.train.lambda_jdg,
+                target_answer_jdg=exp_config.train.target_answer_jdg,
+                train_jdg_metric_list=exp_config.train.train_jdg_metric_list,
             )
         )
 

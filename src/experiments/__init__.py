@@ -25,12 +25,13 @@ configstore.store(
         train=ExperimentTrainConfig(
             embedder_list=[EmbedderName.CLIP_BASE_PATCH16],
             vlm_list=[VLMName.SMOLVLM_1_256M],
-            gen_topk_list=[2],
+            gen_topk_list=[1],
+            judge_list=[VLMName.SMOLVLM_1_256M],
+            lambda_jdg=1,
         ),
         eval=ExperimentEvalConfig(
-            gen_topk_list=[1],
-            eval_jdg_list=[VLMName.SMOLVLM_1_2B],
-            eval_jdg_metric_list=[JudgeMetric.IMAGE_FAITHFULNESS]
+            gen_topk_list=[-1,1],
+            eval_jdg_metric_list=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY],
         )
     ),
 )

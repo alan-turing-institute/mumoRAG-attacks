@@ -6,7 +6,7 @@ from config.task import generate_task_configs
 from config.experiment import ExperimentConfig
 from experiments import DEFAULT_EXPERIMENT
 from utils.attack import rag_attack
-from utils.cache import load_vlm, load_embedder_and_dataset
+from utils.cache import load_vlm, load_embedder_and_dataset, load_judge
 from utils.embedding import is_loss_compatible
 from utils.utils import get_device
 from utils.logger import logger
@@ -31,6 +31,7 @@ def run(exp_config: ExperimentConfig):
             colpali_only_images=exp_config.train.colpali_only_images,
             device=device,
         )
+        jdg = load_judge(task_config.model_name_jdg, device) if task_config.lambda_jdg > 0 else None
 
         query_strings = ds.queries_train
         attack_images = ds.sample_images_from_ds(fraction=task_config.kb_compromised_fraction) # images included by the attacker in the VLM context (n-1 because the malicious image must be included)
@@ -47,6 +48,7 @@ def run(exp_config: ExperimentConfig):
             raw_image=chosen_image,
             embedder=embedder,
             vlm=vlm,
+            jdg=jdg,
             user_query=query_strings,
             config=task_config,
             attack_images=attack_images,

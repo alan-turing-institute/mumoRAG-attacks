@@ -85,13 +85,17 @@ METRIC_2_PROMPT = {
 
 class JudgeVLM(VLM):
 
-    def get_test_prompt(self, template: str, query=None, answer=None, n_images=0):
+    def judge_prompt_components(self, template: str, query=None, answer=None, n_images=0):
         template = template.replace(">>query<<", query).replace(">>answer<<", answer)
         prompt_list = template.split(">>images<<")
         before  = [{"type": "text", "text": prompt_list[0]}] 
         after = [{"type": "text", "text": prompt_list[1]}] if len(prompt_list) == 2 else []
         contexts = [{"type": "image"} for _ in range(n_images)]
-        
+        return before, contexts, after
+
+
+    def get_test_prompt(self, template: str, query=None, answer=None, n_images=0):
+        before, contexts, after = self.judge_prompt_components(template, query, answer, n_images)
         messages = [
             {
                 "role": "user",
@@ -106,39 +110,38 @@ class JudgeVLM(VLM):
 
 
     def get_training_prompt(self, 
-            user_query: str, # list or str 
+            queries: list[str],  
             target_vlm_generation: str,
             target_jdg_generation: str, 
+            jdg_metric_list: list[JudgeMetric],
             n_images: int
         ):
         """
         builds the prompt skeleton for the VLM including the image placeholder, the user query, and the required response
         """
-        if isinstance(user_query, str): user_query = [user_query]
+        all_messages = []
+        for metric in jdg_metric_list:
+            template = METRIC_2_PROMPT[metric]
+            for query in queries:
+                before, contexts, after = self.judge_prompt_components(template, query, target_vlm_generation, n_images)
+                messages = [
+                    {
+                        "role": "user",
+                        "content": 
+                            before +
+                            contexts+
+                            after
+                    },
+                    {
+                        "role": "assistant",
+                        "content": [
+                            {"type": "text", "text": target_jdg_generation}
+                        ]
+                    },
+                ]
+                all_messages.append(messages)
+        
+        prompts = self.processor.apply_chat_template(all_messages, add_generation_prompt=False)
+        target_tokens = self.get_target_tokens(target_jdg_generation)
 
-        messages = [
-            [
-                {
-                    "role": "user",
-                    "content": 
-                        [{"type": "text", "text": JudgeVLM.JUDGE_PROMPT}] +
-                        [{"type": "text", "text": "\nRetrieved images:\n"}] +
-                        [{"type": "image"} for _ in range(n_images)] + 
-                        [{"type": "text", "text": "\nUser query:\n"}] +
-                        [{"type": "text", "text": user_query}] +
-                        [{"type": "text", "text": "\nVLM generated answer:\n"}] +
-                        [{"type": "text", "text": target_vlm_generation}]
-                },
-                {
-                    "role": "assistant",
-                    "content": [
-                        {"type": "text", "text": target_jdg_generation}
-                    ]
-                },
-            ]
-            for i in range(len(user_query))]
-        prompt = self.processor.apply_chat_template(messages, add_generation_prompt=False)
-
-        target_tokens = self.get_target_tokens(target_jdg_generation)       
-
-        return prompt, target_tokens
+        return prompts, target_tokens

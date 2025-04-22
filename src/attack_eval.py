@@ -66,11 +66,9 @@ def run(exp_config: ExperimentConfig):
         # update model names in case we test transferability
         model_name_emb = task_config.eval_emb_name if task_config.eval_emb_name else task_config.model_name_emb
         model_name_vlm = task_config.eval_vlm_name if task_config.eval_vlm_name else task_config.model_name_vlm
-        model_name_jdg = task_config.eval_jdg_name
+        model_name_jdg = task_config.eval_jdg_name if task_config.eval_jdg_name else task_config.model_name_jdg
 
         vlm = load_vlm(model_name_vlm, device)
-        if exp_config.eval.do_judge:
-            judge = load_judge(model_name_jdg, device)
         embedder, ds = load_embedder_and_dataset(
             task_config.ds_name,
             task_config.model_name_emb,
@@ -113,7 +111,7 @@ def run(exp_config: ExperimentConfig):
             metric_vlm_dict_test, gs_vlm_dict_test = ds.evaluate_generation(
                 vlm,
                 image_adv,
-                exp_config.train.target_answer,
+                exp_config.train.target_answer_vlm,
                 metrics=exp_config.eval.gen_metric_list,
                 text_embedder=text_embedder,
                 retrievals=retrievals_test,
@@ -124,7 +122,7 @@ def run(exp_config: ExperimentConfig):
             metric_vlm_dict_train, gs_vlm_dict_train = ds.evaluate_generation(
                 vlm,
                 image_adv,
-                exp_config.train.target_answer,
+                exp_config.train.target_answer_vlm,
                 metrics=exp_config.eval.gen_metric_list,
                 text_embedder=text_embedder,
                 retrievals=retrievals_train,
@@ -138,6 +136,7 @@ def run(exp_config: ExperimentConfig):
             }
 
         if exp_config.eval.do_judge:
+            judge = load_judge(model_name_jdg, device)
             logger.info("=== Evaluating using Judge ...")
 
             metric_jdg_dict_test, generation_jdg_dict_test = ds.evaluate_using_judge(
@@ -167,6 +166,7 @@ def run(exp_config: ExperimentConfig):
 
 
         # save results to JSON format
+        task_config.train_jdg_metric_list = OmegaConf.to_container(task_config.train_jdg_metric_list) # JSON serialization error if we don't do this
         metric_dict_full = {
             "retrieval": retrieval_metric_dict,
             "generation": generation_metric_dict,

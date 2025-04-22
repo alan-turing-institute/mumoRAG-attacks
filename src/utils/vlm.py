@@ -165,9 +165,9 @@ class VLM():
         return inputs
     
     @torch.no_grad()
-    def generate(self, image: torch.tensor, formatted_prompt, context_images, adv_indices: list, overwrite: bool = False):
+    def generate(self, image: torch.tensor, formatted_prompt, context_images, adv_indices: list, overwrite: bool = False, max_new_tokens=30, do_sample=True, temperature=0.5):
         inputs = self.create_vlm_inputs_for_rag(image, formatted_prompt, context_images, adv_indices, overwrite)
-        generated_ids = self.model.generate(**inputs, max_new_tokens=30, do_sample=True, temperature=0.5)
+        generated_ids = self.model.generate(**inputs, max_new_tokens=max_new_tokens, do_sample=do_sample, temperature=temperature)
         generated_texts = self.processor.batch_decode(generated_ids, skip_special_tokens=True)
         return generated_texts
 
