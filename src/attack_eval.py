@@ -13,7 +13,7 @@ from experiments import DEFAULT_EXPERIMENT
 from utils.image_utils import load_adv_image
 from utils.logger import logger
 from utils.utils import get_device
-from wrappers.cache import get_vlm, get_text_embedder, get_dataset, get_embedded_dataset
+from wrappers.cache import get_vlm, get_text_embedder, get_dataset, get_embedded_dataset, get_judge
 from wrappers.embedding import is_loss_compatible
 
 
@@ -60,6 +60,7 @@ def run(exp_config: ExperimentConfig):
         # update model names in case we test transferability
         model_name_emb = task_config.eval_emb_name if task_config.eval_emb_name else task_config.model_name_emb
         model_name_vlm = task_config.eval_vlm_name if task_config.eval_vlm_name else task_config.model_name_vlm
+        model_name_jdg = task_config.eval_jdg_name if task_config.eval_jdg_name else task_config.model_name_jdg
 
         vlm = get_vlm(model_name_vlm, device)
         ds = get_dataset(task_config.ds_name)
@@ -90,7 +91,7 @@ def run(exp_config: ExperimentConfig):
                 include_adv=True,
             )
             retrieval_metric_dict = get_retrieval_saved_info(
-                OmegaConf.to_object(exp_config.eval),
+                exp_config.eval,
                 metric_dict_before,
                 metric_dict_after,
             )
@@ -101,10 +102,10 @@ def run(exp_config: ExperimentConfig):
         # test generation
         if exp_config.eval.do_generation:
             logger.info("=== Evaluating generation ...")
-            metric_dict_test, gs_test = ds.evaluate_generation(
+            metric_vlm_dict_test, gs_vlm_dict_test = ds.evaluate_generation(
                 vlm,
                 image_adv,
-                exp_config.train.target_answer,
+                exp_config.train.target_answer_vlm,
                 metrics=exp_config.eval.gen_metric_list,
                 text_embedder=text_embedder,
                 retrievals=retrievals_test,
@@ -112,10 +113,10 @@ def run(exp_config: ExperimentConfig):
                 batch_size=exp_config.eval.gen_batch_size,
                 eval_train=False,
             )
-            metric_dict_train, gs_train = ds.evaluate_generation(
+            metric_vlm_dict_train, gs_vlm_dict_train = ds.evaluate_generation(
                 vlm,
                 image_adv,
-                exp_config.train.target_answer,
+                exp_config.train.target_answer_vlm,
                 metrics=exp_config.eval.gen_metric_list,
                 text_embedder=text_embedder,
                 retrievals=retrievals_train,
@@ -124,19 +125,49 @@ def run(exp_config: ExperimentConfig):
                 eval_train=True,
             )
             generation_metric_dict = {
-                "train": metric_dict_train,
-                "test": metric_dict_test,
+                "train": metric_vlm_dict_train,
+                "test": metric_vlm_dict_test,
+            }
+
+        if exp_config.eval.do_judge:
+            judge = get_judge(model_name_jdg, device)
+            logger.info("=== Evaluating using Judge ...")
+
+            metric_jdg_dict_test, generation_jdg_dict_test = ds.evaluate_using_judge(
+                judge,
+                image_adv,
+                judge_metrics=exp_config.eval.eval_jdg_metric_list,
+                retrievals=retrievals_test,
+                generation_vlm_dict=gs_vlm_dict_test,
+                generation_topk_list=exp_config.eval.gen_topk_list,
+                batch_size=exp_config.eval.gen_batch_size,
+                eval_train=False,
+            )
+            metric_jdg_dict_train, generation_jdg_dict_train = ds.evaluate_using_judge(
+                judge,
+                image_adv,
+                judge_metrics=exp_config.eval.eval_jdg_metric_list,
+                retrievals=retrievals_train,
+                generation_vlm_dict=gs_vlm_dict_train,
+                generation_topk_list=exp_config.eval.gen_topk_list,
+                batch_size=exp_config.eval.gen_batch_size,
+                eval_train=True,
+            )
+            judge_metric_dict = {
+                "train": metric_jdg_dict_train,
+                "test": metric_jdg_dict_test,
             }
 
         # save results to JSON format
         metric_dict_full = {
             "retrieval": retrieval_metric_dict,
             "generation": generation_metric_dict,
+            "judge": judge_metric_dict,
             "attack_config": task_config.to_dict(),
         }
         results_filename = (
             exp_config.eval.results_folder
-            / f"metrics_{task_config.create_hash_string()}{get_transferability_file_suffix(task_config.eval_emb_name, task_config.eval_vlm_name)}.json"
+            / f"metrics_{task_config.create_hash_string()}{get_transferability_file_suffix(task_config.eval_emb_name, task_config.eval_vlm_name, task_config.eval_jdg_name)}.json"
         )
 
         with open(
@@ -149,7 +180,7 @@ def run(exp_config: ExperimentConfig):
 
 @hydra.main(version_base=None, config_path="pkg://experiments", config_name=DEFAULT_EXPERIMENT)
 def main(exp_config: ExperimentConfig):
-    run(exp_config)
+    run(OmegaConf.to_object(exp_config))
 
 
 if __name__ == "__main__":

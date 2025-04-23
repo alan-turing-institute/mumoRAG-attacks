@@ -4,11 +4,13 @@ This file includes different configurations for the parameters of the attack and
 
 from hydra import compose, initialize
 from hydra.core.config_store import ConfigStore
+from omegaconf import OmegaConf
 
 from config.eval import ExperimentEvalConfig
 from config.experiment import ExperimentConfig
 from config.train import ExperimentTrainConfig
 from wrappers.embedding import EmbedderName
+from wrappers.judge import JudgeMetric
 from wrappers.vlm import VLMName
 from wrappers.dataset import DatasetName
 
@@ -21,11 +23,7 @@ configstore = ConfigStore.instance()
 def load_config(name):
     with initialize(version_base=None, config_path="pkg://experiments"):
         cfg = compose(config_name=name)
-    return ExperimentConfig(
-        train=ExperimentTrainConfig(**cfg["train"]),
-        eval=ExperimentEvalConfig(**cfg["eval"]),
-    )
-
+    return OmegaConf.to_object(cfg)
 
 """
 testing Configuration
@@ -36,12 +34,14 @@ configstore.store(
         train=ExperimentTrainConfig(
             embedder_list=[EmbedderName.CLIP_BASE_PATCH16],
             vlm_list=[VLMName.SMOLVLM_1_256M],
-            gen_topk_list=[2, 1],
-            kb_compromised_fraction=0.1,
+            gen_topk_list=[1],
+            judge_list=[VLMName.SMOLVLM_1_256M],
+            lambda_jdg=1,
         ),
         eval=ExperimentEvalConfig(
-            gen_topk_list=[-1, 1, 2],
-        ),
+            gen_topk_list=[-1,1],
+            eval_jdg_metric_list=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY],
+        )
     ),
 )
 

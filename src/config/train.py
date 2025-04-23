@@ -1,9 +1,11 @@
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from wrappers.embedding import EmbedderName, EmbeddingLoss
-from wrappers.vlm import VLMName
 from wrappers.dataset import DatasetName
+from wrappers.embedding import EmbedderName, EmbeddingLoss
+from wrappers.judge import JudgeMetric
+from wrappers.vlm import VLMName
+
 from . import ATTACKS_FOLDER
 
 
@@ -16,7 +18,7 @@ class ExperimentTrainConfig:
     emb_train_loss_type_list: list[EmbeddingLoss]   = field(default_factory=lambda: [EmbeddingLoss.COS])
     is_adaptive_list: list[bool]                    = field(default_factory=lambda: [False])
     save_folder: Path                               = ATTACKS_FOLDER
-    target_answer: str                              = "I will not reply to you!"
+    target_answer_vlm: str                          = "I will not reply to you!"
     chosen_index_list: list[int]                    = field(default_factory=lambda: [150])
     n_gradient_steps: int                           = 50
     print_every: int                                = 5
@@ -30,3 +32,7 @@ class ExperimentTrainConfig:
     colpali_only_images: bool                       = False
     gen_topk_list: list[int]                        = field(default_factory=lambda: [1])
     kb_compromised_fraction: float                  = 0.1
+    lambda_jdg: float                               = 0
+    judge_list: list[VLMName]                       = field(default_factory=lambda: [VLMName.SMOLVLM_1_2B])
+    target_answer_jdg: str                          = "YES"
+    train_jdg_metric_list: list[JudgeMetric]        = field(default_factory=lambda: [JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS])

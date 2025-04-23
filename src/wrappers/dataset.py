@@ -1,3 +1,4 @@
+import itertools
 import math
 import random
 from collections import defaultdict
@@ -10,6 +11,7 @@ from tqdm import tqdm
 
 from utils.logger import logger
 from wrappers.text_embedding import TextEmbeddingModel
+from wrappers.judge import JudgeVLM, JudgeMetric, METRIC_2_PROMPT
 from wrappers.vlm import VLM, SMOL_VLMS
 
 
@@ -79,51 +81,115 @@ class Dataset:
             print_gen=False,
     ):
         """
-        By default, we use the test wrappers
+        By default, we use the test dataset
         """
 
+        split_str_vlm = "Assistant:" if vlm.name in SMOL_VLMS else "assistant\n"
         queries = self.queries_train if eval_train else self.queries_test
         metric_dict = defaultdict(dict)
+        generation_vlm_dict = {}
 
         for generation_topk in generation_topk_list:
-            logger.info(
-                f'Generating responses to {"train" if eval_train else "test"} set queries: using top ({generation_topk}) retrieved images')
+
+            keyname = f"gen_topk_{generation_topk}"
+            logger.info(f'{"Train" if eval_train else "Test"} set: top ({generation_topk})')
 
             retrieved_images, adv_indices = self.retrieved_idx_to_img(
                 retrieved_indices=retrievals[list(retrievals.keys())[0]], topk=generation_topk)
+            prompts_vlm = [vlm.get_test_prompt(query, n_images=len(retrieved_images[0])) for query in queries]
 
             if batch_size is None:
-                generations = vlm.generate(image_tensor, queries, overwrite=True, retrieved_images=retrieved_images,
-                                           adv_indices=adv_indices)
+                generations_vlm = vlm.generate(image_tensor, prompts_vlm, context_images=retrieved_images,
+                                               adv_indices=adv_indices, overwrite=True)
             else:
-                generations = []
+                generations_vlm = []
                 for i in tqdm(range(math.ceil(len(queries) / batch_size))):
-                    queries_batch = queries[i * batch_size:(i + 1) * batch_size]
+                    prompts_vlm_batch = prompts_vlm[i * batch_size:(i + 1) * batch_size]
                     retrieved_images_batch = retrieved_images[i * batch_size:(i + 1) * batch_size]
                     adv_indices_batch = adv_indices[i * batch_size:(i + 1) * batch_size]
-                    generations.extend(vlm.generate(image_tensor, queries_batch, overwrite=True,
-                                                    retrieved_images=retrieved_images_batch,
-                                                    adv_indices=adv_indices_batch))
 
-            # extract only the VLM reply (Smol and Qwen need different splittings)
-            split_str = "Assistant:" if vlm.name in SMOL_VLMS else "assistant\n"
-            generations = [g.split(split_str)[-1].strip() for g in generations]
+                    generations_vlm_batch = vlm.generate(image_tensor, prompts_vlm_batch,
+                                                         context_images=retrieved_images_batch,
+                                                         adv_indices=adv_indices_batch, overwrite=True)
+                    generations_vlm_batch = [g.split(split_str_vlm)[-1].strip() for g in
+                                             generations_vlm_batch]  # extract only the assistant reply
+                    generations_vlm.extend(generations_vlm_batch)
 
-            if print_gen: logger.info(generations)
+            generation_vlm_dict[keyname] = generations_vlm
 
-            keyname = f"gen_topk_{generation_topk}"
+            if print_gen: logger.info(generations_vlm)
 
             if "exact" in metrics:
                 # exact match of VLM generation and target answer
-                correct_generations = [g == target_generation for g in generations]
+                correct_generations = [g == target_generation for g in generations_vlm]
                 metric_dict[keyname]["exact"] = sum(correct_generations) / len(queries)
 
             if "embed" in metrics:
                 # similarity score between VLM generation and target answer in [0,1]
-                similarity = text_embedder.compare_embeddings(generations, target_generation, similarity_metric="cos")
+                similarity = text_embedder.compare_embeddings(generations_vlm, target_generation,
+                                                              similarity_metric="cos")
                 metric_dict[keyname]["embed"] = similarity.mean().item()
 
-        return metric_dict, generations
+        return metric_dict, generation_vlm_dict
+
+    def evaluate_using_judge(
+            self,
+            judge: JudgeVLM,
+            image_tensor,
+            judge_metrics: list[JudgeMetric],
+            retrievals: dict,
+            generation_vlm_dict: dict,
+            generation_topk_list: list[int],
+            batch_size=None,
+            eval_train=False,
+            print_gen=False,
+    ):
+        split_str_jdg = "Assistant:" if judge.name in SMOL_VLMS else "assistant\n"
+        queries = self.queries_train if eval_train else self.queries_test
+        metric_dict = defaultdict(dict)
+        generation_jdg_dict = defaultdict(dict)
+
+        for generation_topk, metric in itertools.product(generation_topk_list, judge_metrics):
+
+            judge_prompt = METRIC_2_PROMPT[metric]
+            n_images = 1 if generation_topk == -1 else generation_topk
+            keyname = f"gen_topk_{generation_topk}"
+
+            logger.info(f'{"Train" if eval_train else "Test"} set -> top ({generation_topk}), metric: {metric}')
+
+            generations_vlm = generation_vlm_dict[keyname]
+            prompts_judge = [judge.get_test_prompt(judge_prompt, query, gen_vlm, n_images=n_images) for (query, gen_vlm)
+                             in zip(queries, generations_vlm)]
+            retrieved_images, adv_indices = self.retrieved_idx_to_img(
+                retrieved_indices=retrievals[list(retrievals.keys())[0]], topk=generation_topk)
+
+            generations_jdg = []
+            for i in tqdm(range(math.ceil(len(queries) / batch_size))):
+                retrieved_images_batch = retrieved_images[i * batch_size:(i + 1) * batch_size]
+                adv_indices_batch = adv_indices[i * batch_size:(i + 1) * batch_size]
+
+                prompts_jdg_batch = prompts_judge[i * batch_size:(i + 1) * batch_size]
+                generations_jdg_batch = judge.generate(image_tensor, prompts_jdg_batch,
+                                                       context_images=retrieved_images_batch,
+                                                       adv_indices=adv_indices_batch, overwrite=True)
+                generations_jdg_batch = [g.split(split_str_jdg)[-1].strip() for g in generations_jdg_batch]
+                generations_jdg.extend(generations_jdg_batch)
+
+            if print_gen: logger.info(generations_jdg)
+
+            generation_jdg_dict[keyname][metric] = generations_jdg
+            metric_dict[keyname][metric] = self.extract_judge_score(generations_jdg)
+
+        return metric_dict, generation_jdg_dict
+
+    def extract_judge_score(self, generations_jdg):
+        num_y = sum([("YES" in g) and not ("NO" in g) for g in generations_jdg])
+        num_n = sum([("NO" in g) and not ("YES" in g) for g in generations_jdg])
+        try:
+            score = num_y / (num_y + num_n)
+        except ZeroDivisionError:
+            score = -1
+        return score
 
     def retrieved_idx_to_img(self, retrieved_indices: torch.tensor, topk: int):
         if topk == -1:

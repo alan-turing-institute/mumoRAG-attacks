@@ -13,7 +13,7 @@ To train the attack:
 python src/attack_train.py --config-name <name>
 ```
 
-Experiments are defined in the [experiments module](./experiments/__init__.py).
+Experiments are defined in the [experiments module](src/experiments/configstore.py).
 
 Fields of the config can be overridden, e.g.:
 

@@ -40,7 +40,7 @@ def plot_images(images, n_subplots):
     plt.tight_layout()
     plt.show()
 
-# cretaes a huggingface datset given a dict of pdfs, each pdf is a list of images 
+# creates a huggingface dataset given a dict of pdfs, each pdf is a list of images
 def create_hf_dataset(images: dict):
 
     ds_dict = defaultdict(list)
@@ -52,7 +52,7 @@ def create_hf_dataset(images: dict):
 
     return Dataset.from_dict(ds_dict)
 
-# add an extra column to the wrappers containing the embeddings of images
+# add an extra column to the dataset containing the embeddings of images
 def add_img_embedding_column(ds, model, processor, existing_col_name="image", new_col_name="image_embeddings"):
     ds_with_embeddings = ds.map(
         lambda example: {
@@ -61,7 +61,7 @@ def add_img_embedding_column(ds, model, processor, existing_col_name="image", ne
     )
     return ds_with_embeddings
 
-# add an extra column to the wrappers containing the embeddings of texts (not used yet)
+# add an extra column to the dataset containing the embeddings of texts (not used yet)
 def add_txt_embedding_column(ds, model, processor, existing_col_name="text", new_col_name="text_embeddings"):
     ds_with_embeddings = ds.map(
         lambda example: {

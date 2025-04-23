@@ -1,12 +1,14 @@
 from functools import lru_cache
 from typing import Optional
 
-from wrappers.embedding import EmbeddingModel, EmbedderName
 from utils.logger import logger
-from wrappers.text_embedding import TextEmbeddingModel, TextEmbedderName
-from wrappers.vlm import VLM, VLMName
-from wrappers.dataset import DatasetName, Dataset, create_dataset
-from wrappers.embedded_dataset import EmbeddedDataset
+
+from .dataset import DatasetName, Dataset, create_dataset
+from .embedded_dataset import EmbeddedDataset
+from .embedding import EmbeddingModel, EmbedderName
+from .judge import JudgeVLM
+from .text_embedding import TextEmbeddingModel, TextEmbedderName
+from .vlm import VLM, VLMName
 
 
 @lru_cache(maxsize=1)
@@ -18,6 +20,10 @@ def get_vlm(model_name_vlm: VLMName, device: str) -> VLM:
     logger.info(f"VLM: loading {model_name_vlm}")
     return VLM(model_name_vlm, device)
 
+@lru_cache(maxsize=1)
+def get_judge(model_name_jdg: VLMName, device: str) -> JudgeVLM:
+    logger.info(f"JudgeVLM: loading {model_name_jdg}")
+    return JudgeVLM(model_name_jdg, device)
 
 @lru_cache(maxsize=1)
 def get_embedder(model_name_emb: EmbedderName, quantize: bool, colpali_only_images: bool, device: str) -> EmbeddingModel:

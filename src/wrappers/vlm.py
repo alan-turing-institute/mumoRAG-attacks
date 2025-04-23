@@ -144,61 +144,39 @@ class VLM:
 
         return prompt, target_tokens
     
-    @torch.no_grad()
-    def generate(self, image: torch.tensor, user_queries, overwrite: bool = False, retrieved_images = None, adv_indices: list = None):
-        self.model.eval()
-        if isinstance(user_queries, str): user_queries = [user_queries]
-        topk_used = len(retrieved_images[0])
-        test_prompts = [self.get_test_prompt(query, n_images=topk_used) for query in user_queries]
-        
-        if self.name in VLMS_WITH_FAST_PROCESSOR:
-            # TODO: Not tested with large k due to OOM exceptions
-            retrieved_images_pt = self.create_topk_image_list_pt(image, retrieved_images, adv_indices)
-            inputs = self.processor(text=test_prompts, images=retrieved_images_pt, return_tensors="pt", padding=True, padding_side="left").to(self.device)
-        else:            
-            inputs = self.processor(text=test_prompts, images=retrieved_images, return_tensors="pt", padding=True, padding_side="left").to(self.device)
+    def create_vlm_inputs_for_rag(self, image: torch.tensor, formatted_prompt, context_images, adv_indices: list, overwrite: bool = False):
+        """
+        NOTE: padding_side should be set to "left", otherwise this will interfere with the attack optimization
+        """
+        if isinstance(formatted_prompt, str): formatted_prompt = [formatted_prompt]
 
-            if overwrite:
-                image_ppd = process_image(image, self)
-                for i, adv_idx in enumerate(adv_indices):
-                    if adv_idx != -1:
-                        inputs['pixel_values'][i][adv_idx] = image_ppd
+        # convert images to tensors
+        if self.name in VLMS_WITH_FAST_PROCESSOR:
+            context_images = self.create_topk_image_list_pt(image, context_images, adv_indices)
         
-        generated_ids = self.model.generate(**inputs, max_new_tokens=30, do_sample=True, temperature=0.5)
+        # process
+        inputs = self.processor(text=formatted_prompt, images=context_images, return_tensors="pt", truncation=True, padding=True, padding_side="left").to(self.device)
+
+        # overwrite with exact adversarial image tensor if needed
+        if overwrite and self.name not in VLMS_WITH_FAST_PROCESSOR:
+            image_ppd = process_image(image, self)
+            for i, adv_idx in enumerate(adv_indices):
+                if adv_idx != -1:
+                    inputs['pixel_values'][i][adv_idx] = image_ppd
+        
+        return inputs
+    
+    @torch.no_grad()
+    def generate(self, image: torch.tensor, formatted_prompt, context_images, adv_indices: list, overwrite: bool = False, max_new_tokens=30, do_sample=True, temperature=0.5):
+        inputs = self.create_vlm_inputs_for_rag(image, formatted_prompt, context_images, adv_indices, overwrite)
+        generated_ids = self.model.generate(**inputs, max_new_tokens=max_new_tokens, do_sample=do_sample, temperature=temperature)
         generated_texts = self.processor.batch_decode(generated_ids, skip_special_tokens=True)
-        
         return generated_texts
 
-    def forward(self, image, mock_images, prompt, context_images = None, adv_indices: list = None, overwrite: bool = False):
-        """
-        Important:
-        padding_side should be set to "left", otherwise this will interfere with the attack optimization
-        """
-        self.model.eval()
-        if isinstance(prompt, str): prompt = [prompt]
-        if self.name in SMOL_VLMS:
-            if overwrite:
-                image_ppd = process_image(image, self)
-                # inputs_vlm = self.processor(text=prompt, images=mock_images, return_tensors="pt", truncation=True, padding=True, padding_side="left").to(self.device) # here we feed the initial image since we are overwriting it anyway
-                # inputs_vlm['pixel_values'] = image_ppd_vlm.unsqueeze(0).unsqueeze(0).repeat(len(prompt),1,1,1,1).to(self.device)
-                inputs_vlm = self.processor(text=prompt, images=context_images, return_tensors="pt", truncation=True, padding=True, padding_side="left").to(self.device) 
-                for i, adv_idx in enumerate(adv_indices):
-                    inputs_vlm['pixel_values'][i][adv_idx] = image_ppd
-            else:
-                inputs_vlm = self.processor(text=prompt, images=[image for _ in range(len(prompt))], return_tensors="pt", truncation=True, padding=True, padding_side="left").to(self.device) # here we feed the initial image since we are overwriting it anyway
-        
-        if self.name in VLMS_WITH_FAST_PROCESSOR:
-            # it seems that qwen implements their preprocessors in pytorch --> differentiable (no need to overwrite image)
-            retrieved_images_pt = self.create_topk_image_list_pt(image, context_images, adv_indices)
-            inputs_vlm = self.processor(text=prompt, images=retrieved_images_pt, return_tensors="pt", truncation=True, padding=True, padding_side="left").to(self.device)
-            # inputs_vlm = self.processor(text=prompt, images=[image for _ in range(len(prompt))], return_tensors="pt", truncation=True, padding=True, padding_side="left").to(self.device)
-        
-        if inputs_vlm:
-            out = self.model(**inputs_vlm, use_cache=False, output_attentions=False, output_hidden_states=False)
-            return out
-
-        raise ValueError(f"Not supported model {self.name}!")
-
+    def forward(self, image, formatted_prompt, context_images, adv_indices: list, overwrite: bool = False):
+        inputs = self.create_vlm_inputs_for_rag(image, formatted_prompt, context_images, adv_indices, overwrite)
+        out = self.model(**inputs, use_cache=False, output_attentions=False, output_hidden_states=False)
+        return out
 
     def compute_gen_loss(self, vlm_output, target_tokens):
         logits_to_optimize = vlm_output.logits[:,-len(target_tokens)-1:-1,:].transpose(1,2)

@@ -3,10 +3,6 @@ from typing import TYPE_CHECKING
 import torch
 from transformers import AutoProcessor, LlavaNextProcessor
 import torchvision.transforms as T
-import torch.nn.functional as F
-import torchvision.transforms.v2.functional as Tv2F
-from enum import IntEnum
-from transformers.models.qwen2_vl.image_processing_qwen2_vl import smart_resize
 
 from .logger import logger
 
