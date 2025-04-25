@@ -12,6 +12,7 @@ from .scheduler import LearningRateScheduler
 from .utils import get_memory_consumption
 from .logger import logger
 
+import torch
 
 
 def rag_attack(
@@ -23,7 +24,8 @@ def rag_attack(
         config: TaskConfig,
         attack_images: list,
         print_every: int,
-        device: str):
+        device: str,
+        mask: torch.tensor=None):
     """
     Simulates an attack against the full RAG pipeline.
     The input image is jointly optimized w.r.t. the retriever and the VLM outputs
@@ -59,6 +61,20 @@ def rag_attack(
     batch_size_per_iter = min(len(user_query), max_batch_size_per_iter)
     n_iter = n_gradient_steps * gradient_acc_steps
     if type(user_query) == str: user_query = [user_query]
+
+    if mask is None:
+        # If no mask is provided then perturb all pixels
+        mask_tensor = torch.ones_like(raw_image)
+    else:
+        # Make mask tensor with the same shape as the raw_image
+        mask_tensor = mask.clone().to(device)
+        if mask_tensor.dim() == 2:
+            mask_tensor = mask_tensor.unsqueeze(0)
+        if mask_tensor.shape[0] == 1 and raw_image.shape[0] > 1:
+            mask_tensor = mask_tensor.expand(raw_image.shape[0], -1, -1)
+
+    #TODO REMOVE
+    mask_tensor[0][0][0] = 0
 
     # pre-computing embeddings and prompts for all data 
     if lambda_emb > 0: 
@@ -118,6 +134,8 @@ def rag_attack(
 
         # backpropagation
         grads += torch.autograd.grad(total_loss, raw_image)[0]
+        # Applies perturbation mask
+        grads *= mask_tensor
 
         if (i+1)%gradient_acc_steps == 0:
             # compute average gradient

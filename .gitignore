@@ -7,3 +7,6 @@ __pycache__/
 .venv
 .mypy_cache
 .ruff_cache
+venv
+build
+.idea
