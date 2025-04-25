@@ -56,6 +56,7 @@ def run(exp_config: ExperimentConfig):
             attack_images=attack_images,
             print_every=exp_config.train.print_every,
             device=device,
+            attack_mask=task_config.attack_mask,
         )
 
         logger.info(f"MSE: {torch.nn.functional.mse_loss(image_adv, initial_chosen_image)}")

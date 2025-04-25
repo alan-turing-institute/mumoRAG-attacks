@@ -4,6 +4,7 @@ import torch
 import torchvision.transforms as T
 
 from config.task import TaskConfig
+from wrappers.attack_mask import AttackMask
 from wrappers.embedding import EmbeddingModel
 from wrappers.judge import JudgeVLM
 from wrappers.vlm import VLM
@@ -25,7 +26,7 @@ def rag_attack(
         attack_images: list,
         print_every: int,
         device: str,
-        mask: torch.tensor=None):
+        attack_mask: AttackMask):
     """
     Simulates an attack against the full RAG pipeline.
     The input image is jointly optimized w.r.t. the retriever and the VLM outputs
@@ -62,19 +63,22 @@ def rag_attack(
     n_iter = n_gradient_steps * gradient_acc_steps
     if type(user_query) == str: user_query = [user_query]
 
-    if mask is None:
+    if attack_mask is None:
         # If no mask is provided then perturb all pixels
         mask_tensor = torch.ones_like(raw_image)
     else:
         # Make mask tensor with the same shape as the raw_image
-        mask_tensor = mask.clone().to(device)
+        mask_tensor = torch.zeros(raw_image[0].shape).to(device)
+        x_start = attack_mask.value[2]
+        x_end = x_start + attack_mask.value[0]
+        y_start = attack_mask.value[3]
+        y_end = y_start + attack_mask.value[1]
+        mask_tensor[x_start:x_end, y_start:y_end] = 1
+
         if mask_tensor.dim() == 2:
             mask_tensor = mask_tensor.unsqueeze(0)
         if mask_tensor.shape[0] == 1 and raw_image.shape[0] > 1:
             mask_tensor = mask_tensor.expand(raw_image.shape[0], -1, -1)
-
-    #TODO REMOVE
-    mask_tensor[0][0][0] = 0
 
     # pre-computing embeddings and prompts for all data 
     if lambda_emb > 0: 

@@ -3,10 +3,14 @@ from dataclasses import dataclass, asdict
 from itertools import product
 from typing import Optional
 
+import torch
+from aiohttp._websocket import mask
+
 from wrappers.dataset import DatasetName
 from wrappers.embedding import EmbedderName, EmbeddingLoss, COLPALI_MODELS
 from wrappers.judge import JudgeMetric
 from wrappers.vlm import VLMName
+from wrappers.attack_mask import AttackMask
 
 from .experiment import ExperimentConfig
 
@@ -39,6 +43,7 @@ class TaskConfig:
     lambda_jdg: float
     target_answer_jdg: str
     train_jdg_metric_list: list[JudgeMetric]
+    attack_mask: AttackMask
     eval_emb_name: Optional[EmbedderName] = None
     eval_vlm_name: Optional[VLMName] = None
     eval_jdg_name: Optional[VLMName] = None
@@ -92,6 +97,7 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
         exp_config.train.is_adaptive_list,
         exp_config.train.chosen_index_list,
         exp_config.train.gen_topk_list,
+        exp_config.train.attack_mask_list,
         (exp_config.eval.eval_emb_list if include_eval else None) or [""],
         (exp_config.eval.eval_vlm_list if include_eval else None) or [""],
         (exp_config.eval.eval_jdg_list if include_eval else None) or [""],
@@ -108,6 +114,7 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
             is_adaptive,
             chosen_index,
             gen_topk,
+            attack_mask,
             eval_emb_name,
             eval_vlm_name,
             eval_jdg_name,
@@ -141,6 +148,7 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
                 lambda_jdg=exp_config.train.lambda_jdg,
                 target_answer_jdg=exp_config.train.target_answer_jdg,
                 train_jdg_metric_list=exp_config.train.train_jdg_metric_list,
+                attack_mask=attack_mask,
             )
         )
 
