@@ -58,7 +58,7 @@ def rag_attack(
     jdg_metric_list = config.train_jdg_metric_list
 
     initial_image = raw_image.clone().float() if device == "cuda" else raw_image.clone()
-    attack_mask = get_attack_mask(config.attack_mask, initial_image)
+    attack_mask = get_attack_mask(config.attack_mask, initial_image, config.image_size)
     max_perturbation_pixels = max_perturbation*255
     batch_size_per_iter = min(len(user_query), max_batch_size_per_iter)
     n_iter = n_gradient_steps * gradient_acc_steps
