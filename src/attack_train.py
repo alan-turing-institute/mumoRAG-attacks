@@ -12,6 +12,7 @@ from experiments import DEFAULT_EXPERIMENT
 from utils.attack import rag_attack
 from utils.logger import logger
 from utils.utils import get_device
+from wrappers.attack_mask import get_attack_mask
 from wrappers.cache import get_vlm, get_dataset, get_embedder, get_judge
 from wrappers.embedding import is_loss_compatible
 
@@ -45,9 +46,13 @@ def run(exp_config: ExperimentConfig):
         chosen_image = chosen_image.float()
         initial_chosen_image = chosen_image.clone()
 
+        # Create attack mask
+        attack_mask = get_attack_mask(task_config.attack_mask, chosen_image)
+
         # train the attack
         image_adv = rag_attack(
             raw_image=chosen_image,
+            attack_mask=attack_mask,
             embedder=embedder,
             vlm=vlm,
             jdg=jdg,
@@ -56,7 +61,6 @@ def run(exp_config: ExperimentConfig):
             attack_images=attack_images,
             print_every=exp_config.train.print_every,
             device=device,
-            attack_mask=task_config.attack_mask,
         )
 
         logger.info(f"MSE: {torch.nn.functional.mse_loss(image_adv, initial_chosen_image)}")
