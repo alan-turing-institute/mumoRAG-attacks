@@ -41,18 +41,14 @@ def run(exp_config: ExperimentConfig):
 
         # choose attacked image
         chosen_image = ds.images[task_config.chosen_index]
-        chosen_image = chosen_image.resize((512,512))  # this can save memory (also setting this to VLM image size with resample=0 -> reduce errors)
+        chosen_image = chosen_image.resize((task_config.image_size[0],task_config.image_size[1]))  # this can save memory (also setting this to VLM image size with resample=0 -> reduce errors)
         chosen_image = T.PILToTensor()(chosen_image)  # choose from after 100 since those do not have associated queries
         chosen_image = chosen_image.float()
         initial_chosen_image = chosen_image.clone()
 
-        # Create attack mask
-        attack_mask = get_attack_mask(task_config.attack_mask, chosen_image)
-
         # train the attack
         image_adv = rag_attack(
             raw_image=chosen_image,
-            attack_mask=attack_mask,
             embedder=embedder,
             vlm=vlm,
             jdg=jdg,

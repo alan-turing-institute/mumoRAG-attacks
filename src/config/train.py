@@ -41,3 +41,4 @@ class ExperimentTrainConfig:
     target_answer_jdg: str                                  = "YES"
     train_jdg_metric_list: list[JudgeMetric]                = field(default_factory=lambda: [JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS])
     attack_mask_list: list[AttackMask]                      = field(default_factory=lambda: [AttackMask.Full])
+    image_size: list[int]                                   = field(default_factory=lambda: [512,512])

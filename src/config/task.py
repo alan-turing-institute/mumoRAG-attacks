@@ -44,6 +44,7 @@ class TaskConfig:
     target_answer_jdg: str
     train_jdg_metric_list: list[JudgeMetric]
     attack_mask: AttackMask
+    image_size: list[int]
     eval_emb_name: Optional[EmbedderName] = None
     eval_vlm_name: Optional[VLMName] = None
     eval_jdg_name: Optional[VLMName] = None
@@ -149,6 +150,7 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
                 target_answer_jdg=exp_config.train.target_answer_jdg,
                 train_jdg_metric_list=exp_config.train.train_jdg_metric_list,
                 attack_mask=attack_mask,
+                image_size=exp_config.train.image_size
             )
         )
 

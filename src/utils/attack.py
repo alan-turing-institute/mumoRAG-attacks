@@ -4,7 +4,7 @@ import torch
 import torchvision.transforms as T
 
 from config.task import TaskConfig
-from wrappers.attack_mask import AttackMask
+from wrappers.attack_mask import AttackMask, get_attack_mask
 from wrappers.embedding import EmbeddingModel
 from wrappers.judge import JudgeVLM
 from wrappers.vlm import VLM
@@ -18,7 +18,6 @@ import torch
 
 def rag_attack(
         raw_image: torch.tensor,
-        attack_mask: torch.tensor,
         embedder: EmbeddingModel,
         vlm: VLM,
         jdg: JudgeVLM,
@@ -59,6 +58,7 @@ def rag_attack(
     jdg_metric_list = config.train_jdg_metric_list
 
     initial_image = raw_image.clone().float() if device == "cuda" else raw_image.clone()
+    attack_mask = get_attack_mask(config.attack_mask, initial_image)
     max_perturbation_pixels = max_perturbation*255
     batch_size_per_iter = min(len(user_query), max_batch_size_per_iter)
     n_iter = n_gradient_steps * gradient_acc_steps
