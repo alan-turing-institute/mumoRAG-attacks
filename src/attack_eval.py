@@ -29,6 +29,9 @@ def get_retrieval_saved_info(exp_config_eval: ExperimentEvalConfig, metric_dict_
             "recall_after": metric_dict_after[k]["acc"],
             "asr_train": metric_dict_after[k]["asr_train"],
             "asr_test": metric_dict_after[k]["asr_test"],
+            "asr_targeted": metric_dict_after[k].get("asr_targeted", -1),
+            "fpr_targeted_train": metric_dict_after[k].get("fpr_targeted_train", -1),
+            "fpr_targeted_test": metric_dict_after[k].get("fpr_targeted_test", -1),
         }
     return retrieval_dict
 
@@ -83,11 +86,13 @@ def run(exp_config: ExperimentConfig):
             metric_dict_before, retrievals_before = embedded_ds.evaluate_retrieval(
                 ks=exp_config.eval.topk_list,
                 loss_types=emb_test_loss_type_list_compatible,
+                target_query_idx=exp_config.train.target_query_idx,
                 include_adv=False,
             )
             metric_dict_after, retrievals_after = embedded_ds.evaluate_retrieval(
                 ks=exp_config.eval.topk_list,
                 loss_types=emb_test_loss_type_list_compatible,
+                target_query_idx=exp_config.train.target_query_idx,
                 include_adv=True,
             )
             retrieval_metric_dict = get_retrieval_saved_info(
@@ -110,6 +115,7 @@ def run(exp_config: ExperimentConfig):
                 text_embedder=text_embedder,
                 retrievals=retrievals_test,
                 generation_topk_list=exp_config.eval.gen_topk_list,
+                target_query_idx=exp_config.train.target_query_idx,
                 batch_size=exp_config.eval.gen_batch_size,
                 eval_train=False,
             )
@@ -121,6 +127,7 @@ def run(exp_config: ExperimentConfig):
                 text_embedder=text_embedder,
                 retrievals=retrievals_train,
                 generation_topk_list=exp_config.eval.gen_topk_list,
+                target_query_idx=exp_config.train.target_query_idx,
                 batch_size=exp_config.eval.gen_batch_size,
                 eval_train=True,
             )
@@ -140,6 +147,7 @@ def run(exp_config: ExperimentConfig):
                 retrievals=retrievals_test,
                 generation_vlm_dict=gs_vlm_dict_test,
                 generation_topk_list=exp_config.eval.gen_topk_list,
+                target_query_idx=exp_config.train.target_query_idx,
                 batch_size=exp_config.eval.gen_batch_size,
                 eval_train=False,
             )
@@ -150,6 +158,7 @@ def run(exp_config: ExperimentConfig):
                 retrievals=retrievals_train,
                 generation_vlm_dict=gs_vlm_dict_train,
                 generation_topk_list=exp_config.eval.gen_topk_list,
+                target_query_idx=exp_config.train.target_query_idx,
                 batch_size=exp_config.eval.gen_batch_size,
                 eval_train=True,
             )
@@ -162,9 +171,10 @@ def run(exp_config: ExperimentConfig):
         metric_dict_full = {
             "retrieval": retrieval_metric_dict,
             "generation": generation_metric_dict,
-            "judge": judge_metric_dict,
             "attack_config": task_config.to_dict(),
         }
+        if exp_config.eval.do_judge: metric_dict_full["judge"] = judge_metric_dict
+
         results_filename = (
             exp_config.eval.results_folder
             / f"metrics_{task_config.create_hash_string()}{get_transferability_file_suffix(task_config.eval_emb_name, task_config.eval_vlm_name, task_config.eval_jdg_name)}.json"

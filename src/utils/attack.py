@@ -1,4 +1,4 @@
-import random
+import random, math
 
 import torch
 import torchvision.transforms as T
@@ -53,12 +53,14 @@ def rag_attack(
     lambda_jdg = config.lambda_jdg
     target_answer_jdg = config.target_answer_jdg
     jdg_metric_list = config.train_jdg_metric_list
+    target_query_idx = config.target_query_idx
 
     initial_image = raw_image.clone().float() if device == "cuda" else raw_image.clone()
     max_perturbation_pixels = max_perturbation*255
     batch_size_per_iter = min(len(user_query), max_batch_size_per_iter)
     n_iter = n_gradient_steps * gradient_acc_steps
     if type(user_query) == str: user_query = [user_query]
+    is_targeted = len(target_query_idx) > 0 
 
     # pre-computing embeddings and prompts for all data 
     if lambda_emb > 0: 
@@ -80,20 +82,18 @@ def rag_attack(
         raw_image.requires_grad = True
 
         # sample minibatch
-        samples_idx = torch.randint(0, len(user_query), (batch_size_per_iter,))
+        samples_idx = sample_minibatch(n_population=len(user_query), batch_size=batch_size_per_iter, target_idx=target_query_idx)
+        positive_idx = [i for i in range(len(samples_idx)) if samples_idx[i] in target_query_idx]
         if lambda_emb > 0: user_query_embedding_batch = user_query_embedding[samples_idx,:]
         if lambda_vlm > 0: full_text_vlm_prompt_batch = [full_text_vlm_prompt[i] for i in samples_idx]
         if lambda_jdg > 0: 
             samples_jdg_idx = torch.randint(0, len(user_query)*len(jdg_metric_list), (batch_size_per_iter,))
             full_text_jdg_prompt_batch = [full_text_jdg_prompt[i] for i in samples_jdg_idx]
 
-        # -- if code is slow uncomment the following line and indent the following code --
-        # with profiler.profile(use_cuda=False) as prof:
-
         if lambda_emb > 0:
             # retrieval loss function
             image_embedding = embedder.compute_img_embedding(raw_image, initial_image, overwrite=True)
-            loss_emb = embedder.compute_embedding_loss(image_embedding, user_query_embedding_batch, emb_loss_type)
+            loss_emb = embedder.compute_embedding_loss(image_embedding, user_query_embedding_batch, emb_loss_type, is_targeted, positive_idx)
 
 
         if lambda_vlm > 0:
@@ -132,9 +132,6 @@ def rag_attack(
 
             # zero the gradient
             grads = torch.zeros_like(raw_image)
-
-        # -- stop indenting here and uncomment next line to profile timing issues --
-        # logger.info(prof.key_averages().table(sort_by="cpu_time_total"))
 
     return raw_image
 
@@ -183,3 +180,12 @@ def prepare_context_images(attack_images, mock_image_pil, batch_size_per_iter, g
         adv_indices.append(adv_idx)
 
     return context_images, adv_indices
+
+def sample_minibatch(n_population, batch_size, target_idx: list[int]):
+    if target_idx == []:
+        return torch.randint(0, n_population, (batch_size,))
+    else:
+        # 50% positive samples, 50% negative samples on average
+        samples_pos = random.sample([i for i in range(n_population) if i in target_idx], batch_size)
+        samples_neg = random.sample([i for i in range(n_population) if i not in target_idx], batch_size)
+        return random.sample(samples_pos + samples_neg, batch_size)

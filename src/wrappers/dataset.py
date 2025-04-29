@@ -76,6 +76,7 @@ class Dataset:
             text_embedder: TextEmbeddingModel,
             retrievals: dict,
             generation_topk_list: list[int],
+            target_query_idx: list[int],
             batch_size=None,
             eval_train=False,
             print_gen=False,
@@ -92,6 +93,7 @@ class Dataset:
         for generation_topk in generation_topk_list:
 
             keyname = f"gen_topk_{generation_topk}"
+            split = "train" if eval_train else "test"
             logger.info(f'{"Train" if eval_train else "Test"} set: top ({generation_topk})')
 
             retrieved_images, adv_indices = self.retrieved_idx_to_img(
@@ -120,15 +122,22 @@ class Dataset:
             if print_gen: logger.info(generations_vlm)
 
             if "exact" in metrics:
+                
                 # exact match of VLM generation and target answer
                 correct_generations = [g == target_generation for g in generations_vlm]
-                metric_dict[keyname]["exact"] = sum(correct_generations) / len(queries)
+                metric_dict[keyname]["exact"] = {"asr_universal": sum(correct_generations) / len(queries)}
+                # targeted attack metrics
+                if len(target_query_idx)>0:
+                    metric_dict[keyname]["exact"].update(self.compute_targeted_metrics(correct_generations, target_query_idx, split))
 
             if "embed" in metrics:
                 # similarity score between VLM generation and target answer in [0,1]
                 similarity = text_embedder.compare_embeddings(generations_vlm, target_generation,
                                                               similarity_metric="cos")
-                metric_dict[keyname]["embed"] = similarity.mean().item()
+                metric_dict[keyname]["embed"] = {"asr_universal": similarity.mean().item()}
+                # targeted attack metrics
+                if len(target_query_idx)>0:
+                    metric_dict[keyname]["embed"].update(self.compute_targeted_metrics(similarity.flatten().tolist(), target_query_idx, split))
 
         return metric_dict, generation_vlm_dict
 
@@ -140,12 +149,14 @@ class Dataset:
             retrievals: dict,
             generation_vlm_dict: dict,
             generation_topk_list: list[int],
+            target_query_idx: list[int],
             batch_size=None,
             eval_train=False,
             print_gen=False,
     ):
         split_str_jdg = "Assistant:" if judge.name in SMOL_VLMS else "assistant\n"
         queries = self.queries_train if eval_train else self.queries_test
+        split = "train" if eval_train else "test"
         metric_dict = defaultdict(dict)
         generation_jdg_dict = defaultdict(dict)
 
@@ -178,18 +189,17 @@ class Dataset:
             if print_gen: logger.info(generations_jdg)
 
             generation_jdg_dict[keyname][metric] = generations_jdg
-            metric_dict[keyname][metric] = self.extract_judge_score(generations_jdg)
+            passed_judge = self.extract_judge_scores(generations_jdg)
+            metric_dict[keyname][metric] = {"asr_universal": sum(passed_judge) / len(passed_judge)}
+
+            # targeted metrics
+            if len(target_query_idx) > 0:
+                metric_dict[keyname][metric].update(self.compute_targeted_metrics(passed_judge, target_query_idx, split))
 
         return metric_dict, generation_jdg_dict
 
-    def extract_judge_score(self, generations_jdg):
-        num_y = sum([("YES" in g) and not ("NO" in g) for g in generations_jdg])
-        num_n = sum([("NO" in g) and not ("YES" in g) for g in generations_jdg])
-        try:
-            score = num_y / (num_y + num_n)
-        except ZeroDivisionError:
-            score = -1
-        return score
+    def extract_judge_scores(self, generations_jdg) -> list[bool]:
+        return [("YES" in g) and not ("NO" in g) for g in generations_jdg]
 
     def retrieved_idx_to_img(self, retrieved_indices: torch.tensor, topk: int):
         if topk == -1:
@@ -213,6 +223,23 @@ class Dataset:
             ]
 
         return retrieved_images, adv_indices
+    
+    def compute_targeted_metrics(self, observed_adv_effect: list[bool] | list[float], target_query_idx: list[int], split: str = "both"):
+        # NOTE
+        # - we assume the target queries are always in the training set
+        # - we only compute asr_targeted for the training set
+        output_dict = {}
+        if split=="both":
+            output_dict["asr_targeted"] = sum([observed_adv_effect[i] for i in range(len(observed_adv_effect)) if i in target_query_idx]) / len(target_query_idx)
+            output_dict["fpr_targeted_train"] = sum([observed_adv_effect[i] for i in range(len(self.queries_train)) if i not in target_query_idx]) / (len(self.queries_train) - len(target_query_idx))
+            output_dict["fpr_targeted_test"] = sum([observed_adv_effect[i] for i in range(len(self.queries_train), len(self.queries_train)+len(self.queries_test))]) / len(self.queries_test)
+        elif split=="train":
+            output_dict["asr_targeted"] = sum([observed_adv_effect[i] for i in range(len(observed_adv_effect)) if i in target_query_idx]) / len(target_query_idx)
+            output_dict["fpr_targeted"] = sum([observed_adv_effect[i] for i in range(len(self.queries_train)) if i not in target_query_idx]) / (len(self.queries_train) - len(target_query_idx))
+        elif split=="test":
+            output_dict["fpr_targeted"] = sum([observed_adv_effect[i] for i in range(len(self.queries_test))]) / len(self.queries_test)
+
+        return output_dict
 
 
 def create_dataset(

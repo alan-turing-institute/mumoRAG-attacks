@@ -35,12 +35,15 @@ configstore.store(
             embedder_list=[EmbedderName.CLIP_BASE_PATCH16],
             vlm_list=[VLMName.SMOLVLM_1_256M],
             gen_topk_list=[1],
-            judge_list=[VLMName.SMOLVLM_1_256M],
-            lambda_jdg=1,
+            target_query_idx=[2,50],
+            target_answer_vlm="In the straw-man experiment, trees were randomly pruned, whereas the baseline trees were manually curated for bias",
+            print_every=2,
+            n_gradient_steps=50,
         ),
         eval=ExperimentEvalConfig(
-            gen_topk_list=[-1,1],
+            gen_topk_list=[-1],
             eval_jdg_metric_list=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY],
+            do_judge=False,
         )
     ),
 )

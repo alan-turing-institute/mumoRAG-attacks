@@ -265,7 +265,23 @@ class EmbeddingModel:
 
         raise ValueError(f"Not supported model {self.name}!")
 
-    def compute_embedding_loss(self, image_embedding, text_embedding, loss_type: EmbeddingLoss):
+    
+    def compute_embedding_loss(self, image_embedding, text_embedding, loss_type: EmbeddingLoss, is_targeted: bool, positive_idx: list[int]):
+        if not is_targeted:
+            return self._compute_embedding_loss(image_embedding, text_embedding, loss_type)
+        
+        # compute loss separately for in-target and out-of-target queries
+        negative_idx = [i for i in range(text_embedding.shape[0]) if  i not in positive_idx]
+        text_embedding_pos = text_embedding[positive_idx, :]
+        text_embedding_neg = text_embedding[negative_idx, :]
+        loss_pos = self._compute_embedding_loss(image_embedding, text_embedding_pos, loss_type)
+        loss_neg = self._compute_embedding_loss(image_embedding, text_embedding_neg, loss_type)
+        if torch.isnan(loss_pos): loss_pos = 0
+        if torch.isnan(loss_neg): loss_neg = 0
+        return loss_pos - loss_neg
+        
+
+    def _compute_embedding_loss(self, image_embedding, text_embedding, loss_type: EmbeddingLoss):
         # colpali has its own retrieval score (MaxSim)
         if (self.name in COLPALI_MODELS or self.name == EmbedderName.COLPALI) and loss_type != EmbeddingLoss.COS_AVGEMB:
             # my version of the scoring function (allowing different losses)

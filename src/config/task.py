@@ -39,6 +39,7 @@ class TaskConfig:
     lambda_jdg: float
     target_answer_jdg: str
     train_jdg_metric_list: list[JudgeMetric]
+    target_query_idx: list[int]  # we assume the target queries are always from the training dataset
     eval_emb_name: Optional[EmbedderName] = None
     eval_vlm_name: Optional[VLMName] = None
     eval_jdg_name: Optional[VLMName] = None
@@ -47,8 +48,9 @@ class TaskConfig:
     kb_compromised_fraction: float = 0.1
 
     def create_hash_string(self):
+        target_str = ','.join([str(i) for i in self.target_query_idx])
         # this should include more info, but this suffices for now
-        config_str = f"{self.model_name_emb}{self.model_name_vlm}{self.ds_name}{self.chosen_index}{self.target_answer_vlm}{self.max_perturbation}{self.emb_train_loss_type}{self.is_adaptive}{self.gen_topk}{self.kb_compromised_fraction}"
+        config_str = f"{self.model_name_emb}{self.model_name_vlm}{self.ds_name}{self.chosen_index}{self.target_answer_vlm}{self.max_perturbation}{self.emb_train_loss_type}{self.is_adaptive}{self.gen_topk}{self.kb_compromised_fraction}{target_str}"
 
         if self.is_adaptive:
             config_str += f"{float(self.lambda_constant)}"
@@ -85,8 +87,8 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
     parameter_collection = product(
         exp_config.train.dataset_list,
         exp_config.train.embedder_list,
-        exp_config.train.judge_list,
         exp_config.train.vlm_list,
+        exp_config.train.judge_list,
         exp_config.train.max_perturbation_list,
         exp_config.train.emb_train_loss_type_list,
         exp_config.train.is_adaptive_list,
@@ -141,6 +143,7 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
                 lambda_jdg=exp_config.train.lambda_jdg,
                 target_answer_jdg=exp_config.train.target_answer_jdg,
                 train_jdg_metric_list=exp_config.train.train_jdg_metric_list,
+                target_query_idx=exp_config.train.target_query_idx,
             )
         )
 

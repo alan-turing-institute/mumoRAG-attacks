@@ -36,3 +36,4 @@ class ExperimentTrainConfig:
     judge_list: list[VLMName]                       = field(default_factory=lambda: [VLMName.SMOLVLM_1_2B])
     target_answer_jdg: str                          = "YES"
     train_jdg_metric_list: list[JudgeMetric]        = field(default_factory=lambda: [JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS])
+    target_query_idx: list[int]                     = field(default_factory=lambda: [])
