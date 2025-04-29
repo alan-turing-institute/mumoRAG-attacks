@@ -13,6 +13,7 @@ from experiments import DEFAULT_EXPERIMENT
 from utils.image_utils import load_adv_image
 from utils.logger import logger
 from utils.utils import get_device
+from utils.attack import adjust_target_vlm_answer_size
 from wrappers.cache import get_vlm, get_text_embedder, get_dataset, get_embedded_dataset, get_judge
 from wrappers.embedding import is_loss_compatible
 
@@ -107,10 +108,13 @@ def run(exp_config: ExperimentConfig):
         # test generation
         if exp_config.eval.do_generation:
             logger.info("=== Evaluating generation ...")
+            all_answers_vlm = adjust_target_vlm_answer_size(exp_config.train.target_answer_vlm, exp_config.train.target_query_idx, ds.gt_answers)
+            target_answer_vlm_train, target_answer_vlm_test = ds.split_train_test(all_answers_vlm)
             metric_vlm_dict_test, gs_vlm_dict_test = ds.evaluate_generation(
                 vlm,
                 image_adv,
-                exp_config.train.target_answer_vlm,
+                target_generation=target_answer_vlm_test,
+                adv_target_generations=exp_config.train.target_answer_vlm,
                 metrics=exp_config.eval.gen_metric_list,
                 text_embedder=text_embedder,
                 retrievals=retrievals_test,
@@ -122,7 +126,8 @@ def run(exp_config: ExperimentConfig):
             metric_vlm_dict_train, gs_vlm_dict_train = ds.evaluate_generation(
                 vlm,
                 image_adv,
-                exp_config.train.target_answer_vlm,
+                target_generation=target_answer_vlm_train,
+                adv_target_generations=exp_config.train.target_answer_vlm,
                 metrics=exp_config.eval.gen_metric_list,
                 text_embedder=text_embedder,
                 retrievals=retrievals_train,

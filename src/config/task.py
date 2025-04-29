@@ -22,7 +22,7 @@ class TaskConfig:
     ds_name: DatasetName
     model_name_emb: EmbedderName
     model_name_vlm: VLMName
-    target_answer_vlm: str
+    target_answer_vlm: list[str]
     chosen_index: int
     max_perturbation: float
     n_gradient_steps: int
@@ -48,9 +48,10 @@ class TaskConfig:
     kb_compromised_fraction: float = 0.1
 
     def create_hash_string(self):
-        target_str = ','.join([str(i) for i in self.target_query_idx])
-        # this should include more info, but this suffices for now
-        config_str = f"{self.model_name_emb}{self.model_name_vlm}{self.ds_name}{self.chosen_index}{self.target_answer_vlm}{self.max_perturbation}{self.emb_train_loss_type}{self.is_adaptive}{self.gen_topk}{self.kb_compromised_fraction}{target_str}"
+        target_str = ",".join([str(i) for i in self.target_query_idx])
+        target_answer_str = ",".join(self.target_answer_vlm)
+
+        config_str = f"{self.model_name_emb}{self.model_name_vlm}{self.ds_name}{self.chosen_index}{target_answer_str}{self.max_perturbation}{self.emb_train_loss_type}{self.is_adaptive}{self.gen_topk}{self.kb_compromised_fraction}{target_str}"
 
         if self.is_adaptive:
             config_str += f"{float(self.lambda_constant)}"
@@ -114,6 +115,9 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
             eval_vlm_name,
             eval_jdg_name,
         ) = params
+
+        correct_vlm_target = len(exp_config.train.target_answer_vlm) == 1 or len(exp_config.train.target_answer_vlm) == len(exp_config.train.target_query_idx)
+        assert correct_vlm_target, f"VLM target answers array has incompatible length ({len(exp_config.train.target_answer_vlm)}) with target queries ({len(exp_config.train.target_query_idx)})"
 
         attack_configs.append(
             TaskConfig(

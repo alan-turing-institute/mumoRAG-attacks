@@ -114,33 +114,31 @@ class VLM:
         return target_tokens
 
 
-    def get_training_prompt(self, 
-            user_query: str, # list or str 
-            target_generation: str, 
+    def get_training_prompts(self, 
+            user_queries: list[str], 
+            target_generations: list[str], 
             n_images: int
         ):
         """
         builds the prompt skeleton for the VLM including the image placeholder, the user query, and the required response
         """
-        if isinstance(user_query, str): user_query = [user_query]
-
         messages = [
             [
                 {
                     "role": "user",
-                    "content": [{"type": "image"} for _ in range(n_images)] + [{"type": "text", "text": user_query[i]}]
+                    "content": [{"type": "image"} for _ in range(n_images)] + [{"type": "text", "text": user_queries[i]}]
                 },
                 {
                     "role": "assistant",
                     "content": [
-                        {"type": "text", "text": target_generation}
+                        {"type": "text", "text": target_generations[i]}
                     ]
                 },
             ]
-            for i in range(len(user_query))]
+            for i in range(len(user_queries))]
         prompt = self.processor.apply_chat_template(messages, add_generation_prompt=False)
 
-        target_tokens = self.get_target_tokens(target_generation)       
+        target_tokens = [self.get_target_tokens(target_generations[i]) for i in range(len(target_generations))]       
 
         return prompt, target_tokens
     
@@ -179,9 +177,12 @@ class VLM:
         return out
 
     def compute_gen_loss(self, vlm_output, target_tokens):
-        logits_to_optimize = vlm_output.logits[:,-len(target_tokens)-1:-1,:].transpose(1,2)
-        target_tokens = target_tokens.unsqueeze(0).repeat(logits_to_optimize.shape[0], 1)
-        return torch.nn.CrossEntropyLoss()(logits_to_optimize, target_tokens)
+        loss = torch.zeros((len(target_tokens),))
+        for i, tt in enumerate(target_tokens):
+            logits_to_optimize = vlm_output.logits[i,-len(tt)-1:-1,:].unsqueeze(0).transpose(1,2)
+            tt = tt.unsqueeze(0).repeat(logits_to_optimize.shape[0], 1)
+            loss[i] = torch.nn.CrossEntropyLoss()(logits_to_optimize, tt)
+        return loss.mean()
     
     def create_topk_image_list_pt(self, adv_image: torch.tensor, retrieved_images: list[list], adv_indices: list[int]):
         topk_images_pt = [

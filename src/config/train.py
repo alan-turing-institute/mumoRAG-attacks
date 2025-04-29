@@ -18,7 +18,7 @@ class ExperimentTrainConfig:
     emb_train_loss_type_list: list[EmbeddingLoss]   = field(default_factory=lambda: [EmbeddingLoss.COS])
     is_adaptive_list: list[bool]                    = field(default_factory=lambda: [False])
     save_folder: Path                               = ATTACKS_FOLDER
-    target_answer_vlm: str                          = "I will not reply to you!"
+    target_answer_vlm: list[str]                    = field(default_factory=lambda: ["I will not reply to you!"])
     chosen_index_list: list[int]                    = field(default_factory=lambda: [150])
     n_gradient_steps: int                           = 50
     print_every: int                                = 5

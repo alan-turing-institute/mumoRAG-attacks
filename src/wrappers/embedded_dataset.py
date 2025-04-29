@@ -119,7 +119,7 @@ class EmbeddedDataset:
 
             topk = torch.topk(losses, k=k, dim=-1, largest=False, sorted=True)
 
-            correct_retrievals = [any(x in topk.indices[i] for x in self.dataset.ground_truth[i]) for i in
+            correct_retrievals = [any(x in topk.indices[i] for x in self.dataset.gt_retrievals[i]) for i in
                                   range(len(self.dataset.queries))]
             accuracy_train = sum(correct_retrievals[:self.dataset.num_train]) / self.dataset.num_train
             accuracy_test = sum(correct_retrievals[self.dataset.num_train:]) / self.dataset.num_test
@@ -140,5 +140,4 @@ class EmbeddedDataset:
             retrievals[f"loss_{loss_type}"] = {"train": topk.indices[:self.dataset.num_train],
                                                "test": topk.indices[self.dataset.num_train:]}
 
-        print(metric_dict)
         return metric_dict, retrievals

@@ -19,7 +19,8 @@ def rag_attack(
         embedder: EmbeddingModel,
         vlm: VLM,
         jdg: JudgeVLM,
-        user_query: str | list[str],
+        train_user_queries: list[str],
+        train_gt_vlm_answers: list[str],
         config: TaskConfig,
         attack_images: list,
         print_every: int,
@@ -57,18 +58,18 @@ def rag_attack(
 
     initial_image = raw_image.clone().float() if device == "cuda" else raw_image.clone()
     max_perturbation_pixels = max_perturbation*255
-    batch_size_per_iter = min(len(user_query), max_batch_size_per_iter)
+    batch_size_per_iter = min(len(train_user_queries), max_batch_size_per_iter)
     n_iter = n_gradient_steps * gradient_acc_steps
-    if type(user_query) == str: user_query = [user_query]
     is_targeted = len(target_query_idx) > 0 
+    all_answers_vlm = adjust_target_vlm_answer_size(target_answer_vlm, target_query_idx, train_gt_vlm_answers)
 
     # pre-computing embeddings and prompts for all data 
     if lambda_emb > 0: 
-        user_query_embedding = embedder.compute_txt_embedding(user_query)
+        user_query_embedding = embedder.compute_txt_embedding(train_user_queries)
     if lambda_vlm > 0: 
-        full_text_vlm_prompt, target_tokens_vlm = vlm.get_training_prompt(user_query, target_answer_vlm, gen_topk)
+        full_text_vlm_prompts, target_tokens_vlm = vlm.get_training_prompts(train_user_queries, all_answers_vlm, gen_topk)
     if lambda_jdg > 0: 
-        full_text_jdg_prompt, target_tokens_jdg = jdg.get_training_prompt(user_query, target_answer_vlm, target_answer_jdg, jdg_metric_list, gen_topk)
+        full_text_jdg_prompts, target_tokens_jdg = jdg.get_training_prompts(train_user_queries, all_answers_vlm, target_answer_jdg, jdg_metric_list, gen_topk)
 
 
     # initial values for loss
@@ -82,13 +83,15 @@ def rag_attack(
         raw_image.requires_grad = True
 
         # sample minibatch
-        samples_idx = sample_minibatch(n_population=len(user_query), batch_size=batch_size_per_iter, target_idx=target_query_idx)
+        samples_idx = sample_minibatch(n_population=len(train_user_queries), batch_size=batch_size_per_iter, target_idx=target_query_idx)
         positive_idx = [i for i in range(len(samples_idx)) if samples_idx[i] in target_query_idx]
         if lambda_emb > 0: user_query_embedding_batch = user_query_embedding[samples_idx,:]
-        if lambda_vlm > 0: full_text_vlm_prompt_batch = [full_text_vlm_prompt[i] for i in samples_idx]
+        if lambda_vlm > 0: 
+            full_text_vlm_prompt_batch = [full_text_vlm_prompts[i] for i in samples_idx]
+            target_tokens_vlm_batch = [target_tokens_vlm[i] for i in samples_idx]
         if lambda_jdg > 0: 
-            samples_jdg_idx = torch.randint(0, len(user_query)*len(jdg_metric_list), (batch_size_per_iter,))
-            full_text_jdg_prompt_batch = [full_text_jdg_prompt[i] for i in samples_jdg_idx]
+            samples_jdg_idx = torch.randint(0, len(train_user_queries)*len(jdg_metric_list), (batch_size_per_iter,))
+            full_text_jdg_prompt_batch = [full_text_jdg_prompts[i] for i in samples_jdg_idx]
 
         if lambda_emb > 0:
             # retrieval loss function
@@ -100,7 +103,7 @@ def rag_attack(
             # generation loss function
             context_images, adv_indices = prepare_context_images(attack_images, T.ToPILImage()(raw_image), batch_size_per_iter, config.gen_topk)
             out = vlm.forward(raw_image, full_text_vlm_prompt_batch, context_images, adv_indices, overwrite=True)
-            loss_vlm = vlm.compute_gen_loss(out, target_tokens_vlm)
+            loss_vlm = vlm.compute_gen_loss(out, target_tokens_vlm_batch)
         
         if lambda_jdg > 0:
             # judge loss function
@@ -189,3 +192,14 @@ def sample_minibatch(n_population, batch_size, target_idx: list[int]):
         samples_pos = random.sample([i for i in range(n_population) if i in target_idx], batch_size)
         samples_neg = random.sample([i for i in range(n_population) if i not in target_idx], batch_size)
         return random.sample(samples_pos + samples_neg, batch_size)
+    
+def adjust_target_vlm_answer_size(target_answer_vlm: str | list[str], target_query_idx: list[int], gt_answers: list[str]):
+    # make number of answers match number of target queries
+    if len(target_answer_vlm) == 1:
+        target_answer_vlm = [target_answer_vlm[0] for _ in target_query_idx]
+    
+    # update ground truth answers by malicious answers
+    all_answers = gt_answers
+    for idx, answer  in zip(target_query_idx, target_answer_vlm):
+        all_answers[idx] = answer
+    return all_answers

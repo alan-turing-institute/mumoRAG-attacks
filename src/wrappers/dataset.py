@@ -26,6 +26,9 @@ class DatasetName(StrEnum):
 def filter_none(arr):
     return [x for x in arr if x is not None]
 
+def extract_answers(answer_strs):
+    return [", ".join(eval(x)) for x in answer_strs]
+
 
 class Dataset:
     def __init__(
@@ -33,7 +36,8 @@ class Dataset:
         ds_name: DatasetName,
         images: list,
         queries: list,
-        ground_truth: list,
+        answers: list,
+        ground_truth_retrievals: list,
         train_ratio: float,
     ):
         self.ds_name = ds_name
@@ -42,6 +46,7 @@ class Dataset:
         self.num_images_orig = len(self.images)
 
         self.queries = queries
+        self.gt_answers = answers
 
         # only queries are split into train and test splits, images (knowledge base are common to both)
         self.train_ratio = train_ratio
@@ -51,7 +56,10 @@ class Dataset:
         self.queries_train = self.queries[: self.num_train]
         self.queries_test = self.queries[self.num_train :]
 
-        self.ground_truth = ground_truth
+        self.gt_answers_train = self.gt_answers[: self.num_train]
+        self.gt_answers_test = self.gt_answers[self.num_train :]
+
+        self.gt_retrievals = ground_truth_retrievals
 
     def add_adv_image(self, adv_img):
         """
@@ -67,11 +75,18 @@ class Dataset:
         n_images = math.floor(fraction * self.num_images_orig)
         return random.sample(self.images, k=n_images)
 
+    def split_train_test(self, some_list):
+        # some_list: a list of the same length as the number of queries
+        train_list = some_list[:self.num_train]
+        test_list = some_list[self.num_train:]
+        return train_list, test_list
+    
     def evaluate_generation(
             self,
             vlm: VLM,
             image_tensor,
-            target_generation: str,
+            target_generation: list[str],
+            adv_target_generations: list[str],
             metrics: list[str],
             text_embedder: TextEmbeddingModel,
             retrievals: dict,
@@ -124,20 +139,24 @@ class Dataset:
             if "exact" in metrics:
                 
                 # exact match of VLM generation and target answer
-                correct_generations = [g == target_generation for g in generations_vlm]
+                correct_generations = [g == target_generation[i] for i,g in enumerate(generations_vlm)]
+                adversarial_generations = [g in adv_target_generations for g in generations_vlm]
                 metric_dict[keyname]["exact"] = {"asr_universal": sum(correct_generations) / len(queries)}
                 # targeted attack metrics
                 if len(target_query_idx)>0:
-                    metric_dict[keyname]["exact"].update(self.compute_targeted_metrics(correct_generations, target_query_idx, split))
+                    metric_dict[keyname]["exact"].update(self.compute_targeted_metrics(correct_generations, target_query_idx, split, adversarial_generations))
 
             if "embed" in metrics:
                 # similarity score between VLM generation and target answer in [0,1]
                 similarity = text_embedder.compare_embeddings(generations_vlm, target_generation,
                                                               similarity_metric="cos")
-                metric_dict[keyname]["embed"] = {"asr_universal": similarity.mean().item()}
+                similarity_to_target = torch.diag(similarity)
+                
+                metric_dict[keyname]["embed"] = {"asr_universal": similarity_to_target.mean().item()}
                 # targeted attack metrics
                 if len(target_query_idx)>0:
-                    metric_dict[keyname]["embed"].update(self.compute_targeted_metrics(similarity.flatten().tolist(), target_query_idx, split))
+                    similarity_to_adv = similarity[:,torch.tensor(target_query_idx)].max(dim=1).values
+                    metric_dict[keyname]["embed"].update(self.compute_targeted_metrics(similarity_to_target.flatten().tolist(), target_query_idx, split, similarity_to_adv.flatten().tolist()))
 
         return metric_dict, generation_vlm_dict
 
@@ -224,10 +243,11 @@ class Dataset:
 
         return retrieved_images, adv_indices
     
-    def compute_targeted_metrics(self, observed_adv_effect: list[bool] | list[float], target_query_idx: list[int], split: str = "both"):
+    def compute_targeted_metrics(self, observed_adv_effect: list[bool] | list[float], target_query_idx: list[int], split: str = "both", observed_adv_effect_fpr: list = None):
         # NOTE
         # - we assume the target queries are always in the training set
         # - we only compute asr_targeted for the training set
+        if observed_adv_effect_fpr is None: observed_adv_effect_fpr = observed_adv_effect
         output_dict = {}
         if split=="both":
             output_dict["asr_targeted"] = sum([observed_adv_effect[i] for i in range(len(observed_adv_effect)) if i in target_query_idx]) / len(target_query_idx)
@@ -235,9 +255,9 @@ class Dataset:
             output_dict["fpr_targeted_test"] = sum([observed_adv_effect[i] for i in range(len(self.queries_train), len(self.queries_train)+len(self.queries_test))]) / len(self.queries_test)
         elif split=="train":
             output_dict["asr_targeted"] = sum([observed_adv_effect[i] for i in range(len(observed_adv_effect)) if i in target_query_idx]) / len(target_query_idx)
-            output_dict["fpr_targeted"] = sum([observed_adv_effect[i] for i in range(len(self.queries_train)) if i not in target_query_idx]) / (len(self.queries_train) - len(target_query_idx))
+            output_dict["fpr_targeted"] = sum([observed_adv_effect_fpr[i] for i in range(len(self.queries_train)) if i not in target_query_idx]) / (len(self.queries_train) - len(target_query_idx))
         elif split=="test":
-            output_dict["fpr_targeted"] = sum([observed_adv_effect[i] for i in range(len(self.queries_test))]) / len(self.queries_test)
+            output_dict["fpr_targeted"] = sum([observed_adv_effect_fpr[i] for i in range(len(self.queries_test))]) / len(self.queries_test)
 
         return output_dict
 
@@ -250,23 +270,26 @@ def create_dataset(
             corpus = load_dataset(ds_name, "corpus", split="all")
             images = corpus["image"]
             qrels = load_dataset(ds_name, "qrels", split="all")
-            queries = load_dataset(ds_name, "queries", split="all")
-            queries = queries["query"]
-            ground_truth = [[] for _ in range(len(queries))]
+            queries_ds = load_dataset(ds_name, "queries", split="all")
+            queries = queries_ds["query"]
+            answers = queries_ds["answer"]
+            ground_truth_retrievals = [[] for _ in range(len(queries))]
             for row in qrels:
-                ground_truth[row["query-id"]].append(row["corpus-id"])
+                ground_truth_retrievals[row["query-id"]].append(row["corpus-id"])
         else:
             ds = load_dataset(ds_name, split="test")
             images = filter_none(ds["image"])
             queries = filter_none(ds["query"])
-            ground_truth = [[i] for i in range(len(images))]
+            answers = extract_answers(filter_none(ds['answer']))
+            ground_truth_retrievals = [[i] for i in range(len(images))]
         if num_images is not None:
             images = images[:num_images]
         return Dataset(
             ds_name=ds_name,
             images=images,
             queries=queries,
-            ground_truth=ground_truth,
+            answers=answers,
+            ground_truth_retrievals=ground_truth_retrievals,
             train_ratio=train_ratio,
         )
     raise ValueError(f"Dataset {ds_name} is not supported")
