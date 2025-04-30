@@ -176,13 +176,16 @@ class VLM:
         out = self.model(**inputs, use_cache=False, output_attentions=False, output_hidden_states=False)
         return out
 
-    def compute_gen_loss(self, vlm_output, target_tokens):
+    def compute_gen_loss(self, vlm_output, target_tokens, positive_idx=None):
+        if positive_idx is None: positive_idx = [i for i in range(len(target_tokens))]
         loss = torch.zeros((len(target_tokens),))
         for i, tt in enumerate(target_tokens):
+            # NOTE: uncomment next line to skip computing generation loss for non-targeted queries (will increase FPR)
+            # if i not in positive_idx: continue
             logits_to_optimize = vlm_output.logits[i,-len(tt)-1:-1,:].unsqueeze(0).transpose(1,2)
             tt = tt.unsqueeze(0).repeat(logits_to_optimize.shape[0], 1)
             loss[i] = torch.nn.CrossEntropyLoss()(logits_to_optimize, tt)
-        return loss.mean()
+        return loss[torch.nonzero(loss)].mean()
     
     def create_topk_image_list_pt(self, adv_image: torch.tensor, retrieved_images: list[list], adv_indices: list[int]):
         topk_images_pt = [

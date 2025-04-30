@@ -102,7 +102,7 @@ class EmbeddedDataset:
             case _:
                 raise ValueError(f"Unknown loss type: {loss_type}")
 
-    def evaluate_retrieval(self, ks: list[int], loss_types: list[EmbeddingLoss], target_query_idx, include_adv=True):
+    def evaluate_retrieval(self, ks: list[int], loss_types: list[EmbeddingLoss], is_targeted: bool, target_query_idx, include_adv=True):
         """
         Accuracy@k: whether the top-k retrieved images include the ground truth image
         """
@@ -133,7 +133,7 @@ class EmbeddedDataset:
             metric_dict[keyname] = {"acc": accuracy, "asr_train": asr_train, "asr_test": asr_test}
 
             # targeted attack metrics
-            if len(target_query_idx)>0:
+            if is_targeted:
                 metric_dict[keyname].update(self.dataset.compute_targeted_metrics(adversarial_retrievals, target_query_idx))
 
             # keep only the retrievals for highest (lastest) k, should include those for small k

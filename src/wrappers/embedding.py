@@ -274,10 +274,9 @@ class EmbeddingModel:
         negative_idx = [i for i in range(text_embedding.shape[0]) if  i not in positive_idx]
         text_embedding_pos = text_embedding[positive_idx, :]
         text_embedding_neg = text_embedding[negative_idx, :]
-        loss_pos = self._compute_embedding_loss(image_embedding, text_embedding_pos, loss_type)
-        loss_neg = self._compute_embedding_loss(image_embedding, text_embedding_neg, loss_type)
-        if torch.isnan(loss_pos): loss_pos = 0
-        if torch.isnan(loss_neg): loss_neg = 0
+        loss_pos, loss_neg = torch.tensor([0]).to(self.device), torch.tensor([0]).to(self.device)
+        if text_embedding_pos.shape[0]>0: loss_pos = self._compute_embedding_loss(image_embedding, text_embedding_pos, loss_type)
+        if text_embedding_neg.shape[0]>0: loss_neg = self._compute_embedding_loss(image_embedding, text_embedding_neg, loss_type)
         return loss_pos - loss_neg
         
 

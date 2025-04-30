@@ -7,6 +7,7 @@ from config.task import TaskConfig
 from wrappers.embedding import EmbeddingModel
 from wrappers.judge import JudgeVLM
 from wrappers.vlm import VLM
+from wrappers.cache import get_text_embedder
 
 from .scheduler import LearningRateScheduler
 from .utils import get_memory_consumption
@@ -54,14 +55,16 @@ def rag_attack(
     lambda_jdg = config.lambda_jdg
     target_answer_jdg = config.target_answer_jdg
     jdg_metric_list = config.train_jdg_metric_list
+    is_targeted = config.is_targeted
     target_query_idx = config.target_query_idx
+    n_knn_target_queries = config.n_knn_target_queries
+    text_embedder_name = config.attack_text_embedder_name
 
     initial_image = raw_image.clone().float() if device == "cuda" else raw_image.clone()
     max_perturbation_pixels = max_perturbation*255
     batch_size_per_iter = min(len(train_user_queries), max_batch_size_per_iter)
     n_iter = n_gradient_steps * gradient_acc_steps
-    is_targeted = len(target_query_idx) > 0 
-    all_answers_vlm = adjust_target_vlm_answer_size(target_answer_vlm, target_query_idx, train_gt_vlm_answers)
+    target_query_idx, _, all_answers_vlm = get_all_target_queries_and_answers(is_targeted, target_query_idx, target_answer_vlm, train_user_queries, n_knn_target_queries, train_gt_vlm_answers, text_embedder_name, device)
 
     # pre-computing embeddings and prompts for all data 
     if lambda_emb > 0: 
@@ -83,7 +86,7 @@ def rag_attack(
         raw_image.requires_grad = True
 
         # sample minibatch
-        samples_idx = sample_minibatch(n_population=len(train_user_queries), batch_size=batch_size_per_iter, target_idx=target_query_idx)
+        samples_idx = sample_minibatch(n_population=len(train_user_queries), batch_size=batch_size_per_iter, is_targeted=is_targeted, target_idx=target_query_idx)
         positive_idx = [i for i in range(len(samples_idx)) if samples_idx[i] in target_query_idx]
         if lambda_emb > 0: user_query_embedding_batch = user_query_embedding[samples_idx,:]
         if lambda_vlm > 0: 
@@ -103,7 +106,7 @@ def rag_attack(
             # generation loss function
             context_images, adv_indices = prepare_context_images(attack_images, T.ToPILImage()(raw_image), batch_size_per_iter, config.gen_topk)
             out = vlm.forward(raw_image, full_text_vlm_prompt_batch, context_images, adv_indices, overwrite=True)
-            loss_vlm = vlm.compute_gen_loss(out, target_tokens_vlm_batch)
+            loss_vlm = vlm.compute_gen_loss(out, target_tokens_vlm_batch, positive_idx)
         
         if lambda_jdg > 0:
             # judge loss function
@@ -184,8 +187,8 @@ def prepare_context_images(attack_images, mock_image_pil, batch_size_per_iter, g
 
     return context_images, adv_indices
 
-def sample_minibatch(n_population, batch_size, target_idx: list[int]):
-    if target_idx == []:
+def sample_minibatch(n_population, batch_size, is_targeted: bool, target_idx: list[int]):
+    if not is_targeted:
         return torch.randint(0, n_population, (batch_size,))
     else:
         # 50% positive samples, 50% negative samples on average
@@ -193,13 +196,34 @@ def sample_minibatch(n_population, batch_size, target_idx: list[int]):
         samples_neg = random.sample([i for i in range(n_population) if i not in target_idx], batch_size)
         return random.sample(samples_pos + samples_neg, batch_size)
     
-def adjust_target_vlm_answer_size(target_answer_vlm: str | list[str], target_query_idx: list[int], gt_answers: list[str]):
+def get_all_target_queries_and_answers(is_targeted: bool, target_query_idx: list[int], target_answer_vlm: list[str], train_user_queries: list[str], n_knn_target_queries: int, gt_answers: list[str], attack_text_embedder_name, device):
+    # if universal attack, all queries are targeted
+    if not is_targeted:
+        target_query_idx = [i for i in range(len(gt_answers))]
+
     # make number of answers match number of target queries
     if len(target_answer_vlm) == 1:
         target_answer_vlm = [target_answer_vlm[0] for _ in target_query_idx]
     
+    # extend target query indices and target answers to include nearest neighbours
+    if n_knn_target_queries == 1:
+       # only include one nearest neighbors (a.k.a. self) 
+       extended_target_idx, extended_target_answers = target_query_idx, target_answer_vlm
+    else:
+        text_embedder = get_text_embedder(attack_text_embedder_name, device=device)
+        similarity = text_embedder.compare_embeddings(train_user_queries, train_user_queries, similarity_metric="cos")
+        del text_embedder
+        extended_target_idx, extended_target_answers = [], []
+        for i, q_idx in enumerate(target_query_idx):
+            topk_similar = similarity[q_idx,:].topk(n_knn_target_queries, sorted=True).indices
+            # remove duplicates
+            topk_similar = [x for x in topk_similar if x not in extended_target_idx]
+            extended_target_idx.extend(topk_similar)
+            extended_target_answers.extend([target_answer_vlm[i] for _ in range(len(topk_similar))])
+    
     # update ground truth answers by malicious answers
     all_answers = gt_answers
-    for idx, answer  in zip(target_query_idx, target_answer_vlm):
+    for idx, answer  in zip(extended_target_idx, extended_target_answers):
         all_answers[idx] = answer
-    return all_answers
+    
+    return extended_target_idx, extended_target_answers, all_answers

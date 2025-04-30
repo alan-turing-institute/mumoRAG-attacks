@@ -13,7 +13,7 @@ from experiments import DEFAULT_EXPERIMENT
 from utils.image_utils import load_adv_image
 from utils.logger import logger
 from utils.utils import get_device
-from utils.attack import adjust_target_vlm_answer_size
+from utils.attack import get_all_target_queries_and_answers
 from wrappers.cache import get_vlm, get_text_embedder, get_dataset, get_embedded_dataset, get_judge
 from wrappers.embedding import is_loss_compatible
 
@@ -45,6 +45,8 @@ def run(exp_config: ExperimentConfig):
     # first we just make sure that all required files are on disk, so that we don't waste time
     # this will raise an error if there are missing file(s)
     for task_config in task_configs:
+        if not is_loss_compatible(task_config.model_name_emb, task_config.emb_train_loss_type):
+            continue
         _ = load_adv_image(task_config, exp_config.train)
 
     # load text embedding model in case we need it for evaluation
@@ -69,6 +71,18 @@ def run(exp_config: ExperimentConfig):
         vlm = get_vlm(model_name_vlm, device)
         ds = get_dataset(task_config.ds_name)
 
+        # update target queries and answers in case the attack is targetted
+        all_target_query_idx, all_adv_target_answers_vlm, all_answers_vlm = get_all_target_queries_and_answers(
+            exp_config.train.is_targeted,
+            exp_config.train.target_query_idx,
+            exp_config.train.target_answer_vlm,
+            ds.queries,
+            exp_config.train.n_knn_target_queries,
+            ds.gt_answers,
+            exp_config.train.attack_text_embedder_name,
+            device,
+        )
+
         retrievals_train, retrievals_test = None, None
         retrieval_metric_dict = None
         # test retrieval
@@ -87,13 +101,15 @@ def run(exp_config: ExperimentConfig):
             metric_dict_before, retrievals_before = embedded_ds.evaluate_retrieval(
                 ks=exp_config.eval.topk_list,
                 loss_types=emb_test_loss_type_list_compatible,
-                target_query_idx=exp_config.train.target_query_idx,
+                is_targeted=exp_config.train.is_targeted,
+                target_query_idx=all_target_query_idx,
                 include_adv=False,
             )
             metric_dict_after, retrievals_after = embedded_ds.evaluate_retrieval(
                 ks=exp_config.eval.topk_list,
                 loss_types=emb_test_loss_type_list_compatible,
-                target_query_idx=exp_config.train.target_query_idx,
+                is_targeted=exp_config.train.is_targeted,
+                target_query_idx=all_target_query_idx,
                 include_adv=True,
             )
             retrieval_metric_dict = get_retrieval_saved_info(
@@ -108,18 +124,18 @@ def run(exp_config: ExperimentConfig):
         # test generation
         if exp_config.eval.do_generation:
             logger.info("=== Evaluating generation ...")
-            all_answers_vlm = adjust_target_vlm_answer_size(exp_config.train.target_answer_vlm, exp_config.train.target_query_idx, ds.gt_answers)
             target_answer_vlm_train, target_answer_vlm_test = ds.split_train_test(all_answers_vlm)
             metric_vlm_dict_test, gs_vlm_dict_test = ds.evaluate_generation(
                 vlm,
                 image_adv,
                 target_generation=target_answer_vlm_test,
-                adv_target_generations=exp_config.train.target_answer_vlm,
+                adv_target_generations=all_adv_target_answers_vlm,
                 metrics=exp_config.eval.gen_metric_list,
                 text_embedder=text_embedder,
                 retrievals=retrievals_test,
                 generation_topk_list=exp_config.eval.gen_topk_list,
-                target_query_idx=exp_config.train.target_query_idx,
+                is_targeted=exp_config.train.is_targeted,
+                target_query_idx=all_target_query_idx,
                 batch_size=exp_config.eval.gen_batch_size,
                 eval_train=False,
             )
@@ -127,12 +143,13 @@ def run(exp_config: ExperimentConfig):
                 vlm,
                 image_adv,
                 target_generation=target_answer_vlm_train,
-                adv_target_generations=exp_config.train.target_answer_vlm,
+                adv_target_generations=all_adv_target_answers_vlm,
                 metrics=exp_config.eval.gen_metric_list,
                 text_embedder=text_embedder,
                 retrievals=retrievals_train,
                 generation_topk_list=exp_config.eval.gen_topk_list,
-                target_query_idx=exp_config.train.target_query_idx,
+                is_targeted=exp_config.train.is_targeted,
+                target_query_idx=all_target_query_idx,
                 batch_size=exp_config.eval.gen_batch_size,
                 eval_train=True,
             )
@@ -152,7 +169,8 @@ def run(exp_config: ExperimentConfig):
                 retrievals=retrievals_test,
                 generation_vlm_dict=gs_vlm_dict_test,
                 generation_topk_list=exp_config.eval.gen_topk_list,
-                target_query_idx=exp_config.train.target_query_idx,
+                is_targeted=exp_config.train.is_targeted,
+                target_query_idx=all_target_query_idx,
                 batch_size=exp_config.eval.gen_batch_size,
                 eval_train=False,
             )
@@ -163,7 +181,8 @@ def run(exp_config: ExperimentConfig):
                 retrievals=retrievals_train,
                 generation_vlm_dict=gs_vlm_dict_train,
                 generation_topk_list=exp_config.eval.gen_topk_list,
-                target_query_idx=exp_config.train.target_query_idx,
+                is_targeted=exp_config.train.is_targeted,
+                target_query_idx=all_target_query_idx,
                 batch_size=exp_config.eval.gen_batch_size,
                 eval_train=True,
             )

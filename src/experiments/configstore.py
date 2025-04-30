@@ -9,7 +9,7 @@ from omegaconf import OmegaConf
 from config.eval import ExperimentEvalConfig
 from config.experiment import ExperimentConfig
 from config.train import ExperimentTrainConfig
-from wrappers.embedding import EmbedderName
+from wrappers.embedding import EmbedderName, EmbeddingLoss
 from wrappers.judge import JudgeMetric
 from wrappers.vlm import VLMName
 from wrappers.dataset import DatasetName
@@ -35,15 +35,91 @@ configstore.store(
             embedder_list=[EmbedderName.CLIP_BASE_PATCH16],
             vlm_list=[VLMName.SMOLVLM_1_256M],
             gen_topk_list=[1],
-            target_query_idx=[2,5],
-            target_answer_vlm=["Question two me no likey", "Five is not my lucky number"],
+            is_targeted=True,
+            target_query_idx=[2],
+            target_answer_vlm=["In the straw-man experiment, trees were randomly pruned, whereas the baseline trees were manually curated for bias"],
             print_every=2,
             n_gradient_steps=50,
+            n_knn_target_queries=8,
         ),
         eval=ExperimentEvalConfig(
             gen_topk_list=[-1],
             eval_jdg_metric_list=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY],
             do_judge=False,
+        )
+    ),
+)
+
+"""
+Targeted attacks against a subset of queries
+"""
+configstore.store(
+    name="targeted_attacks",
+    node=ExperimentConfig(
+        train=ExperimentTrainConfig(
+            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14, EmbedderName.JINA_CLIP_2, EmbedderName.COLPALI],
+            vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B],
+            is_targeted=True,
+            target_query_idx=[2,5],
+            target_answer_vlm=["Question two me no likey", "Five is not my lucky number"],
+            n_knn_target_queries=1,
+        ),
+        eval=ExperimentEvalConfig(
+            gen_topk_list=[-1,1,5],
+        )
+    ),
+)
+
+"""
+RAG evaluation and attack detection through VLM-as-a-judge
+"""
+configstore.store(
+    name="judge_defence",
+    node=ExperimentConfig(
+        train=ExperimentTrainConfig(
+            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14, EmbedderName.JINA_CLIP_2, EmbedderName.COLPALI],
+            vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B],
+        ),
+        eval=ExperimentEvalConfig(
+            gen_topk_list=[-1,1,5],
+            do_judge=True,
+            eval_jdg_metric_list=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY],
+        )
+    ),
+)
+
+"""
+Attack optimized when the malicious image is retrieved within top-k (not top-1)
+Evaluation when image is retrieved within top-k (not top-1)
+"""
+configstore.store(
+    name="topk_context",
+    node=ExperimentConfig(
+        train=ExperimentTrainConfig(
+            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14, EmbedderName.JINA_CLIP_2, EmbedderName.COLPALI],
+            vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B],
+            gen_topk_list=[1,5],
+        ),
+        eval=ExperimentEvalConfig(
+            gen_topk_list=[-1,1,5],
+            eval_jdg_metric_list=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY],
+        )
+    ),
+)
+
+"""
+ColPali ablations
+"""
+configstore.store(
+    name="topk_context",
+    node=ExperimentConfig(
+        train=ExperimentTrainConfig(
+            embedder_list=[EmbedderName.COLPALI],
+            vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B],
+            emb_train_loss_type_list=[EmbeddingLoss.MAXSIM, EmbeddingLoss.AVGSIM, EmbeddingLoss.SOFTMAXSIM, EmbeddingLoss.COS_AVGEMB],
+        ),
+        eval=ExperimentEvalConfig(
+            emb_test_loss_type_list=[EmbeddingLoss.MAXSIM, EmbeddingLoss.AVGSIM, EmbeddingLoss.SOFTMAXSIM, EmbeddingLoss.COS_AVGEMB],
         )
     ),
 )

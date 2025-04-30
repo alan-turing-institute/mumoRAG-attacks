@@ -91,6 +91,7 @@ class Dataset:
             text_embedder: TextEmbeddingModel,
             retrievals: dict,
             generation_topk_list: list[int],
+            is_targeted: bool,
             target_query_idx: list[int],
             batch_size=None,
             eval_train=False,
@@ -143,19 +144,19 @@ class Dataset:
                 adversarial_generations = [g in adv_target_generations for g in generations_vlm]
                 metric_dict[keyname]["exact"] = {"asr_universal": sum(correct_generations) / len(queries)}
                 # targeted attack metrics
-                if len(target_query_idx)>0:
+                if is_targeted:
                     metric_dict[keyname]["exact"].update(self.compute_targeted_metrics(correct_generations, target_query_idx, split, adversarial_generations))
 
             if "embed" in metrics:
                 # similarity score between VLM generation and target answer in [0,1]
-                similarity = text_embedder.compare_embeddings(generations_vlm, target_generation,
-                                                              similarity_metric="cos")
+                similarity = text_embedder.compare_embeddings(generations_vlm, target_generation, similarity_metric="cos")
                 similarity_to_target = torch.diag(similarity)
                 
                 metric_dict[keyname]["embed"] = {"asr_universal": similarity_to_target.mean().item()}
                 # targeted attack metrics
-                if len(target_query_idx)>0:
-                    similarity_to_adv = similarity[:,torch.tensor(target_query_idx)].max(dim=1).values
+                if is_targeted:
+                    similarity = text_embedder.compare_embeddings(generations_vlm, adv_target_generations, similarity_metric="cos")
+                    similarity_to_adv = similarity.max(dim=1).values
                     metric_dict[keyname]["embed"].update(self.compute_targeted_metrics(similarity_to_target.flatten().tolist(), target_query_idx, split, similarity_to_adv.flatten().tolist()))
 
         return metric_dict, generation_vlm_dict
@@ -168,6 +169,7 @@ class Dataset:
             retrievals: dict,
             generation_vlm_dict: dict,
             generation_topk_list: list[int],
+            is_targeted: bool,
             target_query_idx: list[int],
             batch_size=None,
             eval_train=False,
@@ -212,7 +214,7 @@ class Dataset:
             metric_dict[keyname][metric] = {"asr_universal": sum(passed_judge) / len(passed_judge)}
 
             # targeted metrics
-            if len(target_query_idx) > 0:
+            if is_targeted:
                 metric_dict[keyname][metric].update(self.compute_targeted_metrics(passed_judge, target_query_idx, split))
 
         return metric_dict, generation_jdg_dict

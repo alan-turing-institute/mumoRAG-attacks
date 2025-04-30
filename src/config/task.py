@@ -7,6 +7,7 @@ from wrappers.dataset import DatasetName
 from wrappers.embedding import EmbedderName, EmbeddingLoss, COLPALI_MODELS
 from wrappers.judge import JudgeMetric
 from wrappers.vlm import VLMName
+from wrappers.text_embedding import TextEmbedderName
 
 from .experiment import ExperimentConfig
 
@@ -40,6 +41,9 @@ class TaskConfig:
     target_answer_jdg: str
     train_jdg_metric_list: list[JudgeMetric]
     target_query_idx: list[int]  # we assume the target queries are always from the training dataset
+    is_targeted: bool
+    n_knn_target_queries: int
+    attack_text_embedder_name: TextEmbedderName
     eval_emb_name: Optional[EmbedderName] = None
     eval_vlm_name: Optional[VLMName] = None
     eval_jdg_name: Optional[VLMName] = None
@@ -48,7 +52,7 @@ class TaskConfig:
     kb_compromised_fraction: float = 0.1
 
     def create_hash_string(self):
-        target_str = ",".join([str(i) for i in self.target_query_idx])
+        target_str = ",".join([str(i) for i in self.target_query_idx]) + f"{self.n_knn_target_queries}" + f"{self.attack_text_embedder_name}" if self.is_targeted else ""
         target_answer_str = ",".join(self.target_answer_vlm)
 
         config_str = f"{self.model_name_emb}{self.model_name_vlm}{self.ds_name}{self.chosen_index}{target_answer_str}{self.max_perturbation}{self.emb_train_loss_type}{self.is_adaptive}{self.gen_topk}{self.kb_compromised_fraction}{target_str}"
@@ -148,6 +152,9 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
                 target_answer_jdg=exp_config.train.target_answer_jdg,
                 train_jdg_metric_list=exp_config.train.train_jdg_metric_list,
                 target_query_idx=exp_config.train.target_query_idx,
+                is_targeted=exp_config.train.is_targeted,
+                n_knn_target_queries=exp_config.train.n_knn_target_queries,
+                attack_text_embedder_name=exp_config.train.attack_text_embedder_name,
             )
         )
 
