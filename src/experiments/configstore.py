@@ -35,15 +35,31 @@ configstore.store(
             embedder_list=[EmbedderName.CLIP_BASE_PATCH16],
             vlm_list=[VLMName.SMOLVLM_1_256M],
             gen_topk_list=[1],
-            is_targeted=True,
-            target_query_idx=[2],
-            target_answer_vlm=["In the straw-man experiment, trees were randomly pruned, whereas the baseline trees were manually curated for bias"],
+            is_targeted=False,
             print_every=2,
             n_gradient_steps=50,
-            n_knn_target_queries=8,
         ),
         eval=ExperimentEvalConfig(
-            gen_topk_list=[-1],
+            gen_topk_list=[-1,1],
+        )
+    ),
+)
+
+
+"""
+Experiment to test the effect of the order of the malicious image on the generation ASR
+"""
+configstore.store(
+    name="order_in_topk",
+    node=ExperimentConfig(
+        train=ExperimentTrainConfig(
+            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
+            vlm_list=[VLMName.SMOLVLM_1_2B],
+            gen_topk_list=[1],
+        ),
+        eval=ExperimentEvalConfig(
+            gen_topk_list=[5],
+            test_topk_order=True,
             eval_jdg_metric_list=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY],
             do_judge=False,
         )

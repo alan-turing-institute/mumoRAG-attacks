@@ -91,6 +91,7 @@ class Dataset:
             text_embedder: TextEmbeddingModel,
             retrievals: dict,
             generation_topk_list: list[int],
+            test_topk_order: bool,
             is_targeted: bool,
             target_query_idx: list[int],
             batch_size=None,
@@ -108,56 +109,61 @@ class Dataset:
 
         for generation_topk in generation_topk_list:
 
-            keyname = f"gen_topk_{generation_topk}"
             split = "train" if eval_train else "test"
-            logger.info(f'{"Train" if eval_train else "Test"} set: top ({generation_topk})')
 
             retrieved_images, adv_indices = self.retrieved_idx_to_img(
                 retrieved_indices=retrievals[list(retrievals.keys())[0]], topk=generation_topk)
             prompts_vlm = [vlm.get_test_prompt(query, n_images=len(retrieved_images[0])) for query in queries]
 
-            if batch_size is None:
-                generations_vlm = vlm.generate(image_tensor, prompts_vlm, context_images=retrieved_images,
-                                               adv_indices=adv_indices, overwrite=True)
-            else:
+            upper_limit = generation_topk if (test_topk_order and generation_topk > 1) else 0
+            for order_idx in range(-1, upper_limit):
+                logger.info(f'{"Train" if eval_train else "Test"} set: top ({generation_topk}), order: {order_idx}')
+
+                if order_idx == -1:
+                    retrieved_images_rrd, adv_indices_rrd  = retrieved_images, adv_indices
+                    keyname = f"gen_topk_{generation_topk}"
+                else:
+                    retrieved_images_rrd, adv_indices_rrd = self.put_adv_image_in_index(retrieved_images, adv_indices, order_index=order_idx)
+                    keyname = f"gen_topk_{generation_topk}_setidx_{order_idx}"
+
                 generations_vlm = []
                 for i in tqdm(range(math.ceil(len(queries) / batch_size))):
                     prompts_vlm_batch = prompts_vlm[i * batch_size:(i + 1) * batch_size]
-                    retrieved_images_batch = retrieved_images[i * batch_size:(i + 1) * batch_size]
-                    adv_indices_batch = adv_indices[i * batch_size:(i + 1) * batch_size]
+                    retrieved_images_batch = retrieved_images_rrd[i * batch_size:(i + 1) * batch_size]
+                    adv_indices_batch = adv_indices_rrd[i * batch_size:(i + 1) * batch_size]
 
                     generations_vlm_batch = vlm.generate(image_tensor, prompts_vlm_batch,
-                                                         context_images=retrieved_images_batch,
-                                                         adv_indices=adv_indices_batch, overwrite=True)
+                                                            context_images=retrieved_images_batch,
+                                                            adv_indices=adv_indices_batch, overwrite=True)
                     generations_vlm_batch = [g.split(split_str_vlm)[-1].strip() for g in
-                                             generations_vlm_batch]  # extract only the assistant reply
+                                                generations_vlm_batch]  # extract only the assistant reply
                     generations_vlm.extend(generations_vlm_batch)
 
-            generation_vlm_dict[keyname] = generations_vlm
+                generation_vlm_dict[keyname] = generations_vlm
 
-            if print_gen: logger.info(generations_vlm)
+                if print_gen: logger.info(generations_vlm)
 
-            if "exact" in metrics:
-                
-                # exact match of VLM generation and target answer
-                correct_generations = [g == target_generation[i] for i,g in enumerate(generations_vlm)]
-                adversarial_generations = [g in adv_target_generations for g in generations_vlm]
-                metric_dict[keyname]["exact"] = {"asr_universal": sum(correct_generations) / len(queries)}
-                # targeted attack metrics
-                if is_targeted:
-                    metric_dict[keyname]["exact"].update(self.compute_targeted_metrics(correct_generations, target_query_idx, split, adversarial_generations))
+                if "exact" in metrics:
+                    
+                    # exact match of VLM generation and target answer
+                    correct_generations = [g == target_generation[i] for i,g in enumerate(generations_vlm)]
+                    adversarial_generations = [g in adv_target_generations for g in generations_vlm]
+                    metric_dict[keyname]["exact"] = {"asr_universal": sum(correct_generations) / len(queries)}
+                    # targeted attack metrics
+                    if is_targeted:
+                        metric_dict[keyname]["exact"].update(self.compute_targeted_metrics(correct_generations, target_query_idx, split, adversarial_generations))
 
-            if "embed" in metrics:
-                # similarity score between VLM generation and target answer in [0,1]
-                similarity = text_embedder.compare_embeddings(generations_vlm, target_generation, similarity_metric="cos")
-                similarity_to_target = torch.diag(similarity)
-                
-                metric_dict[keyname]["embed"] = {"asr_universal": similarity_to_target.mean().item()}
-                # targeted attack metrics
-                if is_targeted:
-                    similarity = text_embedder.compare_embeddings(generations_vlm, adv_target_generations, similarity_metric="cos")
-                    similarity_to_adv = similarity.max(dim=1).values
-                    metric_dict[keyname]["embed"].update(self.compute_targeted_metrics(similarity_to_target.flatten().tolist(), target_query_idx, split, similarity_to_adv.flatten().tolist()))
+                if "embed" in metrics:
+                    # similarity score between VLM generation and target answer in [0,1]
+                    similarity = text_embedder.compare_embeddings(generations_vlm, target_generation, similarity_metric="cos")
+                    similarity_to_target = torch.diag(similarity)
+                    
+                    metric_dict[keyname]["embed"] = {"asr_universal": similarity_to_target.mean().item()}
+                    # targeted attack metrics
+                    if is_targeted:
+                        similarity = text_embedder.compare_embeddings(generations_vlm, adv_target_generations, similarity_metric="cos")
+                        similarity_to_adv = similarity.max(dim=1).values
+                        metric_dict[keyname]["embed"].update(self.compute_targeted_metrics(similarity_to_target.flatten().tolist(), target_query_idx, split, similarity_to_adv.flatten().tolist()))
 
         return metric_dict, generation_vlm_dict
 
@@ -169,6 +175,7 @@ class Dataset:
             retrievals: dict,
             generation_vlm_dict: dict,
             generation_topk_list: list[int],
+            test_topk_order: bool,
             is_targeted: bool,
             target_query_idx: list[int],
             batch_size=None,
@@ -185,43 +192,66 @@ class Dataset:
 
             judge_prompt = METRIC_2_PROMPT[metric]
             n_images = 1 if generation_topk == -1 else generation_topk
-            keyname = f"gen_topk_{generation_topk}"
 
-            logger.info(f'{"Train" if eval_train else "Test"} set -> top ({generation_topk}), metric: {metric}')
-
-            generations_vlm = generation_vlm_dict[keyname]
-            prompts_judge = [judge.get_test_prompt(judge_prompt, query, gen_vlm, n_images=n_images) for (query, gen_vlm)
-                             in zip(queries, generations_vlm)]
             retrieved_images, adv_indices = self.retrieved_idx_to_img(
                 retrieved_indices=retrievals[list(retrievals.keys())[0]], topk=generation_topk)
 
-            generations_jdg = []
-            for i in tqdm(range(math.ceil(len(queries) / batch_size))):
-                retrieved_images_batch = retrieved_images[i * batch_size:(i + 1) * batch_size]
-                adv_indices_batch = adv_indices[i * batch_size:(i + 1) * batch_size]
+            
+            upper_limit = generation_topk if (test_topk_order and generation_topk > 1) else 0
+            for order_idx in range(-1, upper_limit):
+                logger.info(f'{"Train" if eval_train else "Test"} set -> top ({generation_topk}), metric: {metric}, order: {order_idx}')
+                
+                if order_idx == -1:
+                    retrieved_images_rrd, adv_indices_rrd  = retrieved_images, adv_indices
+                    keyname = f"gen_topk_{generation_topk}"
+                else:
+                    retrieved_images_rrd, adv_indices_rrd = self.put_adv_image_in_index(retrieved_images, adv_indices, order_index=order_idx)
+                    keyname = f"gen_topk_{generation_topk}_setidx_{order_idx}"
+                
+                generations_vlm = generation_vlm_dict[keyname]
+                prompts_judge = [judge.get_test_prompt(judge_prompt, query, gen_vlm, n_images=n_images) for (query, gen_vlm)
+                                in zip(queries, generations_vlm)]
+            
+                generations_jdg = []
+                for i in tqdm(range(math.ceil(len(queries) / batch_size))):
+                    retrieved_images_batch = retrieved_images_rrd[i * batch_size:(i + 1) * batch_size]
+                    adv_indices_batch = adv_indices_rrd[i * batch_size:(i + 1) * batch_size]
 
-                prompts_jdg_batch = prompts_judge[i * batch_size:(i + 1) * batch_size]
-                generations_jdg_batch = judge.generate(image_tensor, prompts_jdg_batch,
-                                                       context_images=retrieved_images_batch,
-                                                       adv_indices=adv_indices_batch, overwrite=True)
-                generations_jdg_batch = [g.split(split_str_jdg)[-1].strip() for g in generations_jdg_batch]
-                generations_jdg.extend(generations_jdg_batch)
+                    prompts_jdg_batch = prompts_judge[i * batch_size:(i + 1) * batch_size]
+                    generations_jdg_batch = judge.generate(image_tensor, prompts_jdg_batch,
+                                                        context_images=retrieved_images_batch,
+                                                        adv_indices=adv_indices_batch, overwrite=True)
+                    generations_jdg_batch = [g.split(split_str_jdg)[-1].strip() for g in generations_jdg_batch]
+                    generations_jdg.extend(generations_jdg_batch)
 
-            if print_gen: logger.info(generations_jdg)
+                if print_gen: logger.info(generations_jdg)
 
-            generation_jdg_dict[keyname][metric] = generations_jdg
-            passed_judge = self.extract_judge_scores(generations_jdg)
-            metric_dict[keyname][metric] = {"asr_universal": sum(passed_judge) / len(passed_judge)}
+                generation_jdg_dict[keyname][metric] = generations_jdg
+                passed_judge = self.extract_judge_scores(generations_jdg)
+                metric_dict[keyname][metric] = {"asr_universal": sum(passed_judge) / len(passed_judge)}
 
-            # targeted metrics
-            if is_targeted:
-                metric_dict[keyname][metric].update(self.compute_targeted_metrics(passed_judge, target_query_idx, split))
+                # targeted metrics
+                if is_targeted:
+                    metric_dict[keyname][metric].update(self.compute_targeted_metrics(passed_judge, target_query_idx, split))
 
         return metric_dict, generation_jdg_dict
 
     def extract_judge_scores(self, generations_jdg) -> list[bool]:
         return [("YES" in g) and not ("NO" in g) for g in generations_jdg]
 
+    def put_adv_image_in_index(self, retrieved_images: list[list], adv_indices: list[int], order_index: int):
+        adv_indices_reordered = [order_index for _ in range(len(retrieved_images))]
+        retrieved_images_reordered = []
+        for images_per_query, adv_idx in zip(retrieved_images, adv_indices):
+            if adv_idx == -1:
+                images_reordered = images_per_query[:-1]
+            else:
+                images_reordered = [images_per_query[i] for i in range(len(images_per_query)) if i != adv_idx]
+            images_reordered.insert(order_index, images_per_query[0]) # we just add any image for now, since it will be replaced by the adversarial image later
+            retrieved_images_reordered.append(images_reordered)
+            
+        return retrieved_images_reordered, adv_indices_reordered
+    
     def retrieved_idx_to_img(self, retrieved_indices: torch.tensor, topk: int):
         if topk == -1:
             # ignore retrieval results, and assume adversarial image is always retrieved
