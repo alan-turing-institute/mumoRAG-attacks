@@ -3,6 +3,7 @@ from dataclasses import dataclass, asdict
 from itertools import product
 from typing import Optional
 
+from experiments.configstore import get_config_name
 from wrappers.dataset import DatasetName
 from wrappers.embedding import EmbedderName, EmbeddingLoss, COLPALI_MODELS
 from wrappers.judge import JudgeMetric
@@ -67,7 +68,7 @@ class TaskConfig:
 
     def create_filename(self):
         hash_str = self.create_hash_string()
-        return f"adv_img_{hash_str}.pt"
+        return f"adv_img_{get_config_name()}_{hash_str}.pt"
 
     def to_dict(self):
         return asdict(self)

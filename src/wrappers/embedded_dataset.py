@@ -1,4 +1,3 @@
-import hashlib
 import itertools
 import math
 import time
@@ -10,6 +9,15 @@ from config import EMBEDDINGS_FOLDER
 from wrappers.embedding import EmbeddingModel, EmbedderName, EmbeddingLoss, COLPALI_MODELS, score_multi_vector_modified
 from utils.logger import logger
 from .dataset import Dataset
+
+
+def make_safe_filename(s):
+    def safe_char(c):
+        if c.isalnum():
+            return c
+        else:
+            return "_"
+    return "".join(safe_char(c) for c in s).rstrip("_")
 
 
 class EmbeddedDataset:
@@ -38,10 +46,9 @@ class EmbeddedDataset:
 
     @property
     def embeddings_filename(self):
-        emb_str = f"{self.dataset.ds_name}{self.embedder.name}"
-        if self.embedder.colpali_only_images: emb_str += f"{self.embedder.colpali_only_images}"
-        hash_str = hashlib.md5(emb_str.encode()).hexdigest()
-        return self.embeddings_folder / f"embeds_{hash_str}.pt"
+        emb_str = f"{self.dataset.ds_name}_{self.embedder.name}"
+        if self.embedder.colpali_only_images: emb_str += f"_{self.embedder.colpali_only_images}"
+        return self.embeddings_folder / f"embeds_{make_safe_filename(emb_str)}.pt"
 
     def compute_embeddings(self, batch_size=None, for_queries=True, for_images=True):
         if for_images:
