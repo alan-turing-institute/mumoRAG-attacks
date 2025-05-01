@@ -46,20 +46,16 @@ class Dataset:
         self.num_images_orig = len(self.images)
 
         self.queries = queries
-        self.gt_answers = answers
+        self.ground_truth_answers = answers
+        self.ground_truth_retrievals = ground_truth_retrievals
 
-        # only queries are split into train and test splits, images (knowledge base are common to both)
         self.train_ratio = train_ratio
         self.num_train = int(len(self.queries) * train_ratio)
         self.num_test = len(self.queries) - self.num_train
 
-        self.queries_train = self.queries[: self.num_train]
-        self.queries_test = self.queries[self.num_train :]
-
-        self.gt_answers_train = self.gt_answers[: self.num_train]
-        self.gt_answers_test = self.gt_answers[self.num_train :]
-
-        self.gt_retrievals = ground_truth_retrievals
+        self.queries_train, self.queries_test = self.split_train_test(self.queries)
+        self.ground_truth_answers_train, self.ground_truth_answers_test = self.split_train_test(self.ground_truth_answers)
+        self.ground_truth_retrievals_train, self.ground_truth_retrievals_test = self.split_train_test(self.ground_truth_retrievals)
 
     def add_adv_image(self, adv_img):
         """

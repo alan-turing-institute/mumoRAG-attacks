@@ -78,8 +78,9 @@ def run(exp_config: ExperimentConfig):
             exp_config.train.target_answer_vlm,
             ds.queries,
             exp_config.train.n_knn_target_queries,
-            ds.gt_answers,
-            exp_config.train.attack_text_embedder_name,
+            ds.ground_truth_answers,
+            exp_config.train.attack_embedder_name if exp_config.train.attack_embedder_name else task_config.model_name_emb,
+            task_config.emb_train_loss_type,
             device,
         )
 

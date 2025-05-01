@@ -43,7 +43,7 @@ class TaskConfig:
     target_query_idx: list[int]  # we assume the target queries are always from the training dataset
     is_targeted: bool
     n_knn_target_queries: int
-    attack_text_embedder_name: TextEmbedderName
+    attack_embedder_name: TextEmbedderName
     eval_emb_name: Optional[EmbedderName] = None
     eval_vlm_name: Optional[VLMName] = None
     eval_jdg_name: Optional[VLMName] = None
@@ -52,7 +52,13 @@ class TaskConfig:
     kb_compromised_fraction: float = 0.1
 
     def create_hash_string(self):
-        target_str = ",".join([str(i) for i in self.target_query_idx]) + f"{self.n_knn_target_queries}" + f"{self.attack_text_embedder_name}" if self.is_targeted else ""
+        target_str = (
+            ",".join([str(query_id) for query_id in self.target_query_idx])
+            + f"{self.n_knn_target_queries}"
+            + f"{self.attack_embedder_name}"
+            if self.is_targeted
+            else ""
+        )
         target_answer_str = ",".join(self.target_answer_vlm)
 
         config_str = f"{self.model_name_emb}{self.model_name_vlm}{self.ds_name}{self.chosen_index}{target_answer_str}{self.max_perturbation}{self.emb_train_loss_type}{self.is_adaptive}{self.gen_topk}{self.kb_compromised_fraction}{target_str}"
@@ -82,7 +88,8 @@ class TaskConfig:
 
 # standalone function
 def get_transferability_file_suffix(eval_emb_name: EmbedderName, eval_vlm_name: VLMName, eval_jdg_name: VLMName = ""):
-    if eval_emb_name == "" and eval_vlm_name == "" and eval_jdg_name == "": return ""
+    if eval_emb_name == "" and eval_vlm_name == "" and eval_jdg_name == "":
+        return ""
 
     transfer_str = f"{eval_emb_name}{eval_vlm_name}{eval_jdg_name}"
     return f"_{hashlib.md5(transfer_str.encode()).hexdigest()}"
@@ -120,8 +127,10 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
             eval_jdg_name,
         ) = params
 
-        correct_vlm_target = len(exp_config.train.target_answer_vlm) == 1 or len(exp_config.train.target_answer_vlm) == len(exp_config.train.target_query_idx)
-        assert correct_vlm_target, f"VLM target answers array has incompatible length ({len(exp_config.train.target_answer_vlm)}) with target queries ({len(exp_config.train.target_query_idx)})"
+        if len(exp_config.train.target_answer_vlm) not in [1, len(exp_config.train.target_query_idx)]:
+            raise ValueError(
+                f"VLM target answers array has incompatible length ({len(exp_config.train.target_answer_vlm)}) with target queries ({len(exp_config.train.target_query_idx)})"
+            )
 
         attack_configs.append(
             TaskConfig(
@@ -154,7 +163,7 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
                 target_query_idx=exp_config.train.target_query_idx,
                 is_targeted=exp_config.train.is_targeted,
                 n_knn_target_queries=exp_config.train.n_knn_target_queries,
-                attack_text_embedder_name=exp_config.train.attack_text_embedder_name,
+                attack_embedder_name=exp_config.train.attack_embedder_name,
             )
         )
 

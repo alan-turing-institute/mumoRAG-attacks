@@ -51,7 +51,7 @@ def run(exp_config: ExperimentConfig):
             vlm=vlm,
             jdg=jdg,
             train_user_queries=ds.queries_train,
-            train_gt_vlm_answers=ds.gt_answers_train,
+            train_ground_truth_vlm_answers=ds.ground_truth_answers_train,
             config=task_config,
             attack_images=attack_images,
             print_every=exp_config.train.print_every,

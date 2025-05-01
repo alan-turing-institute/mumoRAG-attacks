@@ -302,6 +302,18 @@ class EmbeddingModel:
             case _:
                 raise ValueError(f"Unknown loss type {loss_type}!")
 
+    def compare_embeddings(self, embeddings_1, embeddings_2, loss_type):
+        if (self.name in COLPALI_MODELS or self.name == EmbedderName.COLPALI) and loss_type != EmbeddingLoss.COS_AVGEMB:
+            # my version of the scoring function (allowing different losses)
+            return score_multi_vector_modified(embeddings_1, embeddings_2, device=self.device,
+                                                    loss=loss_type)
+        match loss_type:
+            case EmbeddingLoss.COS_AVGEMB:
+                return torch.nn.CosineSimilarity()(embeddings_1.mean(dim=1), embeddings_2.mean(dim=1)).mean()
+            case EmbeddingLoss.COS:
+                return torch.nn.CosineSimilarity()(embeddings_1, embeddings_2)
+            case _:
+                raise ValueError(f"Unknown loss type {loss_type}!")
 
 """
 Functions

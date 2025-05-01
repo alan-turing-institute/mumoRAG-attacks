@@ -35,12 +35,14 @@ configstore.store(
             embedder_list=[EmbedderName.CLIP_BASE_PATCH16],
             vlm_list=[VLMName.SMOLVLM_1_256M],
             gen_topk_list=[1],
-            is_targeted=False,
+            is_targeted=True,
+            target_query_idx=[2],
+            n_knn_target_queries=5,
             print_every=2,
             n_gradient_steps=50,
         ),
         eval=ExperimentEvalConfig(
-            gen_topk_list=[-1,1],
+            gen_topk_list=[-1],
         )
     ),
 )
