@@ -3,9 +3,6 @@ from dataclasses import dataclass, asdict
 from itertools import product
 from typing import Optional
 
-import torch
-from aiohttp._websocket import mask
-
 from wrappers.dataset import DatasetName
 from wrappers.embedding import EmbedderName, EmbeddingLoss, COLPALI_MODELS
 from wrappers.judge import JudgeMetric
@@ -81,7 +78,8 @@ class TaskConfig:
 
 # standalone function
 def get_transferability_file_suffix(eval_emb_name: EmbedderName, eval_vlm_name: VLMName, eval_jdg_name: VLMName = ""):
-    if eval_emb_name == "" and eval_vlm_name == "" and eval_jdg_name == "": return ""
+    if eval_emb_name == "" and eval_vlm_name == "" and eval_jdg_name == "":
+        return ""
 
     transfer_str = f"{eval_emb_name}{eval_vlm_name}{eval_jdg_name}"
     return f"_{hashlib.md5(transfer_str.encode()).hexdigest()}"
@@ -150,7 +148,7 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
                 target_answer_jdg=exp_config.train.target_answer_jdg,
                 train_jdg_metric_list=exp_config.train.train_jdg_metric_list,
                 attack_mask=attack_mask,
-                image_size=exp_config.train.image_size
+                image_size=exp_config.train.image_size,
             )
         )
 
