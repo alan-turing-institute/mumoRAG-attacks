@@ -1,11 +1,15 @@
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Optional
+
+import torch
 from typing import Any
 
 from wrappers.dataset import DatasetName
 from wrappers.embedding import EmbedderName, EmbeddingLoss
 from wrappers.judge import JudgeMetric
 from wrappers.vlm import VLMName
+from wrappers.attack_mask import AttackMask
 from wrappers.text_embedding import TextEmbedderName
 
 from . import ATTACKS_FOLDER
@@ -40,8 +44,11 @@ class ExperimentTrainConfig:
     train_jdg_metric_list: list[JudgeMetric] = field(
         default_factory=lambda: [JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS]
     )
+    attack_mask_list: list[AttackMask] = field(default_factory=lambda: [AttackMask.Full])
+    image_size: list[int] = field(default_factory=lambda: [512, 512])
     target_query_idx: list[int] = field(default_factory=lambda: [])
     is_targeted: bool = False
     n_knn_target_queries: int = 1  # itself
     attack_embedder_name: Any = None
     optimize_nontargeted_queries_list: list[bool] = field(default_factory=lambda: [True])
+

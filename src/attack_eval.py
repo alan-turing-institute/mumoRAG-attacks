@@ -16,6 +16,7 @@ from utils.utils import get_device
 from utils.attack import get_all_target_queries_and_answers
 from wrappers.cache import get_vlm, get_text_embedder, get_dataset, get_embedded_dataset, get_judge
 from wrappers.embedding import is_loss_compatible
+from wrappers.json_encoder import EnumEncoder
 
 
 def get_retrieval_saved_info(exp_config_eval: ExperimentEvalConfig, metric_dict_before, metric_dict_after):
@@ -214,7 +215,7 @@ def run(exp_config: ExperimentConfig):
             results_filename,
             "w",
         ) as file:
-            json.dump(metric_dict_full, file, indent=4)
+            json.dump(metric_dict_full, file, indent=4, cls=EnumEncoder)
         logger.info(f"Saved results to {results_filename}")
 
 

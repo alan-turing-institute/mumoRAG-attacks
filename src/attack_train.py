@@ -12,6 +12,7 @@ from experiments import DEFAULT_EXPERIMENT
 from utils.attack import rag_attack
 from utils.logger import logger
 from utils.utils import get_device
+from wrappers.attack_mask import get_attack_mask
 from wrappers.cache import get_vlm, get_dataset, get_embedder, get_judge
 from wrappers.embedding import is_loss_compatible
 
@@ -39,7 +40,7 @@ def run(exp_config: ExperimentConfig):
 
         # choose attacked image
         chosen_image = ds.images[task_config.chosen_index]
-        chosen_image = chosen_image.resize((512,512))  # this can save memory (also setting this to VLM image size with resample=0 -> reduce errors)
+        chosen_image = chosen_image.resize((task_config.image_size[0],task_config.image_size[1]))  # this can save memory (also setting this to VLM image size with resample=0 -> reduce errors)
         chosen_image = T.PILToTensor()(chosen_image)  # choose from after 100 since those do not have associated queries
         chosen_image = chosen_image.float()
         initial_chosen_image = chosen_image.clone()

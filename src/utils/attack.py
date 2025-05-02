@@ -4,6 +4,8 @@ import torch
 import torchvision.transforms as T
 
 from config.task import TaskConfig
+
+from wrappers.attack_mask import AttackMask, get_attack_mask
 from wrappers.embedding import EmbeddingModel, EmbedderName, COLPALI_LOSSES
 from wrappers.judge import JudgeVLM
 from wrappers.vlm import VLM
@@ -14,6 +16,7 @@ from .scheduler import LearningRateScheduler
 from .utils import get_memory_consumption
 from .logger import logger
 
+import torch
 
 
 def rag_attack(
@@ -26,7 +29,8 @@ def rag_attack(
         config: TaskConfig,
         attack_images: list,
         print_every: int,
-        device: str):
+        device: str,
+):
     """
     Simulates an attack against the full RAG pipeline.
     The input image is jointly optimized w.r.t. the retriever and the VLM outputs
@@ -63,6 +67,7 @@ def rag_attack(
     optimize_nontargeted_queries = config.optimize_nontargeted_queries
 
     initial_image = raw_image.clone().float() if device == "cuda" else raw_image.clone()
+    attack_mask = get_attack_mask(config.attack_mask, initial_image, config.image_size)
     max_perturbation_pixels = max_perturbation*255
     batch_size_per_iter = min(len(train_user_queries), max_batch_size_per_iter)
     n_iter = n_gradient_steps * gradient_acc_steps
@@ -126,6 +131,8 @@ def rag_attack(
 
         # backpropagation
         grads += torch.autograd.grad(total_loss, raw_image)[0]
+        # Applies perturbation mask
+        grads *= attack_mask
 
         if (i+1)%gradient_acc_steps == 0:
             # compute average gradient

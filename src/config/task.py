@@ -7,7 +7,9 @@ from wrappers.dataset import DatasetName
 from wrappers.embedding import EmbedderName, EmbeddingLoss, COLPALI_MODELS
 from wrappers.judge import JudgeMetric
 from wrappers.vlm import VLMName
+from wrappers.attack_mask import AttackMask
 from wrappers.text_embedding import TextEmbedderName
+
 
 from .experiment import ExperimentConfig
 
@@ -40,6 +42,8 @@ class TaskConfig:
     lambda_jdg: float
     target_answer_jdg: str
     train_jdg_metric_list: list[JudgeMetric]
+    attack_mask: AttackMask
+    image_size: list[int]
     target_query_idx: list[int]  # we assume the target queries are always from the training dataset
     is_targeted: bool
     n_knn_target_queries: int
@@ -63,7 +67,7 @@ class TaskConfig:
         )
         target_answer_str = ",".join(self.target_answer_vlm)
 
-        config_str = f"{self.model_name_emb}{self.model_name_vlm}{self.ds_name}{self.chosen_index}{target_answer_str}{self.max_perturbation}{self.emb_train_loss_type}{self.is_adaptive}{self.gen_topk}{self.kb_compromised_fraction}{target_str}"
+        config_str = f"{self.model_name_emb}{self.model_name_vlm}{self.ds_name}{self.chosen_index}{target_answer_str}{self.max_perturbation}{self.emb_train_loss_type}{self.is_adaptive}{self.gen_topk}{self.kb_compromised_fraction}{target_str}{self.attack_mask}"
 
         if self.is_adaptive:
             config_str += f"{float(self.lambda_constant)}"
@@ -108,6 +112,7 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
         exp_config.train.is_adaptive_list,
         exp_config.train.chosen_index_list,
         exp_config.train.gen_topk_list,
+        exp_config.train.attack_mask_list,
         exp_config.train.optimize_nontargeted_queries_list,
         (exp_config.eval.eval_emb_list if include_eval else None) or [""],
         (exp_config.eval.eval_vlm_list if include_eval else None) or [""],
@@ -125,6 +130,7 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
             is_adaptive,
             chosen_index,
             gen_topk,
+            attack_mask,
             optimize_nontargeted_queries,
             eval_emb_name,
             eval_vlm_name,
@@ -164,6 +170,8 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
                 lambda_jdg=exp_config.train.lambda_jdg,
                 target_answer_jdg=exp_config.train.target_answer_jdg,
                 train_jdg_metric_list=exp_config.train.train_jdg_metric_list,
+                attack_mask=attack_mask,
+                image_size=exp_config.train.image_size,
                 target_query_idx=exp_config.train.target_query_idx,
                 is_targeted=exp_config.train.is_targeted,
                 n_knn_target_queries=exp_config.train.n_knn_target_queries,
