@@ -60,7 +60,7 @@ configstore.store(
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
             ...,
-            save_folder=RESULTS_FOLDER.parent,
+            save_folder=ATTACKS_FOLDER.parent,
         ),
         test=ExperimentEvalConfig(
             ...,
