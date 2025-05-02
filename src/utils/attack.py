@@ -1,13 +1,16 @@
-import random
+import random, math
 
 import torch
 import torchvision.transforms as T
 
 from config.task import TaskConfig
+
 from wrappers.attack_mask import AttackMask, get_attack_mask
-from wrappers.embedding import EmbeddingModel
+from wrappers.embedding import EmbeddingModel, EmbedderName, COLPALI_LOSSES
 from wrappers.judge import JudgeVLM
 from wrappers.vlm import VLM
+from wrappers.cache import get_text_embedder, get_embedder
+from wrappers.text_embedding import TextEmbedderName
 
 from .scheduler import LearningRateScheduler
 from .utils import get_memory_consumption
@@ -21,7 +24,8 @@ def rag_attack(
         embedder: EmbeddingModel,
         vlm: VLM,
         jdg: JudgeVLM,
-        user_query: str | list[str],
+        train_user_queries: list[str],
+        train_ground_truth_vlm_answers: list[str],
         config: TaskConfig,
         attack_images: list,
         print_every: int,
@@ -56,21 +60,26 @@ def rag_attack(
     lambda_jdg = config.lambda_jdg
     target_answer_jdg = config.target_answer_jdg
     jdg_metric_list = config.train_jdg_metric_list
+    is_targeted = config.is_targeted
+    target_query_idx = config.target_query_idx
+    n_knn_target_queries = config.n_knn_target_queries
+    attack_embedder_name = config.attack_embedder_name or embedder.name
+    optimize_nontargeted_queries = config.optimize_nontargeted_queries
 
     initial_image = raw_image.clone().float() if device == "cuda" else raw_image.clone()
     attack_mask = get_attack_mask(config.attack_mask, initial_image, config.image_size)
     max_perturbation_pixels = max_perturbation*255
-    batch_size_per_iter = min(len(user_query), max_batch_size_per_iter)
+    batch_size_per_iter = min(len(train_user_queries), max_batch_size_per_iter)
     n_iter = n_gradient_steps * gradient_acc_steps
-    if type(user_query) == str: user_query = [user_query]
+    target_query_idx, _, all_answers_vlm = get_all_target_queries_and_answers(is_targeted, target_query_idx, target_answer_vlm, train_user_queries, n_knn_target_queries, train_ground_truth_vlm_answers, attack_embedder_name, emb_loss_type, device)
 
     # pre-computing embeddings and prompts for all data 
     if lambda_emb > 0: 
-        user_query_embedding = embedder.compute_txt_embedding(user_query)
+        user_query_embedding = embedder.compute_txt_embedding(train_user_queries)
     if lambda_vlm > 0: 
-        full_text_vlm_prompt, target_tokens_vlm = vlm.get_training_prompt(user_query, target_answer_vlm, gen_topk)
+        full_text_vlm_prompts, target_tokens_vlm = vlm.get_training_prompts(train_user_queries, all_answers_vlm, gen_topk)
     if lambda_jdg > 0: 
-        full_text_jdg_prompt, target_tokens_jdg = jdg.get_training_prompt(user_query, target_answer_vlm, target_answer_jdg, jdg_metric_list, gen_topk)
+        full_text_jdg_prompts, target_tokens_jdg = jdg.get_training_prompts(train_user_queries, all_answers_vlm, target_answer_jdg, jdg_metric_list, gen_topk)
 
 
     # initial values for loss
@@ -84,27 +93,27 @@ def rag_attack(
         raw_image.requires_grad = True
 
         # sample minibatch
-        samples_idx = torch.randint(0, len(user_query), (batch_size_per_iter,))
+        samples_idx = sample_minibatch(n_population=len(train_user_queries), batch_size=batch_size_per_iter, is_targeted=is_targeted, target_idx=target_query_idx, optimize_nontargeted_queries=optimize_nontargeted_queries)
+        positive_idx = [i for i in range(len(samples_idx)) if samples_idx[i] in target_query_idx]
         if lambda_emb > 0: user_query_embedding_batch = user_query_embedding[samples_idx,:]
-        if lambda_vlm > 0: full_text_vlm_prompt_batch = [full_text_vlm_prompt[i] for i in samples_idx]
+        if lambda_vlm > 0: 
+            full_text_vlm_prompt_batch = [full_text_vlm_prompts[i] for i in samples_idx]
+            target_tokens_vlm_batch = [target_tokens_vlm[i] for i in samples_idx]
         if lambda_jdg > 0: 
-            samples_jdg_idx = torch.randint(0, len(user_query)*len(jdg_metric_list), (batch_size_per_iter,))
-            full_text_jdg_prompt_batch = [full_text_jdg_prompt[i] for i in samples_jdg_idx]
-
-        # -- if code is slow uncomment the following line and indent the following code --
-        # with profiler.profile(use_cuda=False) as prof:
+            samples_jdg_idx = torch.randint(0, len(train_user_queries)*len(jdg_metric_list), (batch_size_per_iter,))
+            full_text_jdg_prompt_batch = [full_text_jdg_prompts[i] for i in samples_jdg_idx]
 
         if lambda_emb > 0:
             # retrieval loss function
             image_embedding = embedder.compute_img_embedding(raw_image, initial_image, overwrite=True)
-            loss_emb = embedder.compute_embedding_loss(image_embedding, user_query_embedding_batch, emb_loss_type)
+            loss_emb = embedder.compute_embedding_loss(image_embedding, user_query_embedding_batch, emb_loss_type, is_targeted, positive_idx)
 
 
         if lambda_vlm > 0:
             # generation loss function
             context_images, adv_indices = prepare_context_images(attack_images, T.ToPILImage()(raw_image), batch_size_per_iter, config.gen_topk)
             out = vlm.forward(raw_image, full_text_vlm_prompt_batch, context_images, adv_indices, overwrite=True)
-            loss_vlm = vlm.compute_gen_loss(out, target_tokens_vlm)
+            loss_vlm = vlm.compute_gen_loss(out, target_tokens_vlm_batch, positive_idx)
         
         if lambda_jdg > 0:
             # judge loss function
@@ -138,9 +147,6 @@ def rag_attack(
 
             # zero the gradient
             grads = torch.zeros_like(raw_image)
-
-        # -- stop indenting here and uncomment next line to profile timing issues --
-        # logger.info(prof.key_averages().table(sort_by="cpu_time_total"))
 
     return raw_image
 
@@ -189,3 +195,70 @@ def prepare_context_images(attack_images, mock_image_pil, batch_size_per_iter, g
         adv_indices.append(adv_idx)
 
     return context_images, adv_indices
+
+def sample_minibatch(n_population, batch_size, is_targeted: bool, target_idx: list[int], optimize_nontargeted_queries: bool):
+    if not is_targeted:
+        return torch.randint(0, n_population, (batch_size,))
+    else:
+        # 50% positive samples, 50% negative samples on average
+        samples_pos = random.sample([i for i in range(n_population) if i in target_idx], batch_size)
+        samples_neg = random.sample([i for i in range(n_population) if i not in target_idx], batch_size) if optimize_nontargeted_queries else []
+        return random.sample(samples_pos + samples_neg, batch_size)
+    
+def get_all_target_queries_and_answers(
+        is_targeted: bool,
+        target_query_idx: list[int],
+        target_answer_vlm: list[str],
+        train_user_queries: list[str],
+        n_knn_target_queries: int,
+        ground_truth_answers: list[str],
+        attack_embedder_name: EmbedderName | TextEmbedderName,
+        emb_loss_type,
+        device,
+        
+    ):
+    # if universal attack, all queries are targeted
+    if not is_targeted:
+        target_query_idx = [i for i in range(len(ground_truth_answers))]
+
+    # make number of answers match number of target queries
+    if len(target_answer_vlm) == 1:
+        target_answer_vlm = [target_answer_vlm[0] for _ in target_query_idx]
+    
+    # extend target query indices and target answers to include nearest neighbours
+    if (not is_targeted) or n_knn_target_queries == 1:
+       # only include one nearest neighbors (a.k.a. self) 
+       extended_target_idx, extended_target_answers = target_query_idx, target_answer_vlm
+    else:
+        similarity = get_embedding_similairty(train_user_queries, attack_embedder_name, emb_loss_type, device)
+        extended_target_idx, extended_target_answers = [], []
+        for i, q_idx in enumerate(target_query_idx):
+            topk_similar = similarity[q_idx,:].topk(n_knn_target_queries, sorted=True).indices
+            # remove duplicates
+            topk_similar = [x for x in topk_similar if x not in extended_target_idx]
+            extended_target_idx.extend(topk_similar)
+            extended_target_answers.extend([target_answer_vlm[i] for _ in range(len(topk_similar))])
+    
+    # update ground truth answers by malicious answers
+    all_answers = ground_truth_answers
+    for idx, answer  in zip(extended_target_idx, extended_target_answers):
+        all_answers[idx] = answer
+    
+    return extended_target_idx, extended_target_answers, all_answers
+
+def get_embedding_similairty(train_user_queries: list[str], attack_embedder_name: EmbedderName|TextEmbedderName, emb_loss_type, device):
+    if isinstance(attack_embedder_name, TextEmbedderName):
+        text_embedder = get_text_embedder(attack_embedder_name, device=device)
+        similarity = text_embedder.compare_embeddings(train_user_queries, train_user_queries, similarity_metric="cos")
+        del text_embedder
+    elif isinstance(attack_embedder_name, EmbedderName):
+        embedder = get_embedder(attack_embedder_name, device=device, quantize=False, colpali_only_images=False)
+        query_embeddings = embedder.compute_txt_embedding(train_user_queries)
+        num_queries = query_embeddings.shape[0]
+        similarity = torch.zeros((num_queries, num_queries))
+        for i in range(num_queries):
+            query_i = query_embeddings[i].unsqueeze(0) if emb_loss_type in COLPALI_LOSSES else query_embeddings[i]
+            similarity[i] = embedder.compare_embeddings(query_i, query_embeddings, emb_loss_type)
+        del embedder
+
+    return similarity

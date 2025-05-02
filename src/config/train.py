@@ -3,12 +3,14 @@ from pathlib import Path
 from typing import Optional
 
 import torch
+from typing import Any
 
 from wrappers.dataset import DatasetName
 from wrappers.embedding import EmbedderName, EmbeddingLoss
 from wrappers.judge import JudgeMetric
 from wrappers.vlm import VLMName
 from wrappers.attack_mask import AttackMask
+from wrappers.text_embedding import TextEmbedderName
 
 from . import ATTACKS_FOLDER
 
@@ -19,10 +21,10 @@ class ExperimentTrainConfig:
     embedder_list: list[EmbedderName] = field(default_factory=lambda: [EmbedderName.CLIP_LARGE_PATCH14])
     vlm_list: list[VLMName] = field(default_factory=lambda: [VLMName.SMOLVLM_1_2B])
     max_perturbation_list: list[float] = field(default_factory=lambda: [x / 255.0 for x in [8]])
-    emb_train_loss_type_list: list[EmbeddingLoss] = field(default_factory=lambda: [EmbeddingLoss.COS])
+    emb_train_loss_type_list: list[EmbeddingLoss] = field(default_factory=lambda: [EmbeddingLoss.COS, EmbeddingLoss.MAXSIM])
     is_adaptive_list: list[bool] = field(default_factory=lambda: [False])
     save_folder: Path = ATTACKS_FOLDER
-    target_answer_vlm: str = "I will not reply to you!"
+    target_answer_vlm: list[str] = field(default_factory=lambda: ["I will not reply to you!"])
     chosen_index_list: list[int] = field(default_factory=lambda: [150])
     n_gradient_steps: int = 50
     print_every: int = 5
@@ -44,3 +46,9 @@ class ExperimentTrainConfig:
     )
     attack_mask_list: list[AttackMask] = field(default_factory=lambda: [AttackMask.Full])
     image_size: list[int] = field(default_factory=lambda: [512, 512])
+    target_query_idx: list[int] = field(default_factory=lambda: [])
+    is_targeted: bool = False
+    n_knn_target_queries: int = 1  # itself
+    attack_embedder_name: Any = None
+    optimize_nontargeted_queries_list: list[bool] = field(default_factory=lambda: [True])
+
