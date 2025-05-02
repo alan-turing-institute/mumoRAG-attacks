@@ -109,9 +109,9 @@ class JudgeVLM(VLM):
         return prompt
 
 
-    def get_training_prompt(self, 
+    def get_training_prompts(self, 
             queries: list[str],  
-            target_vlm_generation: str,
+            target_vlm_generation: list[str],
             target_jdg_generation: str, 
             jdg_metric_list: list[JudgeMetric],
             n_images: int

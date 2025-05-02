@@ -35,7 +35,6 @@ def run(exp_config: ExperimentConfig):
         )
         jdg = get_judge(task_config.model_name_jdg, device) if task_config.lambda_jdg > 0 else None
 
-        query_strings = ds.queries_train
         attack_images = ds.sample_images_from_ds(fraction=task_config.kb_compromised_fraction)  # images included by the attacker in the VLM context (n-1 because the malicious image must be included)
 
         # choose attacked image
@@ -51,7 +50,8 @@ def run(exp_config: ExperimentConfig):
             embedder=embedder,
             vlm=vlm,
             jdg=jdg,
-            user_query=query_strings,
+            train_user_queries=ds.queries_train,
+            train_ground_truth_vlm_answers=ds.ground_truth_answers_train,
             config=task_config,
             attack_images=attack_images,
             print_every=exp_config.train.print_every,
