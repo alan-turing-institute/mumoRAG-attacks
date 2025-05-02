@@ -44,3 +44,4 @@ class ExperimentTrainConfig:
     is_targeted: bool = False
     n_knn_target_queries: int = 1  # itself
     attack_embedder_name: Any = None
+    optimize_nontargeted_queries_list: list[bool] = field(default_factory=lambda: [True])

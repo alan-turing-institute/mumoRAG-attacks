@@ -44,6 +44,7 @@ class TaskConfig:
     is_targeted: bool
     n_knn_target_queries: int
     attack_embedder_name: TextEmbedderName
+    optimize_nontargeted_queries: bool
     eval_emb_name: Optional[EmbedderName] = None
     eval_vlm_name: Optional[VLMName] = None
     eval_jdg_name: Optional[VLMName] = None
@@ -56,6 +57,7 @@ class TaskConfig:
             ",".join([str(query_id) for query_id in self.target_query_idx])
             + f"{self.n_knn_target_queries}"
             + f"{self.attack_embedder_name}"
+            + f"{self.optimize_nontargeted_queries}"
             if self.is_targeted
             else ""
         )
@@ -106,6 +108,7 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
         exp_config.train.is_adaptive_list,
         exp_config.train.chosen_index_list,
         exp_config.train.gen_topk_list,
+        exp_config.train.optimize_nontargeted_queries_list,
         (exp_config.eval.eval_emb_list if include_eval else None) or [""],
         (exp_config.eval.eval_vlm_list if include_eval else None) or [""],
         (exp_config.eval.eval_jdg_list if include_eval else None) or [""],
@@ -122,6 +125,7 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
             is_adaptive,
             chosen_index,
             gen_topk,
+            optimize_nontargeted_queries,
             eval_emb_name,
             eval_vlm_name,
             eval_jdg_name,
@@ -164,6 +168,7 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
                 is_targeted=exp_config.train.is_targeted,
                 n_knn_target_queries=exp_config.train.n_knn_target_queries,
                 attack_embedder_name=exp_config.train.attack_embedder_name,
+                optimize_nontargeted_queries=optimize_nontargeted_queries
             )
         )
 

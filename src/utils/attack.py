@@ -59,7 +59,8 @@ def rag_attack(
     is_targeted = config.is_targeted
     target_query_idx = config.target_query_idx
     n_knn_target_queries = config.n_knn_target_queries
-    attack_embedder_name = config.attack_embedder_name if config.attack_embedder_name else embedder.name
+    attack_embedder_name = config.attack_embedder_name or embedder.name
+    optimize_nontargeted_queries = config.optimize_nontargeted_queries
 
     initial_image = raw_image.clone().float() if device == "cuda" else raw_image.clone()
     max_perturbation_pixels = max_perturbation*255
@@ -87,7 +88,7 @@ def rag_attack(
         raw_image.requires_grad = True
 
         # sample minibatch
-        samples_idx = sample_minibatch(n_population=len(train_user_queries), batch_size=batch_size_per_iter, is_targeted=is_targeted, target_idx=target_query_idx)
+        samples_idx = sample_minibatch(n_population=len(train_user_queries), batch_size=batch_size_per_iter, is_targeted=is_targeted, target_idx=target_query_idx, optimize_nontargeted_queries=optimize_nontargeted_queries)
         positive_idx = [i for i in range(len(samples_idx)) if samples_idx[i] in target_query_idx]
         if lambda_emb > 0: user_query_embedding_batch = user_query_embedding[samples_idx,:]
         if lambda_vlm > 0: 
@@ -188,13 +189,13 @@ def prepare_context_images(attack_images, mock_image_pil, batch_size_per_iter, g
 
     return context_images, adv_indices
 
-def sample_minibatch(n_population, batch_size, is_targeted: bool, target_idx: list[int]):
+def sample_minibatch(n_population, batch_size, is_targeted: bool, target_idx: list[int], optimize_nontargeted_queries: bool):
     if not is_targeted:
         return torch.randint(0, n_population, (batch_size,))
     else:
         # 50% positive samples, 50% negative samples on average
         samples_pos = random.sample([i for i in range(n_population) if i in target_idx], batch_size)
-        samples_neg = random.sample([i for i in range(n_population) if i not in target_idx], batch_size)
+        samples_neg = random.sample([i for i in range(n_population) if i not in target_idx], batch_size) if optimize_nontargeted_queries else []
         return random.sample(samples_pos + samples_neg, batch_size)
     
 def get_all_target_queries_and_answers(

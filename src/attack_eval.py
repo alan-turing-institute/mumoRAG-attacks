@@ -79,7 +79,7 @@ def run(exp_config: ExperimentConfig):
             ds.queries,
             exp_config.train.n_knn_target_queries,
             ds.ground_truth_answers,
-            exp_config.train.attack_embedder_name if exp_config.train.attack_embedder_name else task_config.model_name_emb,
+            exp_config.train.attack_embedder_name or task_config.model_name_emb,
             task_config.emb_train_loss_type,
             device,
         )
@@ -161,6 +161,7 @@ def run(exp_config: ExperimentConfig):
                 "test": metric_vlm_dict_test,
             }
 
+        judge_metric_dict = None
         if exp_config.eval.do_judge:
             judge = get_judge(model_name_jdg, device)
             logger.info("=== Evaluating using Judge ...")
@@ -200,9 +201,9 @@ def run(exp_config: ExperimentConfig):
         metric_dict_full = {
             "retrieval": retrieval_metric_dict,
             "generation": generation_metric_dict,
+            "judge": judge_metric_dict,
             "attack_config": task_config.to_dict(),
         }
-        if exp_config.eval.do_judge: metric_dict_full["judge"] = judge_metric_dict
 
         results_filename = (
             exp_config.eval.results_folder
