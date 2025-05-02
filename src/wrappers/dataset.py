@@ -3,6 +3,7 @@ import math
 import random
 from collections import defaultdict
 from typing import Optional
+from ast import literal_eval
 
 import torch
 from datasets import load_dataset
@@ -27,7 +28,7 @@ def filter_none(arr):
     return [x for x in arr if x is not None]
 
 def extract_answers(answer_strs):
-    return [", ".join(eval(x)) for x in answer_strs]
+    return [", ".join(literal_eval(x)) for x in answer_strs]
 
 
 class Dataset:
