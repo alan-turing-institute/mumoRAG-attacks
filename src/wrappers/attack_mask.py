@@ -17,10 +17,10 @@ def get_attack_mask(attack_mask:AttackMask, raw_image:torch.Tensor, image_size:l
     else:
         # Make mask tensor with the same shape as the raw_image
         mask_tensor = torch.zeros(raw_image[0].shape)
-        x_start = attack_mask.value[2] * image_size[0]
-        x_end = x_start + attack_mask.value[0] * image_size[0]
-        y_start = attack_mask.value[3] * image_size[1]
-        y_end = y_start + attack_mask.value[1] * image_size[1]
+        x_start = int(attack_mask.value[2] * image_size[0])
+        x_end = int(x_start + attack_mask.value[0] * image_size[0])
+        y_start = int(attack_mask.value[3] * image_size[1])
+        y_end = int(y_start + attack_mask.value[1] * image_size[1])
         mask_tensor[x_start:x_end, y_start:y_end] = 1
 
         if mask_tensor.dim() == 2:
