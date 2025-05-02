@@ -109,7 +109,7 @@ class EmbeddedDataset:
             case _:
                 raise ValueError(f"Unknown loss type: {loss_type}")
 
-    def evaluate_retrieval(self, ks: list[int], loss_types: list[EmbeddingLoss], include_adv=True):
+    def evaluate_retrieval(self, ks: list[int], loss_types: list[EmbeddingLoss], is_targeted: bool, target_query_idx, include_adv=True):
         """
         Accuracy@k: whether the top-k retrieved images include the ground truth image
         """
@@ -119,13 +119,14 @@ class EmbeddedDataset:
         loss_types_and_topks = itertools.product(loss_types, ks)
 
         for loss_type, k in loss_types_and_topks:
+            keyname = f"loss_{loss_type}_topk_{k}"
             losses = self.create_retriever_score_table(loss_type)
             if not include_adv:
                 losses = losses[:, :self.dataset.num_images_orig]
 
             topk = torch.topk(losses, k=k, dim=-1, largest=False, sorted=True)
 
-            correct_retrievals = [any(x in topk.indices[i] for x in self.dataset.ground_truth[i]) for i in
+            correct_retrievals = [any(x in topk.indices[i] for x in self.dataset.ground_truth_retrievals[i]) for i in
                                   range(len(self.dataset.queries))]
             accuracy_train = sum(correct_retrievals[:self.dataset.num_train]) / self.dataset.num_train
             accuracy_test = sum(correct_retrievals[self.dataset.num_train:]) / self.dataset.num_test
@@ -136,8 +137,13 @@ class EmbeddedDataset:
             asr_train = sum(adversarial_retrievals[:self.dataset.num_train]) / self.dataset.num_train
             asr_test = sum(adversarial_retrievals[self.dataset.num_train:]) / self.dataset.num_test
 
-            metric_dict[f"loss_{loss_type}_topk_{k}"] = {"acc": accuracy, "asr_train": asr_train, "asr_test": asr_test}
-            # keep only the retrievals for highest k, should include those for small k
+            metric_dict[keyname] = {"acc": accuracy, "asr_train": asr_train, "asr_test": asr_test}
+
+            # targeted attack metrics
+            if is_targeted:
+                metric_dict[keyname].update(self.dataset.compute_targeted_metrics(adversarial_retrievals, target_query_idx))
+
+            # keep only the retrievals for highest (lastest) k, should include those for small k
             retrievals[f"loss_{loss_type}"] = {"train": topk.indices[:self.dataset.num_train],
                                                "test": topk.indices[self.dataset.num_train:]}
 

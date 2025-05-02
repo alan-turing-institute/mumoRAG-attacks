@@ -265,7 +265,22 @@ class EmbeddingModel:
 
         raise ValueError(f"Not supported model {self.name}!")
 
-    def compute_embedding_loss(self, image_embedding, text_embedding, loss_type: EmbeddingLoss):
+    
+    def compute_embedding_loss(self, image_embedding, text_embedding, loss_type: EmbeddingLoss, is_targeted: bool, positive_idx: list[int]):
+        if not is_targeted:
+            return self._compute_embedding_loss(image_embedding, text_embedding, loss_type)
+        
+        # compute loss separately for in-target and out-of-target queries
+        negative_idx = [i for i in range(text_embedding.shape[0]) if  i not in positive_idx]
+        text_embedding_pos = text_embedding[positive_idx, :]
+        text_embedding_neg = text_embedding[negative_idx, :]
+        loss_pos, loss_neg = torch.tensor([0]).to(self.device), torch.tensor([0]).to(self.device)
+        if text_embedding_pos.shape[0]>0: loss_pos = self._compute_embedding_loss(image_embedding, text_embedding_pos, loss_type)
+        if text_embedding_neg.shape[0]>0: loss_neg = self._compute_embedding_loss(image_embedding, text_embedding_neg, loss_type)
+        return loss_pos - loss_neg
+        
+
+    def _compute_embedding_loss(self, image_embedding, text_embedding, loss_type: EmbeddingLoss):
         # colpali has its own retrieval score (MaxSim)
         if (self.name in COLPALI_MODELS or self.name == EmbedderName.COLPALI) and loss_type != EmbeddingLoss.COS_AVGEMB:
             # my version of the scoring function (allowing different losses)
@@ -287,6 +302,18 @@ class EmbeddingModel:
             case _:
                 raise ValueError(f"Unknown loss type {loss_type}!")
 
+    def compare_embeddings(self, embeddings_1, embeddings_2, loss_type):
+        if (self.name in COLPALI_MODELS or self.name == EmbedderName.COLPALI) and loss_type != EmbeddingLoss.COS_AVGEMB:
+            # my version of the scoring function (allowing different losses)
+            return score_multi_vector_modified(embeddings_1, embeddings_2, device=self.device,
+                                                    loss=loss_type)
+        match loss_type:
+            case EmbeddingLoss.COS_AVGEMB:
+                return torch.nn.CosineSimilarity()(embeddings_1.mean(dim=1), embeddings_2.mean(dim=1)).mean()
+            case EmbeddingLoss.COS:
+                return torch.nn.CosineSimilarity()(embeddings_1, embeddings_2)
+            case _:
+                raise ValueError(f"Unknown loss type {loss_type}!")
 
 """
 Functions
