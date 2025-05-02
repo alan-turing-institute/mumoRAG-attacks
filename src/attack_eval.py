@@ -10,6 +10,7 @@ from config.eval import ExperimentEvalConfig
 from config.experiment import ExperimentConfig
 from config.task import get_transferability_file_suffix, generate_task_configs
 from experiments import DEFAULT_EXPERIMENT
+from experiments.configstore import get_config_name
 from utils.image_utils import load_adv_image
 from utils.logger import logger
 from utils.utils import get_device
@@ -208,7 +209,7 @@ def run(exp_config: ExperimentConfig):
 
         results_filename = (
             exp_config.eval.results_folder
-            / f"metrics_{task_config.create_hash_string()}{get_transferability_file_suffix(task_config.eval_emb_name, task_config.eval_vlm_name, task_config.eval_jdg_name)}.json"
+            / f"metrics_{get_config_name()}_{task_config.create_hash_string()}{get_transferability_file_suffix(task_config.eval_emb_name, task_config.eval_vlm_name, task_config.eval_jdg_name)}.json"
         )
 
         with open(
