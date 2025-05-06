@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING
 
 import torch
 from transformers import AutoProcessor, LlavaNextProcessor
-import torchvision.transforms as T
+import torchvision.transforms.v2 as T
 
 from .logger import logger
 

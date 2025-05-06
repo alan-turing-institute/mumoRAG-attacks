@@ -297,7 +297,6 @@ def create_dataset(
     if ds_name.startswith("vidore"):
         if "V2" in ds_name.name:
             corpus = load_dataset(ds_name, "corpus", split="all")
-            images = corpus["image"]
             qrels = load_dataset(ds_name, "qrels", split="all")
             queries_ds = load_dataset(ds_name, "queries", split="all")
             queries = queries_ds["query"]
@@ -305,6 +304,7 @@ def create_dataset(
             ground_truth_retrievals = [[] for _ in range(len(queries))]
             for row in qrels:
                 ground_truth_retrievals[row["query-id"]].append(row["corpus-id"])
+            images = corpus["image"]
         else:
             ds = load_dataset(ds_name, split="test")
             images = filter_none(ds["image"])

@@ -1,11 +1,10 @@
-import random, math
+import random
 
-import torch
-import torchvision.transforms as T
+import torchvision.transforms.v2 as T
 
 from config.task import TaskConfig
 
-from wrappers.attack_mask import AttackMask, get_attack_mask
+from wrappers.attack_mask import get_attack_mask
 from wrappers.embedding import EmbeddingModel, EmbedderName, COLPALI_LOSSES
 from wrappers.judge import JudgeVLM
 from wrappers.vlm import VLM
@@ -230,7 +229,7 @@ def get_all_target_queries_and_answers(
        # only include one nearest neighbors (a.k.a. self) 
        extended_target_idx, extended_target_answers = target_query_idx, target_answer_vlm
     else:
-        similarity = get_embedding_similairty(train_user_queries, attack_embedder_name, emb_loss_type, device)
+        similarity = get_embedding_similarity(train_user_queries, attack_embedder_name, emb_loss_type, device)
         extended_target_idx, extended_target_answers = [], []
         for i, q_idx in enumerate(target_query_idx):
             topk_similar = similarity[q_idx,:].topk(n_knn_target_queries, sorted=True).indices
@@ -246,7 +245,7 @@ def get_all_target_queries_and_answers(
     
     return extended_target_idx, extended_target_answers, all_answers
 
-def get_embedding_similairty(train_user_queries: list[str], attack_embedder_name: EmbedderName|TextEmbedderName, emb_loss_type, device):
+def get_embedding_similarity(train_user_queries: list[str], attack_embedder_name: EmbedderName | TextEmbedderName, emb_loss_type, device):
     if isinstance(attack_embedder_name, TextEmbedderName):
         text_embedder = get_text_embedder(attack_embedder_name, device=device)
         similarity = text_embedder.compare_embeddings(train_user_queries, train_user_queries, similarity_metric="cos")
