@@ -28,7 +28,7 @@ class TextEmbeddingModel:
         self.model.eval()
 
     @torch.no_grad()
-    def compare_embeddings(self, generated_strs: list[str], target_answer: str, similarity_metric: str):
+    def compare_embeddings(self, generated_strs: str|list[str], target_answer: str|list[str], similarity_metric: str):
         self.model.eval()
         if type(target_answer) == str: target_answer = [target_answer]
         if type(generated_strs) == str: generated_strs = [generated_strs]

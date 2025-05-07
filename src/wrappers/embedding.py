@@ -2,7 +2,7 @@ from typing import Optional
 
 import torch
 import torch.nn.functional as F
-import torchvision.transforms as T
+import torchvision.transforms.v2 as T
 from strenum import StrEnum
 from transformers import AutoModel, AutoModelForImageTextToText, AutoTokenizer, AutoProcessor, BitsAndBytesConfig
 

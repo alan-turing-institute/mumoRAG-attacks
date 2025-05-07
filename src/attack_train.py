@@ -2,7 +2,7 @@ from pprint import pformat
 
 import hydra
 import torch
-import torchvision.transforms as T
+import torchvision.transforms.v2 as T
 
 from omegaconf import OmegaConf
 
@@ -12,7 +12,6 @@ from experiments import DEFAULT_EXPERIMENT
 from utils.attack import rag_attack
 from utils.logger import logger
 from utils.utils import get_device
-from wrappers.attack_mask import get_attack_mask
 from wrappers.cache import get_vlm, get_dataset, get_embedder, get_judge
 from wrappers.embedding import is_loss_compatible
 
@@ -40,8 +39,9 @@ def run(exp_config: ExperimentConfig):
 
         # choose attacked image
         chosen_image = ds.images[task_config.chosen_index]
+        image_format = chosen_image.format
         chosen_image = chosen_image.resize((task_config.image_size[0],task_config.image_size[1]))  # this can save memory (also setting this to VLM image size with resample=0 -> reduce errors)
-        chosen_image = T.PILToTensor()(chosen_image)  # choose from after 100 since those do not have associated queries
+        chosen_image = T.PILToTensor()(chosen_image)
         chosen_image = chosen_image.float()
         initial_chosen_image = chosen_image.clone()
 
@@ -62,12 +62,20 @@ def run(exp_config: ExperimentConfig):
         logger.info(f"MSE: {torch.nn.functional.mse_loss(image_adv, initial_chosen_image)}")
         logger.info(f"Linf: {(initial_chosen_image - image_adv).norm(p=float('inf'))}")
 
-        # save adv image
-        attack_dict = task_config.to_dict()
-        attack_dict["image_adv"] = image_adv.type(torch.uint8)
-        filename = exp_config.train.save_folder / task_config.create_filename()
-        torch.save(attack_dict, filename)
-        logger.info(f"Saved adversarial image to {filename}.")
+        with torch.no_grad():
+            # save adv image
+            filename = exp_config.train.save_folder / task_config.create_filename()
+            image_adv = image_adv.type(torch.uint8)
+            initial_chosen_image = initial_chosen_image.type(torch.uint8)
+            diff = image_adv - initial_chosen_image
+            to_image = T.ToPILImage()
+            to_image(image_adv).save(filename.with_suffix(f".{image_format}"))
+            to_image(initial_chosen_image).save(filename.with_suffix(f".original.{image_format}"))
+            to_image(diff.type(torch.uint8)).save(filename.with_suffix(f".diff.{image_format}"))
+            attack_dict = task_config.to_dict()
+            attack_dict["image_adv"] = image_adv
+            torch.save(attack_dict, filename)
+            logger.info(f"Saved adversarial image to {filename}.")
 
 
 @hydra.main(version_base=None, config_path="pkg://experiments", config_name=DEFAULT_EXPERIMENT)

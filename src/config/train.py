@@ -1,8 +1,6 @@
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
 
-import torch
 from typing import Any
 
 from wrappers.dataset import DatasetName
@@ -10,7 +8,6 @@ from wrappers.embedding import EmbedderName, EmbeddingLoss
 from wrappers.judge import JudgeMetric
 from wrappers.vlm import VLMName
 from wrappers.attack_mask import AttackMask
-from wrappers.text_embedding import TextEmbedderName
 
 from . import ATTACKS_FOLDER
 

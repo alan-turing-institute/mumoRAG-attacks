@@ -3,7 +3,7 @@ from typing import Any
 from pprint import pformat
 
 import hydra
-import torchvision.transforms as T
+import torchvision.transforms.v2 as T
 from omegaconf import OmegaConf
 
 from config.eval import ExperimentEvalConfig
@@ -73,7 +73,7 @@ def run(exp_config: ExperimentConfig):
         vlm = get_vlm(model_name_vlm, device)
         ds = get_dataset(task_config.ds_name)
 
-        # update target queries and answers in case the attack is targetted
+        # update target queries and answers in case the attack is targeted
         all_target_query_idx, all_adv_target_answers_vlm, all_answers_vlm = get_all_target_queries_and_answers(
             exp_config.train.is_targeted,
             exp_config.train.target_query_idx,
