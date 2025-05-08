@@ -101,7 +101,6 @@ class VLM:
         self.tokenizer = None
         
         self.processor = AutoProcessor.from_pretrained(model_name, use_fast=True)
-            
         self.processor.image_processor.do_image_splitting = False
         if self.processor.image_processor.resample == 1: 
             self.processor.image_processor.resample = 3 # change from LANCZOS (1) to BICUBIC (3) since the former has no pytorch implementation
