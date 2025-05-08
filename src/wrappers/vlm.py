@@ -1,7 +1,7 @@
 import torch
 import torchvision.transforms as T
 from strenum import StrEnum
-from transformers import AutoProcessor, AutoModelForVision2Seq, BitsAndBytesConfig
+from transformers import AutoProcessor, AutoModelForVision2Seq, BitsAndBytesConfig, AutoModelForImageTextToText
 
 from utils.image_utils import process_image
 
@@ -15,6 +15,13 @@ class VLMName(StrEnum):
     QWEN_2p5_VL_3B = "Qwen/Qwen2.5-VL-3B-Instruct"
     QWEN_2p5_VL_7B = "Qwen/Qwen2.5-VL-7B-Instruct"
     LLAVA_ONEVISION_0p5B = "llava-hf/llava-onevision-qwen2-0.5b-ov-hf"
+    INTERNVL_3_1B = "OpenGVLab/InternVL3-1B-hf"
+    INTERNVL_3_2B = "OpenGVLab/InternVL3-2B-hf"
+    INTERNVL_3_8B = "OpenGVLab/InternVL3-8B-hf"
+    OVIS_2_1B = "AIDC-AI/Ovis2-1B"
+    OVIS_2_2B = "AIDC-AI/Ovis2-2B"
+    OVIS_2_4B = "AIDC-AI/Ovis2-4B"
+    OVIS_2_8B = "AIDC-AI/Ovis2-8B"
 
 SMOL_VLMS = [
     VLMName.SMOLVLM_1_256M,
@@ -28,11 +35,24 @@ QWEN_VLMS = [
     VLMName.QWEN_2p5_VL_7B,
 ]
 
+INTERN_VLMS = [
+    VLMName.INTERNVL_3_1B,
+    VLMName.INTERNVL_3_2B,
+    VLMName.INTERNVL_3_8B,
+]
+
+OVIS_VLMS = [
+    VLMName.OVIS_2_1B,
+    VLMName.OVIS_2_2B,
+    VLMName.OVIS_2_4B,
+    VLMName.OVIS_2_8B,
+]
+
 VLMS_WITH_FAST_PROCESSOR = [
-    VLMName.QWEN_2p5_VL_3B,
-    VLMName.QWEN_2p5_VL_7B,
     VLMName.LLAVA_ONEVISION_0p5B,
 ]
+VLMS_WITH_FAST_PROCESSOR.extend(QWEN_VLMS)
+VLMS_WITH_FAST_PROCESSOR.extend(INTERN_VLMS)
 
 MODEL_NAMES = [
     "HuggingFaceTB/SmolVLM-256M-Instruct",
@@ -48,8 +68,15 @@ MODEL_NAMES = [
     "meta-llama/Llama-3.2-11B-Vision-Instruct",
     "microsoft/Phi-3.5-vision-instruct",
     "google/gemma-3-4b-it",
-    "google/gemma-3-12b-it"
-    ]
+    "google/gemma-3-12b-it",
+    "OpenGVLab/InternVL3-1B-hf",
+    "OpenGVLab/InternVL3-2B-hf",
+    "OpenGVLab/InternVL3-8B-hf",
+    "AIDC-AI/Ovis2-1B",
+    "AIDC-AI/Ovis2-2B",
+    "AIDC-AI/Ovis2-4B",
+    "AIDC-AI/Ovis2-8B",
+]
 
 
 
@@ -63,20 +90,24 @@ class VLM:
         self.device = device
 
         quantization_config = BitsAndBytesConfig(load_in_4bit=True) if quantize else None
-
-        self.model = AutoModelForVision2Seq.from_pretrained(
-            model_name, 
-            torch_dtype=torch.float32 if device == "mps" else "auto",
-            quantization_config=quantization_config).to(device)
+        torch_dtype = torch.float32 if device == "mps" else "auto"
+        
+        if model_name in INTERN_VLMS:
+            self.model = AutoModelForImageTextToText.from_pretrained(model_name, torch_dtype=torch_dtype, quantization_config=quantization_config).to(device)
+        else:
+            self.model = AutoModelForVision2Seq.from_pretrained(model_name, torch_dtype=torch_dtype, quantization_config=quantization_config).to(device)
         # potentially use: _attn_implementation="flash_attention_2" if device == "cuda" else "eager",
         
         self.tokenizer = None
         
         self.processor = AutoProcessor.from_pretrained(model_name, use_fast=True)
-        
+            
         self.processor.image_processor.do_image_splitting = False
         if self.processor.image_processor.resample == 1: 
             self.processor.image_processor.resample = 3 # change from LANCZOS (1) to BICUBIC (3) since the former has no pytorch implementation
+
+        if model_name in INTERN_VLMS:
+            self.processor.image_processor.min_patches, self.processor.image_processor.max_patches = 0, 0
         
         self.model.requires_grad_(False)
         self.model.eval()
@@ -195,3 +226,10 @@ class VLM:
         for i in range(len(retrieved_images)):
             topk_images_pt[i][adv_indices[i]] = adv_image
         return topk_images_pt
+    
+    def get_vlm_assistant_delimiter(self,):
+        if self.name in SMOL_VLMS:
+            return "Assistant:"
+        else:
+            # valid for Qwen2.5, InternVL3
+            return "assistant\n"

@@ -42,14 +42,10 @@ configstore.store(
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
             embedder_list=[EmbedderName.CLIP_BASE_PATCH16],
-            vlm_list=[VLMName.SMOLVLM_1_256M],
+            vlm_list=[VLMName.INTERNVL_3_1B],
             gen_topk_list=[1],
-            is_targeted=True,
-            target_query_idx=[2],
-            n_knn_target_queries=5,
             print_every=2,
-            n_gradient_steps=25,
-            optimize_nontargeted_queries_list=[True,False]
+            n_gradient_steps=50,
         ),
         eval=ExperimentEvalConfig(
             gen_topk_list=[-1],
