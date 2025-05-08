@@ -99,7 +99,7 @@ class Dataset:
         By default, we use the test dataset
         """
 
-        split_str_vlm = "Assistant:" if vlm.name in SMOL_VLMS else "assistant\n"
+        split_str_vlm = vlm.get_vlm_assistant_delimiter()
         queries = self.queries_train if eval_train else self.queries_test
         metric_dict = defaultdict(dict)
         generation_vlm_dict = {}
@@ -179,7 +179,7 @@ class Dataset:
             eval_train=False,
             print_gen=False,
     ):
-        split_str_jdg = "Assistant:" if judge.name in SMOL_VLMS else "assistant\n"
+        split_str_jdg = judge.get_vlm_assistant_delimiter()
         queries = self.queries_train if eval_train else self.queries_test
         split = "train" if eval_train else "test"
         metric_dict = defaultdict(dict)

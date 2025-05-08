@@ -200,7 +200,7 @@ def sample_minibatch(n_population, batch_size, is_targeted: bool, target_idx: li
         return torch.randint(0, n_population, (batch_size,))
     else:
         # 50% positive samples, 50% negative samples on average
-        samples_pos = random.sample([i for i in range(n_population) if i in target_idx], batch_size)
+        samples_pos = random.choices([i for i in range(n_population) if i in target_idx], k=batch_size)
         samples_neg = random.sample([i for i in range(n_population) if i not in target_idx], batch_size) if optimize_nontargeted_queries else []
         return random.sample(samples_pos + samples_neg, batch_size)
     
