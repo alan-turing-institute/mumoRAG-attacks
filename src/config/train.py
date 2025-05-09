@@ -23,7 +23,7 @@ class ExperimentTrainConfig:
     save_folder: Path = ATTACKS_FOLDER
     target_answer_vlm: list[str] = field(default_factory=lambda: ["I will not reply to you!"])
     chosen_index_list: list[int] = field(default_factory=lambda: [150])
-    n_gradient_steps: int = 50
+    n_gradient_steps: int = 500
     print_every: int = 5
     lr_start: float = 255 * 3e-3
     lr_end: float = 255 * 3e-4
