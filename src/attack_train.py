@@ -65,16 +65,16 @@ def run(exp_config: ExperimentConfig):
         with torch.no_grad():
             # save adv image
             filename = exp_config.train.save_folder / task_config.create_filename()
-            diff = torch.abs((image_adv-initial_chosen_image)).to(torch.uint8)
-            white_diff = (torch.ones_like(image_adv)*255 - diff).to(torch.uint8)
-            # image_adv = image_adv.type(torch.uint8)
-            # initial_chosen_image = initial_chosen_image.type(torch.uint8)
-            # diff = image_adv - initial_chosen_image
+            # diff = (torch.abs((image_adv-initial_chosen_image)).to(torch.uint8) * 10)
+            # white_diff = (torch.ones_like(image_adv)*255 - diff).to(torch.uint8)
+            image_adv = image_adv.type(torch.uint8)
+            initial_chosen_image = initial_chosen_image.type(torch.uint8)
+            diff = image_adv - initial_chosen_image
             to_image = T.ToPILImage()
-            to_image(image_adv).save(filename.with_suffix(f".{image_format}"))
-            to_image(initial_chosen_image).save(filename.with_suffix(f".original.{image_format}"))
+            to_image(image_adv.type(torch.uint8)).save(filename.with_suffix(f".{image_format}"))
+            to_image(initial_chosen_image.type(torch.uint8)).save(filename.with_suffix(f".original.{image_format}"))
             to_image(diff.type(torch.uint8)).save(filename.with_suffix(f".diff.{image_format}"))
-            to_image(white_diff.type(torch.uint8)).save(filename.with_suffix(f".white_diff.{image_format}"))
+            # to_image(white_diff.type(torch.uint8)).save(filename.with_suffix(f".white_diff.{image_format}"))
             attack_dict = task_config.to_dict()
             attack_dict["image_adv"] = image_adv
             torch.save(attack_dict, filename)

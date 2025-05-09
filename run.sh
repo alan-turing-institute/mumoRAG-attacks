@@ -2,15 +2,17 @@
 
 # Define your experiments
 exps=(
-    "order_in_topk"
-    "targeted_attacks"
+    "mask_attack"
+    "targeted_attacks_oneQ_oneA"
+    "targeted_attacks_multiQ_oneA"
+    "targeted_attacks_multiQ_multiA"
     "judge_defence"
     "topk_context"
-    "copali_ab"
     "perturbation_plot"
-    "heatmap_plot"
+    "perturbation_plot_targeted"
+    "copali_ab"
+    "copali_ab_cpoiT"
     "transferability"
-    "display_images"
 )
 
 # Loop through each config
