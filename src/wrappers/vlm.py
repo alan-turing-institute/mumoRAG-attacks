@@ -5,6 +5,10 @@ from transformers import AutoProcessor, AutoModelForVision2Seq, BitsAndBytesConf
 
 from utils.image_utils import process_image
 
+class VLMEvaluationMetric(StrEnum):
+    ASR_EXACT = "exact-asr"
+    EMBED_ADV = "embed-adversarial"
+    EMBED_GT = "embed-ground-truth"
 
 # candidate models
 class VLMName(StrEnum):

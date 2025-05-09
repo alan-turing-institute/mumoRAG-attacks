@@ -45,7 +45,7 @@ configstore.store(
             vlm_list=[VLMName.QWEN_2p5_VL_3B],
             gen_topk_list=[1],
             print_every=2,
-            n_gradient_steps=50,
+            n_gradient_steps=4,
         ),
         eval=ExperimentEvalConfig(
             gen_topk_list=[-1],

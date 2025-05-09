@@ -18,6 +18,7 @@ from utils.attack import get_all_target_queries_and_answers
 from wrappers.cache import get_vlm, get_text_embedder, get_dataset, get_embedded_dataset, get_judge
 from wrappers.embedding import is_loss_compatible
 from wrappers.json_encoder import EnumEncoder
+from wrappers.vlm import VLMEvaluationMetric
 
 
 def get_retrieval_saved_info(exp_config_eval: ExperimentEvalConfig, metric_dict_before, metric_dict_after):
@@ -52,7 +53,7 @@ def run(exp_config: ExperimentConfig):
         _ = load_adv_image(task_config, exp_config.train)
 
     # load text embedding model in case we need it for evaluation
-    if "embed" in exp_config.eval.gen_metric_list:
+    if VLMEvaluationMetric.EMBED_ADV in exp_config.eval.gen_metric_list or VLMEvaluationMetric.EMBED_GT in exp_config.eval.gen_text_embedder:
         text_embedder = get_text_embedder(exp_config.eval.gen_text_embedder, device=device)
     else:
         get_text_embedder.cache_clear()
