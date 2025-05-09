@@ -13,7 +13,7 @@ from tqdm import tqdm
 from utils.logger import logger
 from wrappers.text_embedding import TextEmbeddingModel
 from wrappers.judge import JudgeVLM, JudgeMetric, METRIC_2_PROMPT
-from wrappers.vlm import VLM, SMOL_VLMS
+from wrappers.vlm import VLM, VLMEvaluationMetric
 
 
 class DatasetName(StrEnum):
@@ -101,12 +101,12 @@ class Dataset:
 
         split_str_vlm = vlm.get_vlm_assistant_delimiter()
         queries = self.queries_train if eval_train else self.queries_test
+        ground_truth_answers = self.ground_truth_answers_train if eval_train else self.ground_truth_answers_test
+        split = "train" if eval_train else "test"
         metric_dict = defaultdict(dict)
         generation_vlm_dict = {}
 
         for generation_topk in generation_topk_list:
-
-            split = "train" if eval_train else "test"
 
             retrieved_images, adv_indices = self.retrieved_idx_to_img(
                 retrieved_indices=retrievals[list(retrievals.keys())[0]], topk=generation_topk)
@@ -140,28 +140,21 @@ class Dataset:
 
                 if print_gen: logger.info(generations_vlm)
 
-                if "exact" in metrics:
-                    
-                    # exact match of VLM generation and target answer
-                    correct_generations = [g == target_generation[i] for i,g in enumerate(generations_vlm)]
-                    adversarial_generations = [g in adv_target_generations for g in generations_vlm]
-                    metric_dict[keyname]["exact"] = {"asr_universal": sum(correct_generations) / len(queries)}
-                    # targeted attack metrics
-                    if is_targeted:
-                        metric_dict[keyname]["exact"].update(self.compute_targeted_metrics(correct_generations, target_query_idx, split, adversarial_generations))
-
-                if "embed" in metrics:
-                    # similarity score between VLM generation and target answer in [0,1]
-                    similarity = text_embedder.compare_embeddings(generations_vlm, target_generation, similarity_metric="cos")
-                    similarity_to_target = torch.diag(similarity)
-                    
-                    metric_dict[keyname]["embed"] = {"asr_universal": similarity_to_target.mean().item()}
-                    # targeted attack metrics
-                    if is_targeted:
-                        similarity = text_embedder.compare_embeddings(generations_vlm, adv_target_generations, similarity_metric="cos")
-                        similarity_to_adv = similarity.max(dim=1).values
-                        metric_dict[keyname]["embed"].update(self.compute_targeted_metrics(similarity_to_target.flatten().tolist(), target_query_idx, split, similarity_to_adv.flatten().tolist()))
-
+                for metric in metrics:
+                    metric_dict[keyname].update(
+                        self.compute_generation_metric(
+                            metric,
+                            generations_vlm,
+                            target_generation,
+                            adv_target_generations,
+                            ground_truth_answers,
+                            is_targeted,
+                            target_query_idx,
+                            text_embedder,
+                            split,
+                        )
+                    )
+                
         return metric_dict, generation_vlm_dict
 
     def evaluate_using_judge(
@@ -181,6 +174,7 @@ class Dataset:
     ):
         split_str_jdg = judge.get_vlm_assistant_delimiter()
         queries = self.queries_train if eval_train else self.queries_test
+        ground_truth_answers = self.ground_truth_answers_train if eval_train else self.ground_truth_answers_test
         split = "train" if eval_train else "test"
         metric_dict = defaultdict(dict)
         generation_jdg_dict = defaultdict(dict)
@@ -233,6 +227,38 @@ class Dataset:
 
         return metric_dict, generation_jdg_dict
 
+    def compute_generation_metric(self, metric, generations_vlm, target_generation, adv_target_generations, ground_truth_answers, is_targeted, target_query_idx, text_embedder, split):
+        metric_subdict = {}
+        match metric:
+            case VLMEvaluationMetric.ASR_EXACT:
+                # exact match of VLM generation and target answer
+                correct_generations = [g == target_generation[i] for i,g in enumerate(generations_vlm)]
+                adversarial_generations = [g in adv_target_generations for g in generations_vlm]
+                metric_subdict[metric] = {"asr_universal": sum(correct_generations) / len(generations_vlm)}
+                # targeted attack metrics
+                if is_targeted:
+                    metric_subdict[metric].update(self.compute_targeted_metrics(correct_generations, target_query_idx, split, adversarial_generations))
+
+            case VLMEvaluationMetric.EMBED_ADV:
+                # similarity score between VLM generation and target answer in [-1,1]
+                similarity = text_embedder.compare_embeddings(generations_vlm, target_generation, similarity_metric="cos")
+                similarity_to_target = torch.diag(similarity)
+                metric_subdict[metric] = {"asr_universal": similarity_to_target.mean().item()}
+                # targeted attack metrics
+                if is_targeted:
+                    similarity = text_embedder.compare_embeddings(generations_vlm, adv_target_generations, similarity_metric="cos")
+                    similarity_to_adv = similarity.max(dim=1).values
+                    metric_subdict[metric].update(self.compute_targeted_metrics(similarity_to_target.flatten().tolist(), target_query_idx, split, similarity_to_adv.flatten().tolist()))
+
+            case VLMEvaluationMetric.EMBED_GT:
+                # similarity score between VLM generation and ground truth answer in [-1,1]
+                similarity = text_embedder.compare_embeddings(generations_vlm, ground_truth_answers, similarity_metric="cos")
+                similarity_to_gt = torch.diag(similarity)
+                metric_subdict[metric] = {"accuracy": similarity_to_gt.mean().item()}
+        
+        return metric_subdict
+
+    
     def extract_judge_scores(self, generations_jdg) -> list[bool]:
         return [("YES" in g) and not ("NO" in g) for g in generations_jdg]
 
