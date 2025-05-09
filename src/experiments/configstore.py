@@ -16,7 +16,7 @@ from wrappers.vlm import VLMName
 from wrappers.dataset import DatasetName
 
 
-DEFAULT_EXPERIMENT = "testing"
+DEFAULT_EXPERIMENT = "dev"
 
 configstore = ConfigStore.instance()
 
@@ -35,6 +35,25 @@ def get_config_name() -> str:
 
 
 """
+Development Configuration (default)
+"""
+configstore.store(
+    name="dev",
+    node=ExperimentConfig(
+        train=ExperimentTrainConfig(
+            embedder_list=[EmbedderName.CLIP_BASE_PATCH16],
+            vlm_list=[VLMName.INTERNVL_3_1B],
+            gen_topk_list=[1],
+            print_every=2,
+            n_gradient_steps=50,
+        ),
+        eval=ExperimentEvalConfig(
+            gen_topk_list=[-1],
+        )
+    ),
+)
+
+"""
 testing Configuration
 """
 configstore.store(
@@ -48,7 +67,7 @@ configstore.store(
             target_query_idx=[2],
             n_knn_target_queries=5,
             print_every=2,
-            n_gradient_steps=25,
+            n_gradient_steps=10,
             optimize_nontargeted_queries_list=[True,False]
         ),
         eval=ExperimentEvalConfig(
