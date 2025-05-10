@@ -15,6 +15,7 @@ from wrappers.embedding import EmbedderName, EmbeddingLoss
 from wrappers.judge import JudgeMetric
 from wrappers.vlm import VLMName
 from wrappers.dataset import DatasetName
+from utils.defence import DefenceName
 
 
 DEFAULT_EXPERIMENT = "dev"
@@ -42,13 +43,14 @@ configstore.store(
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
             embedder_list=[EmbedderName.CLIP_BASE_PATCH16],
-            vlm_list=[VLMName.QWEN_2p5_VL_3B],
+            vlm_list=[VLMName.SMOLVLM_1_256M],
             gen_topk_list=[1],
             print_every=2,
-            n_gradient_steps=4,
+            n_gradient_steps=50,
         ),
         eval=ExperimentEvalConfig(
             gen_topk_list=[-1],
+            defences_list=[DefenceName.PARAPHRASE, DefenceName.NONE],
         )
     ),
 )

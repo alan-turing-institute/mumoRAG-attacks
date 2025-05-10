@@ -8,7 +8,7 @@ from omegaconf import OmegaConf
 
 from config.eval import ExperimentEvalConfig
 from config.experiment import ExperimentConfig
-from config.task import get_transferability_file_suffix, generate_task_configs
+from config.task import get_transferability_file_suffix, generate_task_configs, get_defence_file_suffix
 from experiments import DEFAULT_EXPERIMENT
 from experiments.configstore import get_config_name
 from utils.image_utils import load_adv_image
@@ -73,6 +73,7 @@ def run(exp_config: ExperimentConfig):
 
         vlm = get_vlm(model_name_vlm, device)
         ds = get_dataset(task_config.ds_name)
+        ds.use_original_or_paraphrased_queries(task_config.defence)
 
         # update target queries and answers in case the attack is targeted
         all_target_query_idx, all_adv_target_answers_vlm, all_answers_vlm = get_all_target_queries_and_answers(
@@ -210,7 +211,7 @@ def run(exp_config: ExperimentConfig):
 
         results_filename = (
             exp_config.eval.results_folder
-            / f"metrics_{get_config_name()}_{task_config.create_hash_string()}{get_transferability_file_suffix(task_config.eval_emb_name, task_config.eval_vlm_name, task_config.eval_jdg_name)}.json"
+            / f"metrics_{get_config_name()}_{task_config.create_hash_string()}{get_transferability_file_suffix(task_config.eval_emb_name, task_config.eval_vlm_name, task_config.eval_jdg_name)}{get_defence_file_suffix(task_config.defence)}.json"
         )
 
         with open(

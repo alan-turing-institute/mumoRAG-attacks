@@ -6,6 +6,7 @@ from wrappers.embedding import EmbedderName, EmbeddingLoss
 from wrappers.judge import JudgeMetric
 from wrappers.text_embedding import TextEmbedderName
 from wrappers.vlm import VLMName, VLMEvaluationMetric
+from utils.defence import DefenceName
 
 from . import RESULTS_FOLDER
 
@@ -24,6 +25,7 @@ class ExperimentEvalConfig:
     eval_jdg_metric_list: list[JudgeMetric] = field(default_factory=lambda: [JudgeMetric.IMAGE_CONTEXT_RELEVANCY])
     gen_topk_list: list[int] = field(default_factory=lambda: [-1])  # (-1) means we assume adversarial image always retrieved
     test_topk_order: bool = False
+    defences_list: list[DefenceName] = field(default_factory=lambda: [DefenceName.NONE])
     # following used to test transferability, None means white-box setting
     eval_emb_list: Optional[list[EmbedderName]] = None
     eval_vlm_list: Optional[list[VLMName]] = None
