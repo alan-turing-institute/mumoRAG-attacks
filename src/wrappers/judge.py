@@ -1,3 +1,5 @@
+from typing import Any
+
 from .vlm import VLM
 from strenum import StrEnum
 
@@ -85,7 +87,7 @@ METRIC_2_PROMPT = {
 
 class JudgeVLM(VLM):
 
-    def judge_prompt_components(self, template: str, query=None, answer=None, n_images=0):
+    def judge_prompt_components(self, template: str, query: object = None, answer: object = None, n_images: object = 0) -> tuple[list[dict[str, str | Any]], list[dict[str, str]], list[dict[str, str | Any]] | list[Any]]:
         template = template.replace(">>query<<", query).replace(">>answer<<", answer)
         prompt_list = template.split(">>images<<")
         before  = [{"type": "text", "text": prompt_list[0]}] 
@@ -122,8 +124,8 @@ class JudgeVLM(VLM):
         all_messages = []
         for metric in jdg_metric_list:
             template = METRIC_2_PROMPT[metric]
-            for query in queries:
-                before, contexts, after = self.judge_prompt_components(template, query, target_vlm_generation, n_images)
+            for query, target in zip(queries,target_vlm_generation):
+                before, contexts, after = self.judge_prompt_components(template, query, target, n_images)
                 messages = [
                     {
                         "role": "user",
@@ -142,6 +144,6 @@ class JudgeVLM(VLM):
                 all_messages.append(messages)
         
         prompts = self.processor.apply_chat_template(all_messages, add_generation_prompt=False)
-        target_tokens = self.get_target_tokens(target_jdg_generation)
+        target_tokens = [self.get_target_tokens(target_jdg_generation) for _ in range(len(all_messages))]
 
         return prompts, target_tokens

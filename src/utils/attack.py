@@ -101,6 +101,7 @@ def rag_attack(
         if lambda_jdg > 0: 
             samples_jdg_idx = torch.randint(0, len(train_user_queries)*len(jdg_metric_list), (batch_size_per_iter,))
             full_text_jdg_prompt_batch = [full_text_jdg_prompts[i] for i in samples_jdg_idx]
+            target_tokens_jdg_batch = [target_tokens_jdg[i] for i in samples_jdg_idx]
 
         if lambda_emb > 0:
             # retrieval loss function
@@ -117,7 +118,7 @@ def rag_attack(
         if lambda_jdg > 0:
             # judge loss function
             out = jdg.forward(raw_image, full_text_jdg_prompt_batch, context_images, adv_indices, overwrite=True)
-            loss_jdg = jdg.compute_gen_loss(out, target_tokens_jdg)
+            loss_jdg = jdg.compute_gen_loss(out, target_tokens_jdg_batch)
 
         # update loss coefficients if we use the adaptive attack
         if i==0 and is_adaptive and lambda_emb>0 and lambda_vlm>0:
