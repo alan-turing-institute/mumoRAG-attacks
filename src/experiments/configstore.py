@@ -50,7 +50,8 @@ configstore.store(
         ),
         eval=ExperimentEvalConfig(
             gen_topk_list=[-1],
-            defences_list=[DefenceName.PARAPHRASE, DefenceName.NONE],
+            defences_list=[DefenceName.NOISE, DefenceName.PARAPHRASE, DefenceName.NONE],
+            noise_defence_level=4.0,
         )
     ),
 )

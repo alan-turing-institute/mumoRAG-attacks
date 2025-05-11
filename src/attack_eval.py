@@ -3,7 +3,6 @@ from typing import Any
 from pprint import pformat
 
 import hydra
-import torchvision.transforms.v2 as T
 from omegaconf import OmegaConf
 
 from config.eval import ExperimentEvalConfig
@@ -15,6 +14,7 @@ from utils.image_utils import load_adv_image
 from utils.logger import logger
 from utils.utils import get_device
 from utils.attack import get_all_target_queries_and_answers
+from utils.defence import DefenceName, add_noise
 from wrappers.cache import get_vlm, get_text_embedder, get_dataset, get_embedded_dataset, get_judge
 from wrappers.embedding import is_loss_compatible
 from wrappers.json_encoder import EnumEncoder
@@ -65,6 +65,7 @@ def run(exp_config: ExperimentConfig):
 
         logger.info(f"Eval {(i + 1):4d}/{n_evals}, task_config -> {pformat(task_config.to_dict(), indent=4)}\n{'=' * 20}")
         image_adv = load_adv_image(task_config, exp_config.train)
+        if task_config.defence == DefenceName.NOISE: image_adv = add_noise(image_adv, exp_config.eval.noise_defence_level)
 
         # update model names in case we test transferability
         model_name_emb = task_config.eval_emb_name if task_config.eval_emb_name else task_config.model_name_emb
@@ -100,7 +101,7 @@ def run(exp_config: ExperimentConfig):
                 colpali_only_images=exp_config.train.colpali_only_images,
                 device=device,
             )
-            embedded_ds.add_adv_image(T.ToPILImage()(image_adv / 255))
+            embedded_ds.add_adv_image(image_adv)
             # remove incompatible losses
             emb_test_loss_type_list_compatible = [loss for loss in exp_config.eval.emb_test_loss_type_list if is_loss_compatible(model_name_emb, loss)]
             metric_dict_before, retrievals_before = embedded_ds.evaluate_retrieval(
