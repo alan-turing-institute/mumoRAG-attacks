@@ -89,16 +89,21 @@ class EmbeddedDataset:
         """
         creates a [num_queries x num_images] tensor of scores/losses
         """
+
         if self.embedder.name in COLPALI_MODELS and loss_type != EmbeddingLoss.COS_AVGEMB:
             return -1 * score_multi_vector_modified(qs=self.query_embeddings, ps=self.image_embeddings, loss=loss_type)
 
         if loss_type == EmbeddingLoss.COS_AVGEMB:
-            img_embs = self.image_embeddings.mean(dim=1).unsqueeze(0).repeat(len(self.dataset.queries), 1, 1)
-            txt_embs = self.query_embeddings.mean(dim=1).unsqueeze(1).repeat(1, len(self.dataset.images), 1)
+            img_emb_avg = self.image_embeddings.mean(dim=1)
+            txt_emb_avg = self.query_embeddings.mean(dim=1)
+
+            img_embs = img_emb_avg.unsqueeze(0).repeat(txt_emb_avg.shape[0], 1, 1)
+            txt_embs = txt_emb_avg.unsqueeze(1).repeat(1, img_embs.shape[1], 1)
+
             return 1 - torch.nn.functional.cosine_similarity(img_embs, txt_embs, dim=-1)
 
-        img_embs = self.image_embeddings.unsqueeze(0).repeat(len(self.dataset.queries), 1, 1)
-        txt_embs = self.query_embeddings.unsqueeze(1).repeat(1, len(self.dataset.images), 1)
+        img_embs = self.image_embeddings.unsqueeze(0).repeat(self.query_embeddings.shape[0], 1, 1)
+        txt_embs = self.query_embeddings.unsqueeze(1).repeat(1, self.image_embeddings.shape[1], 1)
 
         match loss_type:
             case EmbeddingLoss.MSE:
