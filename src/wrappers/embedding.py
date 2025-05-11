@@ -50,6 +50,7 @@ class EmbeddingLoss(StrEnum):
     AVGSIM = "avgsim"
     SOFTMAXSIM = "softmaxsim"
     COS_AVGEMB = "cos_avgemb"
+    DEFAULT = "default"  # call get_default_loss
 
 
 COLPALI_LOSSES = [
@@ -67,6 +68,12 @@ QWEN2_MODELS = [
     EmbedderName.QWEN2_GME_2B,
     EmbedderName.QWEN2_GME_7B,
 ]
+
+
+def get_default_loss(model_name: EmbedderName) -> EmbeddingLoss:
+    if model_name in COLPALI_MODELS:
+        return EmbeddingLoss.MAXSIM
+    return EmbeddingLoss.COS
 
 
 def is_loss_compatible(model_name_emb: EmbedderName, loss: EmbeddingLoss) -> bool:
@@ -132,7 +139,6 @@ class EmbeddingModel:
         #     self.tokenizer = None
         else:
             raise ValueError(f"Unknown model {model_name}")
-
         self.model.requires_grad_(False)
         self.model.eval()
 
@@ -178,6 +184,11 @@ class EmbeddingModel:
             batch_queries = self.processor.process_queries(user_query).to(self.device)
             user_query_embedding = self.model(**batch_queries)
             return user_query_embedding
+
+        # if self.name in QWEN2_MODELS:
+        #     batch_queries = self.processor(text=user_query).to(self.device)
+        #     user_query_embedding = self.model(**batch_queries)
+        #     return user_query_embedding
 
         raise ValueError(f"Not supported model {self.name}!")
 

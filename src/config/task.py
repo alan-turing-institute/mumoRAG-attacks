@@ -1,7 +1,7 @@
 import hashlib
 from dataclasses import dataclass, asdict
 from itertools import product
-from typing import Optional
+from typing import Optional, Any
 
 from experiments.configstore import get_config_name
 from utils.logger import logger
@@ -22,7 +22,7 @@ class TaskConfig:
     """
 
     ds_name: DatasetName
-    model_name_emb: EmbedderName
+    model_name_embs: list[EmbedderName]
     model_name_vlm: VLMName
     target_answer_vlm: list[str]
     chosen_index: int
@@ -64,14 +64,14 @@ class TaskConfig:
         )
         target_answer_str = ",".join(self.target_answer_vlm)
 
-        config_str = f"{self.model_name_emb}{self.model_name_vlm}{self.ds_name}{self.chosen_index}{target_answer_str}{self.max_perturbation}{self.emb_train_loss_type}{self.is_adaptive}{self.gen_topk}{self.kb_compromised_fraction}{target_str}{self.attack_mask}"
+        config_str = f"{self.model_name_embs}{self.model_name_vlm}{self.ds_name}{self.chosen_index}{target_answer_str}{self.max_perturbation}{self.emb_train_loss_type}{self.is_adaptive}{self.gen_topk}{self.kb_compromised_fraction}{target_str}{self.attack_mask}"
 
         if self.is_adaptive:
             config_str += f"{float(self.lambda_constant)}"
         else:
             config_str += f"{float(self.lambda_emb)}{float(self.lambda_vlm)}"
 
-        if self.model_name_emb in COLPALI_MODELS and self.colpali_only_images:
+        if any([model_name in COLPALI_MODELS for model_name in self.model_name_embs]) and self.colpali_only_images:
             config_str += f"{self.colpali_only_images}"
 
         if self.lambda_jdg > 0:
@@ -119,7 +119,7 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
     for params in parameter_collection:
         (
             ds_name,
-            model_name_emb,
+            model_name_embs,
             model_name_vlm,
             model_name_jdg,
             max_perturbation,
@@ -134,19 +134,24 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
             eval_jdg_name,
         ) = params
 
+        if isinstance(model_name_embs, list):
+            if emb_train_loss_type != EmbeddingLoss.DEFAULT:
+                raise ValueError("Multi-embedder tasks do not support choosing non-default loss type.")
+        else:
+            if not is_loss_compatible(model_name_embs, emb_train_loss_type):
+                logger.warn(f"Loss {emb_train_loss_type} not compatible with {model_name_embs}; skipping task config")
+                continue
+            model_name_embs = [model_name_embs]
+
         if len(exp_config.train.target_answer_vlm) not in [1, len(exp_config.train.target_query_idx)]:
             raise ValueError(
                 f"VLM target answers array has incompatible length ({len(exp_config.train.target_answer_vlm)}) with target queries ({len(exp_config.train.target_query_idx)})"
             )
 
-        if not is_loss_compatible(model_name_emb, emb_train_loss_type):
-            logger.warn(f"Loss {emb_train_loss_type} not compatible with {model_name_emb}; skipping task config")
-            continue
-
         attack_configs.append(
             TaskConfig(
                 ds_name=ds_name,
-                model_name_emb=model_name_emb,
+                model_name_embs=model_name_embs,
                 model_name_vlm=model_name_vlm,
                 target_answer_vlm=exp_config.train.target_answer_vlm,
                 chosen_index=chosen_index,

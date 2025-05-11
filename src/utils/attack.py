@@ -6,7 +6,7 @@ import torchvision.transforms.v2 as T
 from config.task import TaskConfig
 from wrappers.attack_mask import get_attack_mask
 from wrappers.cache import get_text_embedder, get_embedder
-from wrappers.embedding import EmbeddingModel, EmbedderName, COLPALI_LOSSES
+from wrappers.embedding import EmbeddingModel, EmbedderName, COLPALI_LOSSES, EmbeddingLoss, get_default_loss
 from wrappers.judge import JudgeVLM
 from wrappers.text_embedding import TextEmbedderName
 from wrappers.vlm import VLM
@@ -17,7 +17,7 @@ from .utils import get_memory_consumption
 
 def rag_attack(
         raw_image: torch.tensor,
-        embedder: EmbeddingModel,
+        embedders: list[EmbeddingModel],
         vlm: VLM,
         jdg: JudgeVLM,
         train_user_queries: list[str],
@@ -49,7 +49,6 @@ def rag_attack(
     gradient_acc_steps = config.gradient_acc_steps
     lambda_emb = config.lambda_emb
     lambda_vlm = config.lambda_vlm
-    emb_loss_type = config.emb_train_loss_type
     is_adaptive = config.is_adaptive
     lambda_constant = config.lambda_constant
     gen_topk = config.gen_topk
@@ -66,50 +65,70 @@ def rag_attack(
     max_perturbation_pixels = max_perturbation*255
     batch_size_per_iter = min(len(train_user_queries), max_batch_size_per_iter)
     n_iter = n_gradient_steps * gradient_acc_steps
-    target_query_idx, _, all_answers_vlm = get_all_target_queries_and_answers(is_targeted, target_query_idx, target_answer_vlm, train_user_queries, n_knn_target_queries, train_ground_truth_vlm_answers, embedder.name, emb_loss_type, device)
+    embedder_info = dict()
+    for embedder in embedders:
+        if config.emb_train_loss_type == EmbeddingLoss.DEFAULT:
+            emb_loss_type = get_default_loss(embedder.name)
+        else:
+            emb_loss_type = config.emb_train_loss_type
+        target_query_idx, _, all_answers_vlm = get_all_target_queries_and_answers(is_targeted, target_query_idx, target_answer_vlm, train_user_queries, n_knn_target_queries, train_ground_truth_vlm_answers, embedder.name, emb_loss_type, device)
+        embedder_info[embedder.name] = {
+            "target_query_idx": target_query_idx,
+        }
 
-    # pre-computing embeddings and prompts for all data 
-    if lambda_emb > 0: 
-        user_query_embedding = embedder.compute_txt_embedding(train_user_queries)
-    if lambda_vlm > 0: 
-        full_text_vlm_prompts, target_tokens_vlm = vlm.get_training_prompts(train_user_queries, all_answers_vlm, gen_topk)
-    if lambda_jdg > 0: 
-        full_text_jdg_prompts, target_tokens_jdg = jdg.get_training_prompts(train_user_queries, all_answers_vlm, target_answer_jdg, jdg_metric_list, gen_topk)
+        # pre-computing embeddings and prompts for all data
+        if lambda_emb > 0:
+            embedder_info[embedder.name]["user_query_embedding"] = embedder.compute_txt_embedding(train_user_queries)
+        if lambda_vlm > 0:
+            full_text_vlm_prompts, target_tokens_vlm = vlm.get_training_prompts(train_user_queries, all_answers_vlm, gen_topk)
+            embedder_info[embedder.name]["full_text_vlm_prompts"] = full_text_vlm_prompts
+            embedder_info[embedder.name]["target_tokens_vlm"] = target_tokens_vlm
+        if lambda_jdg > 0:
+            full_text_jdg_prompts, target_tokens_jdg = jdg.get_training_prompts(train_user_queries, all_answers_vlm, target_answer_jdg, jdg_metric_list, gen_topk)
+            embedder_info[embedder.name]["full_text_jdg_prompts"] = full_text_jdg_prompts
+            embedder_info[embedder.name]["target_tokens_jdg"] = target_tokens_jdg
 
-
-    # initial values for loss
-    loss_emb, loss_vlm, loss_jdg = torch.tensor([0]).to(device), torch.tensor([0]).to(device), torch.tensor([0]).to(device)
     grads = torch.zeros_like(raw_image)
 
-    # attack iterations
     for i in range(n_iter):
-
-        # ensure that raw_image requires grad
         raw_image.requires_grad = True
 
-        # sample minibatch
-        samples_idx = sample_minibatch(n_population=len(train_user_queries), batch_size=batch_size_per_iter, is_targeted=is_targeted, target_idx=target_query_idx, optimize_nontargeted_queries=optimize_nontargeted_queries)
-        positive_idx = [i for i in range(len(samples_idx)) if samples_idx[i] in target_query_idx]
-        if lambda_emb > 0:
-            user_query_embedding_batch = user_query_embedding[samples_idx,:]
-            # retrieval loss function
-            image_embedding = embedder.compute_img_embedding(raw_image, initial_image, overwrite=True)
-            loss_emb = embedder.compute_embedding_loss(image_embedding, user_query_embedding_batch, emb_loss_type, is_targeted, positive_idx)
+        loss_emb, loss_vlm, loss_jdg = torch.tensor([0.]).to(device), torch.tensor([0.]).to(device), torch.tensor([0.]).to(device)
+        for embedder in embedders:
+            target_query_idx = embedder_info[embedder.name]["target_query_idx"]
 
-        if lambda_vlm > 0: 
-            full_text_vlm_prompt_batch = [full_text_vlm_prompts[i] for i in samples_idx]
-            target_tokens_vlm_batch = [target_tokens_vlm[i] for i in samples_idx]
-            # generation loss function
-            context_images, adv_indices = prepare_context_images(attack_images, T.ToPILImage()(raw_image), batch_size_per_iter, config.gen_topk)
-            out = vlm.forward(raw_image, full_text_vlm_prompt_batch, context_images, adv_indices, overwrite=True)
-            loss_vlm = vlm.compute_gen_loss(out, target_tokens_vlm_batch, positive_idx)
+            samples_idx = sample_minibatch(
+                n_population=len(train_user_queries),
+                batch_size=batch_size_per_iter,
+                is_targeted=is_targeted,
+                target_idx=target_query_idx,
+                optimize_nontargeted_queries=optimize_nontargeted_queries,
+            )
+            positive_idx = [i for i in range(len(samples_idx)) if samples_idx[i] in target_query_idx]
 
-            if lambda_jdg > 0:
-                samples_jdg_idx = torch.randint(0, len(train_user_queries)*len(jdg_metric_list), (batch_size_per_iter,))
-                full_text_jdg_prompt_batch = [full_text_jdg_prompts[i] for i in samples_jdg_idx]
-                # judge loss function
-                out = jdg.forward(raw_image, full_text_jdg_prompt_batch, context_images, adv_indices, overwrite=True)
-                loss_jdg = jdg.compute_gen_loss(out, target_tokens_jdg)
+            if lambda_emb > 0:
+                # retrieval loss function
+                user_query_embedding_batch = embedder_info[embedder.name]["user_query_embedding"][samples_idx, :]
+                image_embedding = embedder.compute_img_embedding(raw_image, initial_image, overwrite=True)
+                loss_emb += embedder.compute_embedding_loss(image_embedding, user_query_embedding_batch, emb_loss_type, is_targeted, positive_idx)
+
+            if lambda_vlm > 0:
+                full_text_vlm_prompts = embedder_info[embedder.name]["full_text_vlm_prompts"]
+                full_text_vlm_prompt_batch = [full_text_vlm_prompts[i] for i in samples_idx]
+                target_tokens_vlm = embedder_info[embedder.name]["target_tokens_vlm"]
+                target_tokens_vlm_batch = [target_tokens_vlm[i] for i in samples_idx]
+                # generation loss function
+                context_images, adv_indices = prepare_context_images(attack_images, T.ToPILImage()(raw_image), batch_size_per_iter, config.gen_topk)
+                out = vlm.forward(raw_image, full_text_vlm_prompt_batch, context_images, adv_indices, overwrite=True)
+                loss_vlm += vlm.compute_gen_loss(out, target_tokens_vlm_batch, positive_idx)
+                if lambda_jdg > 0:
+                    full_text_jdg_prompts = embedder_info[embedder.name]["full_text_jdg_prompts"]
+                    samples_jdg_idx = torch.randint(0, len(train_user_queries)*len(jdg_metric_list), (batch_size_per_iter,))
+                    full_text_jdg_prompt_batch = [full_text_jdg_prompts[i] for i in samples_jdg_idx]
+                    # judge loss function
+                    out = jdg.forward(raw_image, full_text_jdg_prompt_batch, context_images, adv_indices, overwrite=True)
+                    target_tokens_jdg=embedder_info[embedder.name]["target_tokens_jdg"]
+                    loss_jdg += jdg.compute_gen_loss(out, target_tokens_jdg)
 
         # update loss coefficients if we use the adaptive attack
         if i==0 and is_adaptive and lambda_emb>0 and lambda_vlm>0:

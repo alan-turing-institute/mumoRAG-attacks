@@ -58,12 +58,13 @@ def run(exp_config: ExperimentConfig):
         text_embedder = None
 
     for i, task_config in enumerate(task_configs):
-
         logger.info(f"Eval {(i + 1):4d}/{n_evals}, task_config -> {pformat(task_config.to_dict(), indent=4)}\n{'=' * 20}")
         image_adv = load_adv_image(task_config, exp_config.train)
 
         # update model names in case we test transferability
-        model_name_emb = task_config.eval_emb_name if task_config.eval_emb_name else task_config.model_name_emb
+        model_name_emb = task_config.eval_emb_name if task_config.eval_emb_name else task_config.model_name_embs
+        if isinstance(model_name_emb, list):
+            raise ValueError("If trained with multiple embedders, evaluation config must specify a single embedder to test transferability")
         model_name_vlm = task_config.eval_vlm_name if task_config.eval_vlm_name else task_config.model_name_vlm
         model_name_jdg = task_config.eval_jdg_name if task_config.eval_jdg_name else task_config.model_name_jdg
 

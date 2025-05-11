@@ -25,12 +25,12 @@ def run(exp_config: ExperimentConfig):
 
         vlm = get_vlm(task_config.model_name_vlm, device)
         ds = get_dataset(task_config.ds_name)
-        embedder = get_embedder(
-            task_config.model_name_emb,
+        embedders = [get_embedder(
+            model_name,
             quantize=False,
             colpali_only_images=exp_config.train.colpali_only_images,
             device=device,
-        )
+        ) for model_name in task_config.model_name_embs]
         jdg = get_judge(task_config.model_name_jdg, device) if task_config.lambda_jdg > 0 else None
 
         attack_images = ds.sample_images_from_ds(fraction=task_config.kb_compromised_fraction)  # images included by the attacker in the VLM context (n-1 because the malicious image must be included)
@@ -46,7 +46,7 @@ def run(exp_config: ExperimentConfig):
         # train the attack
         image_adv = rag_attack(
             raw_image=chosen_image,
-            embedder=embedder,
+            embedders=embedders,
             vlm=vlm,
             jdg=jdg,
             train_user_queries=ds.queries_train,
