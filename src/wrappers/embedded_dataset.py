@@ -102,8 +102,8 @@ class EmbeddedDataset:
 
             return 1 - torch.nn.functional.cosine_similarity(img_embs, txt_embs, dim=-1)
 
-        img_embs = self.image_embeddings.unsqueeze(0).repeat(self.query_embeddings.shape[0], 1, 1)
-        txt_embs = self.query_embeddings.unsqueeze(1).repeat(1, self.image_embeddings.shape[1], 1)
+        img_embs = self.image_embeddings.unsqueeze(0).repeat(len(self.dataset.queries), 1, 1)
+        txt_embs = self.query_embeddings.unsqueeze(1).repeat(1,len(self.dataset.images), 1)
 
         match loss_type:
             case EmbeddingLoss.MSE:
