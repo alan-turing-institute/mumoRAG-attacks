@@ -70,25 +70,10 @@ QWEN2_MODELS = [
 
 
 def is_loss_compatible(model_name_emb: EmbedderName, loss: EmbeddingLoss) -> bool:
-    if (model_name_emb in COLPALI_MODELS and loss not in COLPALI_LOSSES) or (
-            model_name_emb not in COLPALI_MODELS and loss in COLPALI_LOSSES):
-        return False
-    return True
-
-
-# candidate models
-MODEL_NAMES = [
-    "openai/clip-vit-base-patch16",
-    "openai/clip-vit-large-patch14",
-    "google/siglip2-base-patch16-224",
-    "jinaai/jina-clip-v2",
-    "vidore/colSmol-256M",  # maybe not worth trying since it requires installing colpali
-    # larger models: test later
-    "royokong/e5-v",
-    "nomic-ai/nomic-embed-vision-v1.5",
-    # multimodal retrieval requires using this in conjunction with "nomic-ai/nomic-embed-text-v1.5"
-    "vidore/colpali-v1.3",
-]
+    if model_name_emb in COLPALI_MODELS:
+        return loss in COLPALI_LOSSES
+    else:
+        return loss not in COLPALI_LOSSES
 
 
 class EmbeddingModel:
@@ -107,14 +92,14 @@ class EmbeddingModel:
             self.processor = None
             self.tokenizer = None
 
-        if model_name in CLIP_LIKE_MODELS:
+        elif model_name in CLIP_LIKE_MODELS:
             self.model = AutoModel.from_pretrained(
                 model_name,
                 torch_dtype=torch.float32 if device == "mps" else "auto").to(device)
             self.processor = AutoProcessor.from_pretrained(model_name, use_fast=True)
             self.tokenizer = AutoTokenizer.from_pretrained(model_name)
 
-        if model_name == EmbedderName.E5_V:
+        elif model_name == EmbedderName.E5_V:
             self.model = AutoModelForImageTextToText.from_pretrained(model_name,
                                                                      quantization_config=quantization_config).to(device)
             self.processor = AutoProcessor.from_pretrained(model_name)
@@ -124,7 +109,7 @@ class EmbeddingModel:
             self.processor.image_processor.image_grid_pinpoints = [[336, 336]]
             self.processor.image_processor.size['shortest_edge'] = 336
 
-        if model_name == EmbedderName.COLPALI:
+        elif model_name == EmbedderName.COLPALI:
             from colpali_engine.models import ColPali, ColPaliProcessor
 
             self.model = ColPali.from_pretrained(
@@ -133,7 +118,7 @@ class EmbeddingModel:
             self.processor = ColPaliProcessor.from_pretrained(model_name)
             self.tokenizer = None
 
-        if model_name in COLSMOL_MODELS:
+        elif model_name in COLSMOL_MODELS:
             from colpali_engine.models import ColIdefics3, ColIdefics3Processor
             self.model = ColIdefics3.from_pretrained(
                 model_name,
@@ -145,6 +130,8 @@ class EmbeddingModel:
         #     self.model = AutoModel.from_pretrained("Alibaba-NLP/gme-Qwen2-VL-2B-Instruct", revision="refs/pr/10", trust_remote_code=True)
         #     self.processor = AutoProcessor.from_pretrained("Alibaba-NLP/gme-Qwen2-VL-2B-Instruct", revision="refs/pr/10", trust_remote_code=True)
         #     self.tokenizer = None
+        else:
+            raise ValueError(f"Unknown model {model_name}")
 
         self.model.requires_grad_(False)
         self.model.eval()
