@@ -70,25 +70,10 @@ QWEN2_MODELS = [
 
 
 def is_loss_compatible(model_name_emb: EmbedderName, loss: EmbeddingLoss) -> bool:
-    if (model_name_emb in COLPALI_MODELS and loss not in COLPALI_LOSSES) or (
-            model_name_emb not in COLPALI_MODELS and loss in COLPALI_LOSSES):
-        return False
-    return True
-
-
-# candidate models
-MODEL_NAMES = [
-    "openai/clip-vit-base-patch16",
-    "openai/clip-vit-large-patch14",
-    "google/siglip2-base-patch16-224",
-    "jinaai/jina-clip-v2",
-    "vidore/colSmol-256M",  # maybe not worth trying since it requires installing colpali
-    # larger models: test later
-    "royokong/e5-v",
-    "nomic-ai/nomic-embed-vision-v1.5",
-    # multimodal retrieval requires using this in conjunction with "nomic-ai/nomic-embed-text-v1.5"
-    "vidore/colpali-v1.3",
-]
+    if model_name_emb in COLPALI_MODELS:
+        return loss in COLPALI_LOSSES
+    else:
+        return loss not in COLPALI_LOSSES
 
 
 class EmbeddingModel:
