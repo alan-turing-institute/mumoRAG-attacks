@@ -65,6 +65,7 @@ def rag_attack(
     max_perturbation_pixels = max_perturbation*255
     batch_size_per_iter = min(len(train_user_queries), max_batch_size_per_iter)
     n_iter = n_gradient_steps * gradient_acc_steps
+
     embedder_info = dict()
     for embedder in embedders:
         if config.emb_train_loss_type == EmbeddingLoss.DEFAULT:

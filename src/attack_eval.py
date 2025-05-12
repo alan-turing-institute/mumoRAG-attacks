@@ -3,15 +3,15 @@ from pprint import pformat
 from typing import Any
 
 import hydra
-import torchvision.transforms.v2 as T
 from omegaconf import OmegaConf
 
 from config.eval import ExperimentEvalConfig
 from config.experiment import ExperimentConfig
-from config.task import get_transferability_file_suffix, generate_task_configs
+from config.task import get_transferability_file_suffix, generate_task_configs, get_defence_file_suffix
 from experiments import DEFAULT_EXPERIMENT
 from experiments.configstore import get_config_name
 from utils.attack import get_all_target_queries_and_answers
+from utils.defence import DefenceName, add_noise
 from utils.image_utils import load_adv_image
 from utils.logger import logger
 from utils.utils import get_device
@@ -60,6 +60,7 @@ def run(exp_config: ExperimentConfig):
     for i, task_config in enumerate(task_configs):
         logger.info(f"Eval {(i + 1):4d}/{n_evals}, task_config -> {pformat(task_config.to_dict(), indent=4)}\n{'=' * 20}")
         image_adv = load_adv_image(task_config, exp_config.train)
+        if task_config.defence == DefenceName.NOISE: image_adv = add_noise(image_adv, exp_config.eval.noise_defence_level)
 
         # update model names in case we test transferability
         model_name_emb = task_config.eval_emb_name if task_config.eval_emb_name else task_config.model_name_embs
@@ -70,6 +71,7 @@ def run(exp_config: ExperimentConfig):
 
         vlm = get_vlm(model_name_vlm, device)
         ds = get_dataset(task_config.ds_name)
+        ds.use_original_or_paraphrased_queries(task_config.defence)
 
         # update target queries and answers in case the attack is targeted
         all_target_query_idx, all_adv_target_answers_vlm, all_answers_vlm = get_all_target_queries_and_answers(
@@ -96,7 +98,7 @@ def run(exp_config: ExperimentConfig):
                 colpali_only_images=exp_config.train.colpali_only_images,
                 device=device,
             )
-            embedded_ds.add_adv_image(T.ToPILImage()(image_adv / 255))
+            embedded_ds.add_adv_image(image_adv)
             # remove incompatible losses
             emb_test_loss_type_list_compatible = [loss for loss in exp_config.eval.emb_test_loss_type_list if is_loss_compatible(model_name_emb, loss)]
             metric_dict_before, retrievals_before = embedded_ds.evaluate_retrieval(
@@ -208,7 +210,7 @@ def run(exp_config: ExperimentConfig):
 
         results_filename = (
             exp_config.eval.results_folder
-            / f"metrics_{get_config_name()}_{task_config.create_hash_string()}{get_transferability_file_suffix(task_config.eval_emb_name, task_config.eval_vlm_name, task_config.eval_jdg_name)}.json"
+            / f"metrics_{get_config_name()}_{task_config.create_hash_string()}{get_transferability_file_suffix(task_config.eval_emb_name, task_config.eval_vlm_name, task_config.eval_jdg_name)}{get_defence_file_suffix(task_config.defence)}.json"
         )
 
         with open(

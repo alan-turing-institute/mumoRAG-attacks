@@ -5,6 +5,7 @@ from typing import Optional, Any
 
 from experiments.configstore import get_config_name
 from utils.logger import logger
+from utils.defence import DefenceName
 from wrappers.attack_mask import AttackMask
 from wrappers.dataset import DatasetName
 from wrappers.embedding import EmbedderName, EmbeddingLoss, COLPALI_MODELS, is_loss_compatible
@@ -53,6 +54,7 @@ class TaskConfig:
     colpali_only_images: bool = False
     gen_topk: int = 1
     kb_compromised_fraction: float = 0.1
+    defence: DefenceName = DefenceName.NONE
 
     def create_hash_string(self):
         target_str = (
@@ -89,7 +91,7 @@ class TaskConfig:
         return asdict(self)
 
 
-# standalone function
+# standalone functions
 def get_transferability_file_suffix(eval_emb_name: EmbedderName, eval_vlm_name: VLMName, eval_jdg_name: VLMName = ""):
     if eval_emb_name == "" and eval_vlm_name == "" and eval_jdg_name == "":
         return ""
@@ -97,6 +99,11 @@ def get_transferability_file_suffix(eval_emb_name: EmbedderName, eval_vlm_name: 
     transfer_str = f"{eval_emb_name}{eval_vlm_name}{eval_jdg_name}"
     return f"_{hashlib.md5(transfer_str.encode()).hexdigest()}"
 
+def get_defence_file_suffix(defence: DefenceName):
+    if defence == DefenceName.NONE: return ""
+    
+    defence_str = f"{defence.value}"
+    return f"_{defence_str}"
 
 def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = False) -> list[TaskConfig]:
     parameter_collection = product(
@@ -114,6 +121,7 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
         (exp_config.eval.eval_emb_list if include_eval else None) or [""],
         (exp_config.eval.eval_vlm_list if include_eval else None) or [""],
         (exp_config.eval.eval_jdg_list if include_eval else None) or [""],
+        (exp_config.eval.defences_list if include_eval else None) or [DefenceName.NONE],
     )
     attack_configs = []
     for params in parameter_collection:
@@ -132,6 +140,7 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
             eval_emb_name,
             eval_vlm_name,
             eval_jdg_name,
+            defence,
         ) = params
 
         if isinstance(model_name_embs, list):
@@ -182,6 +191,7 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
                 is_targeted=exp_config.train.is_targeted,
                 n_knn_target_queries=exp_config.train.n_knn_target_queries,
                 optimize_nontargeted_queries=optimize_nontargeted_queries,
+                defence=defence,
             )
         )
 

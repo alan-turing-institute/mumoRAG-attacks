@@ -25,6 +25,7 @@ def run(exp_config: ExperimentConfig):
 
         vlm = get_vlm(task_config.model_name_vlm, device)
         ds = get_dataset(task_config.ds_name)
+        ds.use_original_or_paraphrased_queries(task_config.defence)
         embedders = [get_embedder(
             model_name,
             quantize=False,

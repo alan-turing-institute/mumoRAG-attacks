@@ -139,6 +139,7 @@ class EmbeddingModel:
         #     self.tokenizer = None
         else:
             raise ValueError(f"Unknown model {model_name}")
+
         self.model.requires_grad_(False)
         self.model.eval()
 

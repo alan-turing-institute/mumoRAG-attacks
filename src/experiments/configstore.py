@@ -7,6 +7,7 @@ from hydra.core.config_store import ConfigStore
 from hydra.core.hydra_config import HydraConfig
 from omegaconf import OmegaConf
 
+from utils.defence import DefenceName
 from config.eval import ExperimentEvalConfig
 from config.experiment import ExperimentConfig
 from config.train import ExperimentTrainConfig
@@ -48,13 +49,35 @@ configstore.store(
             ],
             vlm_list=[VLMName.SMOLVLM_1_256M],
             gen_topk_list=[1],
-            print_every=2,
+            print_every=5,
             n_gradient_steps=250,
             optimize_nontargeted_queries_list=[False],
         ),
         eval=ExperimentEvalConfig(
             eval_emb_list=[EmbedderName.JINA_CLIP_2, EmbedderName.CLIP_BASE_PATCH16],
             gen_topk_list=[-1],
+        ),
+    ),
+)
+
+
+
+"""
+Simple Defences
+"""
+configstore.store(
+    name="simple_defences",
+    node=ExperimentConfig(
+        train=ExperimentTrainConfig(
+            dataset_list=[DatasetName.VIDORE_SYN_AI, DatasetName.VIDORE_V2_ESG],
+            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14, EmbedderName.SIGLIP2_LARGE_PATCH16, EmbedderName.JINA_CLIP_2, EmbedderName.COLPALI],
+            vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
+            gen_topk_list=[1],
+        ),
+        eval=ExperimentEvalConfig(
+            gen_topk_list=[-1,1],
+            defences_list=[DefenceName.NOISE, DefenceName.PARAPHRASE, DefenceName.NONE],
+            noise_defence_level=8.0,
         ),
     ),
 )
