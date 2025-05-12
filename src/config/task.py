@@ -4,9 +4,10 @@ from itertools import product
 from typing import Optional
 
 from experiments.configstore import get_config_name
+from utils.logger import logger
 from wrappers.attack_mask import AttackMask
 from wrappers.dataset import DatasetName
-from wrappers.embedding import EmbedderName, EmbeddingLoss, COLPALI_MODELS
+from wrappers.embedding import EmbedderName, EmbeddingLoss, COLPALI_MODELS, is_loss_compatible
 from wrappers.judge import JudgeMetric
 from wrappers.vlm import VLMName
 from .experiment import ExperimentConfig
@@ -137,6 +138,10 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
             raise ValueError(
                 f"VLM target answers array has incompatible length ({len(exp_config.train.target_answer_vlm)}) with target queries ({len(exp_config.train.target_query_idx)})"
             )
+
+        if not is_loss_compatible(model_name_emb, emb_train_loss_type):
+            logger.warn(f"Loss {emb_train_loss_type} not compatible with {model_name_emb}; skipping task config")
+            continue
 
         attack_configs.append(
             TaskConfig(

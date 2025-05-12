@@ -48,8 +48,6 @@ def run(exp_config: ExperimentConfig):
     # first we just make sure that all required files are on disk, so that we don't waste time
     # this will raise an error if there are missing file(s)
     for task_config in task_configs:
-        if not is_loss_compatible(task_config.model_name_emb, task_config.emb_train_loss_type):
-            continue
         _ = load_adv_image(task_config, exp_config.train)
 
     # load text embedding model in case we need it for evaluation
@@ -60,8 +58,6 @@ def run(exp_config: ExperimentConfig):
         text_embedder = None
 
     for i, task_config in enumerate(task_configs):
-        if not is_loss_compatible(task_config.model_name_emb, task_config.emb_train_loss_type):
-            continue
 
         logger.info(f"Eval {(i + 1):4d}/{n_evals}, task_config -> {pformat(task_config.to_dict(), indent=4)}\n{'=' * 20}")
         image_adv = load_adv_image(task_config, exp_config.train)

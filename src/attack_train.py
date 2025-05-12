@@ -13,7 +13,6 @@ from utils.attack import rag_attack
 from utils.logger import logger
 from utils.utils import get_device
 from wrappers.cache import get_vlm, get_dataset, get_embedder, get_judge
-from wrappers.embedding import is_loss_compatible
 
 
 def run(exp_config: ExperimentConfig):
@@ -22,7 +21,6 @@ def run(exp_config: ExperimentConfig):
     n_evals = len(task_configs)
 
     for i, task_config in enumerate(task_configs):
-        if not is_loss_compatible(task_config.model_name_emb, task_config.emb_train_loss_type): continue
         logger.info(f"{'+' * 20}\nTrain Attack {(i + 1):4d}/{n_evals}, task_config -> {pformat(task_config.to_dict(), indent=4)}")
 
         vlm = get_vlm(task_config.model_name_vlm, device)
