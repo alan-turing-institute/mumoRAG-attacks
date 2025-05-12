@@ -56,6 +56,28 @@ configstore.store(
     ),
 )
 
+
+
+"""
+Simple Defences
+"""
+configstore.store(
+    name="dev",
+    node=ExperimentConfig(
+        train=ExperimentTrainConfig(
+            dataset_list=[DatasetName.VIDORE_SYN_AI, DatasetName.VIDORE_V2_ESG],
+            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14, EmbedderName.SIGLIP2_LARGE_PATCH16, EmbedderName.JINA_CLIP_2, EmbedderName.COLPALI],
+            vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
+            gen_topk_list=[1],
+        ),
+        eval=ExperimentEvalConfig(
+            gen_topk_list=[-1,1],
+            defences_list=[DefenceName.NOISE, DefenceName.PARAPHRASE, DefenceName.NONE],
+            noise_defence_level=8.0,
+        )
+    ),
+)
+
 """
 Performs attack constrained
 """

@@ -17,6 +17,7 @@ from utils.defence import DefenceName
 from wrappers.text_embedding import TextEmbeddingModel
 from wrappers.judge import JudgeVLM, JudgeMetric, METRIC_2_PROMPT
 from wrappers.vlm import VLM, VLMEvaluationMetric
+from config import DATA_FOLDER
 
 
 class DatasetName(StrEnum):
@@ -83,7 +84,7 @@ class Dataset:
             case _:
                 raise ValueError(f"Praphrased queries not available for dataset {self.ds_name}!")
 
-        PARAPHRASE_FOLDER = Path(__file__).parents[2] / "data" / "paraphrased-queries"
+        PARAPHRASE_FOLDER = DATA_FOLDER / "paraphrased-queries"
         with open(PARAPHRASE_FOLDER / filename, "r") as f:
             paraphrased_queries = json.load(f)
 
