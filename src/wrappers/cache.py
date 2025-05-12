@@ -35,7 +35,7 @@ def get_dataset(ds_name: DatasetName, train_ratio: float = 0.8, num_images: Opti
     logger.info(f"Dataset: loading {ds_name}")
     return create_dataset(ds_name=ds_name, train_ratio=train_ratio, num_images=num_images)
 
-@lru_cache(maxsize=1)
+# @lru_cache(maxsize=1)
 def get_embedded_dataset(
     dataset: Dataset, model_name_emb: EmbedderName, quantize: bool, colpali_only_images: bool, device: str
 ) -> EmbeddedDataset:
