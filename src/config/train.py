@@ -1,14 +1,11 @@
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from typing import Any
-
+from wrappers.attack_mask import AttackMask
 from wrappers.dataset import DatasetName
 from wrappers.embedding import EmbedderName, EmbeddingLoss
 from wrappers.judge import JudgeMetric
 from wrappers.vlm import VLMName
-from wrappers.attack_mask import AttackMask
-
 from . import ATTACKS_FOLDER
 
 
@@ -46,6 +43,4 @@ class ExperimentTrainConfig:
     target_query_idx: list[int] = field(default_factory=lambda: [])
     is_targeted: bool = False
     n_knn_target_queries: int = 1  # itself
-    attack_embedder_name: Any = None
     optimize_nontargeted_queries_list: list[bool] = field(default_factory=lambda: [True])
-

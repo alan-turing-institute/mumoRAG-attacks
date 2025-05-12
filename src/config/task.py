@@ -4,14 +4,11 @@ from itertools import product
 from typing import Optional
 
 from experiments.configstore import get_config_name
+from wrappers.attack_mask import AttackMask
 from wrappers.dataset import DatasetName
 from wrappers.embedding import EmbedderName, EmbeddingLoss, COLPALI_MODELS
 from wrappers.judge import JudgeMetric
 from wrappers.vlm import VLMName
-from wrappers.attack_mask import AttackMask
-from wrappers.text_embedding import TextEmbedderName
-
-
 from .experiment import ExperimentConfig
 
 
@@ -48,7 +45,6 @@ class TaskConfig:
     target_query_idx: list[int]  # we assume the target queries are always from the training dataset
     is_targeted: bool
     n_knn_target_queries: int
-    attack_embedder_name: TextEmbedderName
     optimize_nontargeted_queries: bool
     eval_emb_name: Optional[EmbedderName] = None
     eval_vlm_name: Optional[VLMName] = None
@@ -61,7 +57,6 @@ class TaskConfig:
         target_str = (
             ",".join([str(query_id) for query_id in self.target_query_idx])
             + f"{self.n_knn_target_queries}"
-            + f"{self.attack_embedder_name}"
             + f"{self.optimize_nontargeted_queries}"
             if self.is_targeted
             else ""
@@ -176,8 +171,7 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
                 target_query_idx=exp_config.train.target_query_idx,
                 is_targeted=exp_config.train.is_targeted,
                 n_knn_target_queries=exp_config.train.n_knn_target_queries,
-                attack_embedder_name=exp_config.train.attack_embedder_name,
-                optimize_nontargeted_queries=optimize_nontargeted_queries
+                optimize_nontargeted_queries=optimize_nontargeted_queries,
             )
         )
 

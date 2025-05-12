@@ -1,6 +1,6 @@
 import json
-from typing import Any
 from pprint import pformat
+from typing import Any
 
 import hydra
 import torchvision.transforms.v2 as T
@@ -11,10 +11,10 @@ from config.experiment import ExperimentConfig
 from config.task import get_transferability_file_suffix, generate_task_configs
 from experiments import DEFAULT_EXPERIMENT
 from experiments.configstore import get_config_name
+from utils.attack import get_all_target_queries_and_answers
 from utils.image_utils import load_adv_image
 from utils.logger import logger
 from utils.utils import get_device
-from utils.attack import get_all_target_queries_and_answers
 from wrappers.cache import get_vlm, get_text_embedder, get_dataset, get_embedded_dataset, get_judge
 from wrappers.embedding import is_loss_compatible
 from wrappers.json_encoder import EnumEncoder
@@ -82,7 +82,7 @@ def run(exp_config: ExperimentConfig):
             ds.queries,
             exp_config.train.n_knn_target_queries,
             ds.ground_truth_answers,
-            exp_config.train.attack_embedder_name or task_config.model_name_emb,
+            model_name_emb,
             task_config.emb_train_loss_type,
             device,
         )
@@ -94,7 +94,7 @@ def run(exp_config: ExperimentConfig):
             logger.info("=== Evaluating retrieval ...")
             embedded_ds = get_embedded_dataset(
                 dataset=ds,
-                model_name_emb=task_config.model_name_emb,
+                model_name_emb=model_name_emb,
                 quantize=False,
                 colpali_only_images=exp_config.train.colpali_only_images,
                 device=device,
@@ -125,6 +125,8 @@ def run(exp_config: ExperimentConfig):
             retrievals_test = {k: v["test"] for k, v in retrievals_after.items()}
 
         generation_metric_dict = None
+        judge_metric_dict = None
+
         # test generation
         if exp_config.eval.do_generation:
             logger.info("=== Evaluating generation ...")
@@ -164,41 +166,40 @@ def run(exp_config: ExperimentConfig):
                 "test": metric_vlm_dict_test,
             }
 
-        judge_metric_dict = None
-        if exp_config.eval.do_judge:
-            judge = get_judge(model_name_jdg, device)
-            logger.info("=== Evaluating using Judge ...")
+            if exp_config.eval.do_judge:
+                judge = get_judge(model_name_jdg, device)
+                logger.info("=== Evaluating using Judge ...")
 
-            metric_jdg_dict_test, generation_jdg_dict_test = ds.evaluate_using_judge(
-                judge,
-                image_adv,
-                judge_metrics=exp_config.eval.eval_jdg_metric_list,
-                retrievals=retrievals_test,
-                generation_vlm_dict=gs_vlm_dict_test,
-                generation_topk_list=exp_config.eval.gen_topk_list,
-                test_topk_order=exp_config.eval.test_topk_order,
-                is_targeted=exp_config.train.is_targeted,
-                target_query_idx=all_target_query_idx,
-                batch_size=exp_config.eval.gen_batch_size,
-                eval_train=False,
-            )
-            metric_jdg_dict_train, generation_jdg_dict_train = ds.evaluate_using_judge(
-                judge,
-                image_adv,
-                judge_metrics=exp_config.eval.eval_jdg_metric_list,
-                retrievals=retrievals_train,
-                generation_vlm_dict=gs_vlm_dict_train,
-                generation_topk_list=exp_config.eval.gen_topk_list,
-                test_topk_order=exp_config.eval.test_topk_order,
-                is_targeted=exp_config.train.is_targeted,
-                target_query_idx=all_target_query_idx,
-                batch_size=exp_config.eval.gen_batch_size,
-                eval_train=True,
-            )
-            judge_metric_dict = {
-                "train": metric_jdg_dict_train,
-                "test": metric_jdg_dict_test,
-            }
+                metric_jdg_dict_test, generation_jdg_dict_test = ds.evaluate_using_judge(
+                    judge,
+                    image_adv,
+                    judge_metrics=exp_config.eval.eval_jdg_metric_list,
+                    retrievals=retrievals_test,
+                    generation_vlm_dict=gs_vlm_dict_test,
+                    generation_topk_list=exp_config.eval.gen_topk_list,
+                    test_topk_order=exp_config.eval.test_topk_order,
+                    is_targeted=exp_config.train.is_targeted,
+                    target_query_idx=all_target_query_idx,
+                    batch_size=exp_config.eval.gen_batch_size,
+                    eval_train=False,
+                )
+                metric_jdg_dict_train, generation_jdg_dict_train = ds.evaluate_using_judge(
+                    judge,
+                    image_adv,
+                    judge_metrics=exp_config.eval.eval_jdg_metric_list,
+                    retrievals=retrievals_train,
+                    generation_vlm_dict=gs_vlm_dict_train,
+                    generation_topk_list=exp_config.eval.gen_topk_list,
+                    test_topk_order=exp_config.eval.test_topk_order,
+                    is_targeted=exp_config.train.is_targeted,
+                    target_query_idx=all_target_query_idx,
+                    batch_size=exp_config.eval.gen_batch_size,
+                    eval_train=True,
+                )
+                judge_metric_dict = {
+                    "train": metric_jdg_dict_train,
+                    "test": metric_jdg_dict_test,
+                }
 
         # save results to JSON format
         metric_dict_full = {

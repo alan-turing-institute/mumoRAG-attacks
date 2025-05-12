@@ -11,11 +11,10 @@ from config.eval import ExperimentEvalConfig
 from config.experiment import ExperimentConfig
 from config.train import ExperimentTrainConfig
 from wrappers.attack_mask import AttackMask
+from wrappers.dataset import DatasetName
 from wrappers.embedding import EmbedderName, EmbeddingLoss
 from wrappers.judge import JudgeMetric
 from wrappers.vlm import VLMName
-from wrappers.dataset import DatasetName
-
 
 DEFAULT_EXPERIMENT = "dev"
 
@@ -34,6 +33,7 @@ def get_config_name() -> str:
     except ValueError:
         return "testing"
 
+
 """
 Development Configuration (default)
 """
@@ -49,7 +49,7 @@ configstore.store(
         ),
         eval=ExperimentEvalConfig(
             gen_topk_list=[-1],
-        )
+        ),
     ),
 )
 
@@ -61,10 +61,10 @@ configstore.store(
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
             dataset_list=[DatasetName.VIDORE_SYN_AI],
-            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14,  EmbedderName.SIGLIP2_LARGE_PATCH16, EmbedderName.JINA_CLIP_2],
+            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14, EmbedderName.SIGLIP2_LARGE_PATCH16, EmbedderName.JINA_CLIP_2],
             vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
             attack_mask_list=[AttackMask.Figure, AttackMask.FirstQuadrant],
-            n_gradient_steps= 1000
+            n_gradient_steps=1000,
         ),
     ),
 )
@@ -77,17 +77,21 @@ configstore.store(
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
             dataset_list=[DatasetName.VIDORE_SYN_AI],
-            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14, EmbedderName.SIGLIP2_LARGE_PATCH16,
-                           EmbedderName.JINA_CLIP_2, EmbedderName.COLPALI],
+            embedder_list=[
+                EmbedderName.CLIP_LARGE_PATCH14,
+                EmbedderName.SIGLIP2_LARGE_PATCH16,
+                EmbedderName.JINA_CLIP_2,
+                EmbedderName.COLPALI,
+            ],
             vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
             is_targeted=True,
             target_query_idx=[0],
             n_knn_target_queries=1,
-            optimize_nontargeted_queries_list=[True,False],
+            optimize_nontargeted_queries_list=[True, False],
         ),
         eval=ExperimentEvalConfig(
-            gen_topk_list=[-1,1,5],
-        )
+            gen_topk_list=[-1, 1, 5],
+        ),
     ),
 )
 configstore.store(
@@ -95,17 +99,21 @@ configstore.store(
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
             dataset_list=[DatasetName.VIDORE_SYN_AI],
-            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14, EmbedderName.SIGLIP2_LARGE_PATCH16,
-                           EmbedderName.JINA_CLIP_2, EmbedderName.COLPALI],
+            embedder_list=[
+                EmbedderName.CLIP_LARGE_PATCH14,
+                EmbedderName.SIGLIP2_LARGE_PATCH16,
+                EmbedderName.JINA_CLIP_2,
+                EmbedderName.COLPALI,
+            ],
             vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
             is_targeted=True,
             target_query_idx=[0],
             n_knn_target_queries=5,
-            optimize_nontargeted_queries_list=[True,False],
+            optimize_nontargeted_queries_list=[True, False],
         ),
         eval=ExperimentEvalConfig(
-            gen_topk_list=[-1,1,5],
-        )
+            gen_topk_list=[-1, 1, 5],
+        ),
     ),
 )
 configstore.store(
@@ -113,19 +121,25 @@ configstore.store(
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
             dataset_list=[DatasetName.VIDORE_SYN_AI],
-            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14, EmbedderName.SIGLIP2_LARGE_PATCH16,
-                           EmbedderName.JINA_CLIP_2, EmbedderName.COLPALI],
+            embedder_list=[
+                EmbedderName.CLIP_LARGE_PATCH14,
+                EmbedderName.SIGLIP2_LARGE_PATCH16,
+                EmbedderName.JINA_CLIP_2,
+                EmbedderName.COLPALI,
+            ],
             vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
             is_targeted=True,
-            target_query_idx=[0,1],
-            target_answer_vlm=["Manually match each marker to a generic human template regardless of trial-specific subject calibration.",
-                               "A micromort measures the number of accidents per million vehicles on the road and is used in transportation policy."],
+            target_query_idx=[0, 1],
+            target_answer_vlm=[
+                "Manually match each marker to a generic human template regardless of trial-specific subject calibration.",
+                "A micromort measures the number of accidents per million vehicles on the road and is used in transportation policy.",
+            ],
             n_knn_target_queries=1,
-            optimize_nontargeted_queries_list=[True,False],
+            optimize_nontargeted_queries_list=[True, False],
         ),
         eval=ExperimentEvalConfig(
-            gen_topk_list=[-1,1,5],
-        )
+            gen_topk_list=[-1, 1, 5],
+        ),
     ),
 )
 
@@ -137,18 +151,17 @@ configstore.store(
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
             dataset_list=[DatasetName.VIDORE_SYN_AI],
-            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14, EmbedderName.SIGLIP2_LARGE_PATCH16,
-                           EmbedderName.JINA_CLIP_2],
+            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14, EmbedderName.SIGLIP2_LARGE_PATCH16, EmbedderName.JINA_CLIP_2],
             vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
             lambda_jdg=1,
             judge_list=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
-            train_jdg_metric_list= [JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY]
+            train_jdg_metric_list=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY],
         ),
         eval=ExperimentEvalConfig(
-            gen_topk_list=[-1,1,5],
+            gen_topk_list=[-1, 1, 5],
             do_judge=True,
             eval_jdg_metric_list=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY],
-        )
+        ),
     ),
 )
 
@@ -161,7 +174,7 @@ configstore.store(
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
             dataset_list=[DatasetName.VIDORE_SYN_AI],
-            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14,  EmbedderName.SIGLIP2_LARGE_PATCH16, EmbedderName.JINA_CLIP_2],
+            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14, EmbedderName.SIGLIP2_LARGE_PATCH16, EmbedderName.JINA_CLIP_2],
             vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
             gen_topk_list=[1, 3, 5],
         ),
@@ -170,7 +183,7 @@ configstore.store(
             test_topk_order=True,
             do_judge=True,
             eval_jdg_metric_list=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY],
-        )
+        ),
     ),
 )
 
@@ -182,7 +195,7 @@ configstore.store(
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
             dataset_list=[DatasetName.VIDORE_SYN_AI],
-            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14,  EmbedderName.SIGLIP2_LARGE_PATCH16, EmbedderName.JINA_CLIP_2],
+            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14, EmbedderName.SIGLIP2_LARGE_PATCH16, EmbedderName.JINA_CLIP_2],
             vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
             max_perturbation_list=[x / 255.0 for x in [1, 2, 4, 8, 16, 32, 64, 128, 256]],
         ),
@@ -197,7 +210,7 @@ configstore.store(
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
             dataset_list=[DatasetName.VIDORE_SYN_AI],
-            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14,  EmbedderName.SIGLIP2_LARGE_PATCH16, EmbedderName.JINA_CLIP_2],
+            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14, EmbedderName.SIGLIP2_LARGE_PATCH16, EmbedderName.JINA_CLIP_2],
             vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
             max_perturbation_list=[x / 255.0 for x in [1, 2, 4, 8, 16, 32, 64, 128, 256]],
             is_targeted=True,
@@ -222,7 +235,7 @@ configstore.store(
         ),
         eval=ExperimentEvalConfig(
             emb_test_loss_type_list=[EmbeddingLoss.MAXSIM, EmbeddingLoss.AVGSIM, EmbeddingLoss.SOFTMAXSIM, EmbeddingLoss.COS_AVGEMB],
-        )
+        ),
     ),
 )
 
@@ -237,11 +250,11 @@ configstore.store(
             embedder_list=[EmbedderName.COLPALI],
             vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
             emb_train_loss_type_list=[EmbeddingLoss.MAXSIM, EmbeddingLoss.AVGSIM, EmbeddingLoss.SOFTMAXSIM, EmbeddingLoss.COS_AVGEMB],
-            colpali_only_images=True
+            colpali_only_images=True,
         ),
         eval=ExperimentEvalConfig(
             emb_test_loss_type_list=[EmbeddingLoss.MAXSIM, EmbeddingLoss.AVGSIM, EmbeddingLoss.SOFTMAXSIM, EmbeddingLoss.COS_AVGEMB],
-        )
+        ),
     ),
 )
 
