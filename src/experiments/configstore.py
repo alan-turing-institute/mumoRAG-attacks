@@ -182,8 +182,8 @@ configstore.store(
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
             dataset_list=[DatasetName.VIDORE_SYN_AI],
-            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14,  EmbedderName.SIGLIP2_LARGE_PATCH16, EmbedderName.JINA_CLIP_2],
-            vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
+            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14, EmbedderName.SIGLIP2_LARGE_PATCH16],
+            vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.INTERNVL_3_2B],
             max_perturbation_list=[x / 255.0 for x in [1, 2, 4, 8, 16, 32, 64, 128, 256]],
         ),
     ),
@@ -197,8 +197,8 @@ configstore.store(
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
             dataset_list=[DatasetName.VIDORE_SYN_AI],
-            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14,  EmbedderName.SIGLIP2_LARGE_PATCH16, EmbedderName.JINA_CLIP_2],
-            vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
+            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14,  EmbedderName.SIGLIP2_LARGE_PATCH16],
+            vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.INTERNVL_3_2B],
             max_perturbation_list=[x / 255.0 for x in [1, 2, 4, 8, 16, 32, 64, 128, 256]],
             is_targeted=True,
             target_query_idx=[1],
@@ -217,7 +217,7 @@ configstore.store(
         train=ExperimentTrainConfig(
             dataset_list=[DatasetName.VIDORE_SYN_AI],
             embedder_list=[EmbedderName.COLPALI],
-            vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
+            vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.INTERNVL_3_2B],
             emb_train_loss_type_list=[EmbeddingLoss.MAXSIM, EmbeddingLoss.AVGSIM, EmbeddingLoss.SOFTMAXSIM, EmbeddingLoss.COS_AVGEMB],
         ),
         eval=ExperimentEvalConfig(
