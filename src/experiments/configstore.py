@@ -62,7 +62,7 @@ configstore.store(
 Simple Defences
 """
 configstore.store(
-    name="dev",
+    name="simple_defences",
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
             dataset_list=[DatasetName.VIDORE_SYN_AI, DatasetName.VIDORE_V2_ESG],
