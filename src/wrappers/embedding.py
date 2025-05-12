@@ -107,14 +107,14 @@ class EmbeddingModel:
             self.processor = None
             self.tokenizer = None
 
-        if model_name in CLIP_LIKE_MODELS:
+        elif model_name in CLIP_LIKE_MODELS:
             self.model = AutoModel.from_pretrained(
                 model_name,
                 torch_dtype=torch.float32 if device == "mps" else "auto").to(device)
             self.processor = AutoProcessor.from_pretrained(model_name, use_fast=True)
             self.tokenizer = AutoTokenizer.from_pretrained(model_name)
 
-        if model_name == EmbedderName.E5_V:
+        elif model_name == EmbedderName.E5_V:
             self.model = AutoModelForImageTextToText.from_pretrained(model_name,
                                                                      quantization_config=quantization_config).to(device)
             self.processor = AutoProcessor.from_pretrained(model_name)
@@ -124,7 +124,7 @@ class EmbeddingModel:
             self.processor.image_processor.image_grid_pinpoints = [[336, 336]]
             self.processor.image_processor.size['shortest_edge'] = 336
 
-        if model_name == EmbedderName.COLPALI:
+        elif model_name == EmbedderName.COLPALI:
             from colpali_engine.models import ColPali, ColPaliProcessor
 
             self.model = ColPali.from_pretrained(
@@ -133,7 +133,7 @@ class EmbeddingModel:
             self.processor = ColPaliProcessor.from_pretrained(model_name)
             self.tokenizer = None
 
-        if model_name in COLSMOL_MODELS:
+        elif model_name in COLSMOL_MODELS:
             from colpali_engine.models import ColIdefics3, ColIdefics3Processor
             self.model = ColIdefics3.from_pretrained(
                 model_name,
@@ -145,6 +145,8 @@ class EmbeddingModel:
         #     self.model = AutoModel.from_pretrained("Alibaba-NLP/gme-Qwen2-VL-2B-Instruct", revision="refs/pr/10", trust_remote_code=True)
         #     self.processor = AutoProcessor.from_pretrained("Alibaba-NLP/gme-Qwen2-VL-2B-Instruct", revision="refs/pr/10", trust_remote_code=True)
         #     self.tokenizer = None
+        else:
+            raise ValueError(f"Unknown model {model_name}")
 
         self.model.requires_grad_(False)
         self.model.eval()
