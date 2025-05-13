@@ -53,6 +53,47 @@ configstore.store(
 )
 
 
+"""
+Testing Configuration (default)
+"""
+configstore.store(
+    name="testing",
+    node=ExperimentConfig(
+        train=ExperimentTrainConfig(
+            embedder_list=[
+                EmbedderName.JINA_CLIP_2,
+                EmbedderName.CLIP_BASE_PATCH16,
+            ],
+            vlm_list=[VLMName.SMOLVLM_1_256M],
+            n_gradient_steps=2,
+        ),
+        eval=ExperimentEvalConfig(
+        ),
+    ),
+)
+
+
+"""
+Testing Configuration (multi-embedder)
+"""
+configstore.store(
+    name="testing multi-embedder",
+    node=ExperimentConfig(
+        train=ExperimentTrainConfig(
+            embedder_list=[
+                [EmbedderName.JINA_CLIP_2, EmbedderName.CLIP_BASE_PATCH16],
+                EmbedderName.JINA_CLIP_2,
+                EmbedderName.CLIP_BASE_PATCH16,
+            ],
+            vlm_list=[VLMName.SMOLVLM_1_256M],
+            n_gradient_steps=2,
+        ),
+        eval=ExperimentEvalConfig(
+            eval_emb_list=[EmbedderName.JINA_CLIP_2, EmbedderName.CLIP_BASE_PATCH16],
+        ),
+    ),
+)
+
 
 """
 Simple Defences

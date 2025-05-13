@@ -63,8 +63,11 @@ def run(exp_config: ExperimentConfig):
         if task_config.defence == DefenceName.NOISE: image_adv = add_noise(image_adv, exp_config.eval.noise_defence_level)
 
         # update model names in case we test transferability
-        model_name_emb = task_config.eval_emb_name if task_config.eval_emb_name else task_config.model_name_embs
-        if isinstance(model_name_emb, list):
+        if task_config.eval_emb_name:
+            model_name_emb = task_config.eval_emb_name
+        elif len(task_config.model_name_embs) == 1:
+            model_name_emb = task_config.model_name_embs[0]
+        else:
             raise ValueError("If trained with multiple embedders, evaluation config must specify a single embedder to test transferability")
         model_name_vlm = task_config.eval_vlm_name if task_config.eval_vlm_name else task_config.model_name_vlm
         model_name_jdg = task_config.eval_jdg_name if task_config.eval_jdg_name else task_config.model_name_jdg

@@ -21,3 +21,15 @@ def test_end_to_end():
 
         train_run(exp_config)
         eval_run(exp_config)
+
+def test_end_to_end_multi_embedder():
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        tmpdirname = Path(tmpdirname)
+        exp_config = load_config("testing multi-embedder")
+        exp_config = ExperimentConfig(
+            train=replace(exp_config.train, n_gradient_steps=2, save_folder = tmpdirname),
+            eval=replace(exp_config.eval, results_folder = tmpdirname),
+        )
+
+        train_run(exp_config)
+        eval_run(exp_config)
