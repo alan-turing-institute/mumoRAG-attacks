@@ -228,8 +228,7 @@ def get_all_queries_and_answers(
     ):
     target_query_idx = [i for i in range(len(ground_truth_answers))]
 
-    if len(target_answer_vlm) == 1:
-        target_answer_vlm = [target_answer_vlm[0] for _ in target_query_idx]
+    target_answer_vlm = [target_answer_vlm[0] for _ in target_query_idx]
 
     # update ground truth answers by malicious answers
     all_answers = ground_truth_answers

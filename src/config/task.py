@@ -144,6 +144,8 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
             eval_jdg_name,
             defence,
         ) = params
+        if len(exp_config.train.target_answer_vlm) > 1 and not exp_config.train.is_targeted:
+            raise ValueError("Multiple target answers supported only for targeted attacks.")
 
         if isinstance(model_name_embs, list):
             if exp_config.train.is_targeted or exp_config.train.n_knn_target_queries != 1:
