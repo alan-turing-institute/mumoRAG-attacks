@@ -35,7 +35,7 @@ class EmbeddedDataset:
             self.attempt_load_embeddings()
         except FileNotFoundError:
             logger.info("Precomputing Embeddings ...")
-            batch_size = 4 if self.embedder.name == EmbedderName.COLPALI else 16
+            batch_size = 2 if self.embedder.name in [EmbedderName.COLPALI, EmbedderName.QWEN2_GME_2B] else 16
             with torch.no_grad():
                 self.compute_embeddings(batch_size=batch_size)
 
