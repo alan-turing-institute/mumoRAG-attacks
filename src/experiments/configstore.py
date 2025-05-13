@@ -47,7 +47,6 @@ configstore.store(
             gen_topk_list=[1],
         ),
         eval=ExperimentEvalConfig(
-            eval_emb_list=[EmbedderName.JINA_CLIP_2, EmbedderName.CLIP_BASE_PATCH16],
             gen_topk_list=[-1],
         ),
     ),

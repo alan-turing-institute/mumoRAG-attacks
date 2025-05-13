@@ -210,6 +210,7 @@ class EmbeddingModel:
             outputs = self.model(**inputs, output_hidden_states=True)
             last_hidden_state = outputs.hidden_states[-1]
             embeddings = last_hidden_state[:, -1].contiguous()
+            embeddings = torch.nn.functional.normalize(embeddings, p=2, dim=1)
             return embeddings
 
 
@@ -290,7 +291,6 @@ class EmbeddingModel:
             return image_embedding
         
         if self.name in QWEN_GME_MODELS: 
-            # if not isinstance(image, list) and len(image.shape) == 3: image = image.unsqueeze(0) # batch dimension
             if isinstance(image, list):
                 image = torch.cat([T.Resize((512,512))(T.PILToTensor()(im)).unsqueeze(0) for im in image], dim=0)
             n_image = 1 if len(image.shape) == 3 else image.shape[0]
@@ -300,6 +300,7 @@ class EmbeddingModel:
             outputs = self.model(**inputs, output_hidden_states=True)
             last_hidden_state = outputs.hidden_states[-1]
             embeddings = last_hidden_state[:, -1]
+            embeddings = torch.nn.functional.normalize(embeddings, p=2, dim=1)
             return embeddings
 
 
