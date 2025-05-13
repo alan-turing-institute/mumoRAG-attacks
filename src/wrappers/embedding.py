@@ -76,6 +76,12 @@ def get_default_loss(model_name: EmbedderName) -> EmbeddingLoss:
     return EmbeddingLoss.COS
 
 
+def get_loss_with_default(model_name: EmbedderName, loss_type: EmbeddingLoss) -> EmbeddingLoss:
+    if loss_type == EmbeddingLoss.DEFAULT:
+        return get_default_loss(model_name)
+    return loss_type
+
+
 def is_loss_compatible(model_name_emb: EmbedderName, loss: EmbeddingLoss) -> bool:
     if model_name_emb in COLPALI_MODELS:
         return loss in COLPALI_LOSSES

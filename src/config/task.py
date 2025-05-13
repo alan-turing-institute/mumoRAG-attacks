@@ -146,6 +146,8 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
         ) = params
 
         if isinstance(model_name_embs, list):
+            if exp_config.train.is_targeted or exp_config.train.n_knn_target_queries != 1:
+                raise ValueError("Multi-embedder tasks do not targeted attacks.")
             if emb_train_loss_type != EmbeddingLoss.DEFAULT:
                 raise ValueError("Multi-embedder tasks do not support choosing non-default loss type.")
         else:
