@@ -148,7 +148,7 @@ class EmbeddingModel:
         #     self.model = AutoModel.from_pretrained("Alibaba-NLP/gme-Qwen2-VL-2B-Instruct", revision="refs/pr/10", trust_remote_code=True)
         #     self.processor = AutoProcessor.from_pretrained("Alibaba-NLP/gme-Qwen2-VL-2B-Instruct", revision="refs/pr/10", trust_remote_code=True)
         #     self.tokenizer = None
-        if model_name in QWEN_GME_MODELS:
+        elif model_name in QWEN_GME_MODELS:
             self.model = AutoModelForImageTextToText.from_pretrained(model_name).to(device).eval()
             self.processor = AutoProcessor.from_pretrained(model_name, use_fast=True)
             self.tokenizer = None
