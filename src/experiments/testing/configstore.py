@@ -6,10 +6,8 @@ from hydra.core.config_store import ConfigStore
 
 from config.eval import ExperimentEvalConfig
 from config.experiment import ExperimentConfig
-from config.train import ExperimentTrainConfig
-from wrappers.attack_mask import AttackMask
-from wrappers.dataset import DatasetName
-from wrappers.embedding import EmbedderName, EmbeddingLoss
+from config.train import ExperimentTrainConfig, JudgeConfig
+from wrappers.embedding import EmbedderName
 from wrappers.judge import JudgeMetric
 from wrappers.vlm import VLMName
 
@@ -66,9 +64,11 @@ configstore.store(
         train=ExperimentTrainConfig(
             embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
             vlm_list=[VLMName.SMOLVLM_1_2B],
-            lambda_jdg=1,
-            judge_list=[VLMName.SMOLVLM_1_2B],
-            train_jdg_metric_list=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY],
+            judge=JudgeConfig(
+                lambda_=1,
+                models=[VLMName.SMOLVLM_1_2B],
+                metrics=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY],
+            ),
         ),
         eval=ExperimentEvalConfig(
             gen_topk_list=[-1, 1, 5],

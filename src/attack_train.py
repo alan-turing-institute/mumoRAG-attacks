@@ -32,7 +32,7 @@ def run(exp_config: ExperimentConfig):
             colpali_only_images=exp_config.train.colpali_only_images,
             device=device,
         ) for model_name in task_config.model_name_embs]
-        jdg = get_judge(task_config.model_name_jdg, device) if task_config.lambda_jdg > 0 else None
+        jdg = get_judge(task_config.judge.model_name, device) if task_config.judge else None
 
         attack_images = ds.sample_images_from_ds(fraction=task_config.kb_compromised_fraction)  # images included by the attacker in the VLM context (n-1 because the malicious image must be included)
 

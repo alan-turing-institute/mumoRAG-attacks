@@ -1,17 +1,26 @@
 import hashlib
 from dataclasses import dataclass, asdict
+from typing import Literal
 from itertools import product
-from typing import Optional
 
 from experiments.configstore import get_config_name
 from utils.logger import logger
 from utils.defence import DefenceName
+from utils.scheduler import LearningRateConfig
 from wrappers.attack_mask import AttackMask
 from wrappers.dataset import DatasetName
 from wrappers.embedding import EmbedderName, EmbeddingLoss, COLPALI_MODELS, is_loss_compatible, get_loss_with_default
 from wrappers.judge import JudgeMetric
 from wrappers.vlm import VLMName
 from .experiment import ExperimentConfig
+
+
+@dataclass
+class TaskJudgeConfig:
+    lambda_: float
+    model_name: VLMName
+    target_answer: str
+    metrics: list[JudgeMetric]
 
 
 @dataclass
@@ -29,8 +38,6 @@ class TaskConfig:
     chosen_index: int
     max_perturbation: float
     n_gradient_steps: int
-    lr_start: float
-    lr_end: float
     max_batch_size_per_iter: int
     gradient_acc_steps: int
     lambda_emb: float
@@ -38,22 +45,21 @@ class TaskConfig:
     emb_train_loss_type: EmbeddingLoss
     is_adaptive: bool
     lambda_constant: float
-    model_name_jdg: VLMName
-    lambda_jdg: float
-    target_answer_jdg: str
-    train_jdg_metric_list: list[JudgeMetric]
     attack_mask: AttackMask
     image_size: list[int]
     target_query_idx: list[int]  # we assume the target queries are always from the training dataset
     is_targeted: bool
     n_knn_target_queries: int
     optimize_nontargeted_queries: bool
-    eval_emb_name: Optional[EmbedderName] = None
-    eval_vlm_name: Optional[VLMName] = None
-    eval_jdg_name: Optional[VLMName] = None
+    judge: TaskJudgeConfig | None
+    lr: LearningRateConfig
     colpali_only_images: bool = False
     gen_topk: int = 1
     kb_compromised_fraction: float = 0.1
+    # eval
+    eval_emb_name: EmbedderName | None = None
+    eval_vlm_name: VLMName | None = None
+    eval_jdg_name: VLMName | None = None
     defence: DefenceName = DefenceName.NONE
 
     def create_hash_string(self):
@@ -78,9 +84,9 @@ class TaskConfig:
         if any([model_name in COLPALI_MODELS for model_name in self.model_name_embs]) and self.colpali_only_images:
             config_str += f"{self.colpali_only_images}"
 
-        if self.lambda_jdg > 0:
-            jdg_metric_str = "".join(self.train_jdg_metric_list)
-            config_str += f"{self.model_name_jdg}{self.lambda_jdg}{self.target_answer_jdg}{jdg_metric_str}"
+        if self.judge:
+            jdg_metric_str = "".join(self.judge.metrics)
+            config_str += f"{self.judge.model_name}{self.judge.lambda_}{self.judge.target_answer}{jdg_metric_str}"
 
         hash_str = hashlib.md5(config_str.encode()).hexdigest()
         return hash_str
@@ -94,25 +100,27 @@ class TaskConfig:
 
 
 # standalone functions
-def get_transferability_file_suffix(eval_emb_name: EmbedderName, eval_vlm_name: VLMName, eval_jdg_name: VLMName = ""):
+def get_transferability_file_suffix(
+        eval_emb_name: EmbedderName | Literal[""],
+        eval_vlm_name: VLMName | Literal[""],
+        eval_jdg_name: VLMName | Literal[""] = "",
+) -> str:
     if eval_emb_name == "" and eval_vlm_name == "" and eval_jdg_name == "":
         return ""
-
     transfer_str = f"{eval_emb_name}{eval_vlm_name}{eval_jdg_name}"
     return f"_{hashlib.md5(transfer_str.encode()).hexdigest()}"
 
-def get_defence_file_suffix(defence: DefenceName):
-    if defence == DefenceName.NONE: return ""
-    
-    defence_str = f"{defence.value}"
-    return f"_{defence_str}"
+def get_defence_file_suffix(defence: DefenceName) -> str:
+    if defence == DefenceName.NONE:
+        return ""
+    return f"_{defence.value}"
 
 def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = False) -> list[TaskConfig]:
     parameter_collection = product(
         exp_config.train.dataset_list,
         exp_config.train.embedder_list,
         exp_config.train.vlm_list,
-        exp_config.train.judge_list,
+        exp_config.train.judge.models if exp_config.train.judge else [""],
         exp_config.train.max_perturbation_list,
         exp_config.train.emb_train_loss_type_list,
         exp_config.train.is_adaptive_list,
@@ -155,7 +163,7 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
         else:
             emb_train_loss_type = get_loss_with_default(model_name_embs, emb_train_loss_type)
             if not is_loss_compatible(model_name_embs, emb_train_loss_type):
-                logger.warn(f"Loss {emb_train_loss_type} not compatible with {model_name_embs}; skipping task config")
+                logger.warning(f"Loss {emb_train_loss_type} not compatible with {model_name_embs}; skipping task config")
                 continue
             model_name_embs = [model_name_embs]
 
@@ -173,8 +181,7 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
                 chosen_index=chosen_index,
                 max_perturbation=max_perturbation,
                 n_gradient_steps=exp_config.train.n_gradient_steps,
-                lr_start=exp_config.train.lr_start,
-                lr_end=exp_config.train.lr_end,
+                lr=exp_config.train.lr,
                 max_batch_size_per_iter=exp_config.train.max_batch_size_per_iter,
                 gradient_acc_steps=exp_config.train.gradient_acc_steps,
                 lambda_emb=exp_config.train.lambda_emb,
@@ -188,10 +195,12 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
                 colpali_only_images=exp_config.train.colpali_only_images,
                 gen_topk=gen_topk,
                 kb_compromised_fraction=exp_config.train.kb_compromised_fraction,
-                model_name_jdg=model_name_jdg,
-                lambda_jdg=exp_config.train.lambda_jdg,
-                target_answer_jdg=exp_config.train.target_answer_jdg,
-                train_jdg_metric_list=exp_config.train.train_jdg_metric_list,
+                judge=TaskJudgeConfig(
+                    model_name=model_name_jdg,
+                    lambda_=exp_config.train.judge.lambda_,
+                    target_answer=exp_config.train.judge.target_answer,
+                    metrics=exp_config.train.judge.metrics,
+                ) if exp_config.train.judge else None,
                 attack_mask=attack_mask,
                 image_size=exp_config.train.image_size,
                 target_query_idx=exp_config.train.target_query_idx,
