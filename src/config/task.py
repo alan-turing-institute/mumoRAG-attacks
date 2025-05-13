@@ -8,7 +8,7 @@ from utils.logger import logger
 from utils.defence import DefenceName
 from wrappers.attack_mask import AttackMask
 from wrappers.dataset import DatasetName
-from wrappers.embedding import EmbedderName, EmbeddingLoss, COLPALI_MODELS, is_loss_compatible, get_default_loss
+from wrappers.embedding import EmbedderName, EmbeddingLoss, COLPALI_MODELS, is_loss_compatible, get_loss_with_default
 from wrappers.judge import JudgeMetric
 from wrappers.vlm import VLMName
 from .experiment import ExperimentConfig
@@ -153,8 +153,7 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
             if emb_train_loss_type != EmbeddingLoss.DEFAULT:
                 raise ValueError("Multi-embedder tasks do not support choosing non-default loss type.")
         else:
-            if emb_train_loss_type == EmbeddingLoss.DEFAULT:
-                emb_train_loss_type = get_default_loss(model_name_embs)
+            emb_train_loss_type = get_loss_with_default(model_name_embs, emb_train_loss_type)
             if not is_loss_compatible(model_name_embs, emb_train_loss_type):
                 logger.warn(f"Loss {emb_train_loss_type} not compatible with {model_name_embs}; skipping task config")
                 continue

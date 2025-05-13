@@ -50,7 +50,7 @@ class EmbeddingLoss(StrEnum):
     AVGSIM = "avgsim"
     SOFTMAXSIM = "softmaxsim"
     COS_AVGEMB = "cos_avgemb"
-    DEFAULT = "default"  # call get_default_loss
+    DEFAULT = "default"  # call get_loss_with_default
 
 
 COLPALI_LOSSES = [
