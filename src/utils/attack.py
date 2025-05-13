@@ -66,25 +66,20 @@ def rag_attack(
     batch_size_per_iter = min(len(train_user_queries), max_batch_size_per_iter)
     n_iter = n_gradient_steps * gradient_acc_steps
 
-    if is_targeted:
-        # targeted attacks do not support multiple embedders
-        embedder = embedders[0]
-        emb_loss_type = get_loss_with_default(embedder.name, config.emb_train_loss_type)
-        target_query_idx, _, all_answers_vlm = get_target_queries_and_answers(
-            target_query_idx,
-            target_answer_vlm,
-            train_user_queries,
-            n_knn_target_queries,
-            train_ground_truth_vlm_answers,
-            embedder.name,
-            emb_loss_type,
-            device,
-        )
-    else:
-        target_query_idx, _, all_answers_vlm = get_all_queries_and_answers(
-            target_answer_vlm,
-            train_ground_truth_vlm_answers,
-        )
+    # embedder only required for nearest neighbour attacks which are not currently supported with multi-embedder
+    embedder = embedders[0]
+    emb_loss_type = get_loss_with_default(embedder.name, config.emb_train_loss_type)
+    target_query_idx, _, all_answers_vlm = get_all_target_queries_and_answers(
+        is_targeted,
+        target_query_idx,
+        target_answer_vlm,
+        train_user_queries,
+        n_knn_target_queries,
+        train_ground_truth_vlm_answers,
+        embedder.name,
+        emb_loss_type,
+        device,
+    )
 
     user_query_embeddings = dict()
     # pre-computing embeddings and prompts for all data
@@ -221,24 +216,8 @@ def sample_minibatch(n_population, batch_size, is_targeted: bool, target_idx: li
         samples_neg = random.sample([i for i in range(n_population) if i not in target_idx], batch_size) if optimize_nontargeted_queries else []
         return random.sample(samples_pos + samples_neg, batch_size)
 
-
-def get_all_queries_and_answers(
-        target_answer_vlm: list[str],
-        ground_truth_answers: list[str],
-    ):
-    target_query_idx = [i for i in range(len(ground_truth_answers))]
-
-    target_answer_vlm = [target_answer_vlm[0] for _ in target_query_idx]
-
-    # update ground truth answers by malicious answers
-    all_answers = ground_truth_answers
-    for idx, answer in zip(target_query_idx, target_answer_vlm):
-        all_answers[idx] = answer
-
-    return target_query_idx, target_answer_vlm, all_answers
-
-
-def get_target_queries_and_answers(
+def get_all_target_queries_and_answers(
+        is_targeted: bool,
         target_query_idx: list[int],
         target_answer_vlm: list[str],
         train_user_queries: list[str],
@@ -248,13 +227,17 @@ def get_target_queries_and_answers(
         emb_loss_type,
         device,
     ):
+    # if universal attack, all queries are targeted
+    if not is_targeted:
+        target_query_idx = [i for i in range(len(ground_truth_answers))]
+
     # make number of answers match number of target queries
     if len(target_answer_vlm) == 1:
         target_answer_vlm = [target_answer_vlm[0] for _ in target_query_idx]
-    
+
     # extend target query indices and target answers to include nearest neighbours
-    if n_knn_target_queries == 1:
-       # only include one nearest neighbors (a.k.a. self) 
+    if (not is_targeted) or n_knn_target_queries == 1:
+       # only include one nearest neighbors (a.k.a. self)
        extended_target_idx, extended_target_answers = target_query_idx, target_answer_vlm
     else:
         similarity = get_embedding_similarity(train_user_queries, attack_embedder_name, emb_loss_type, device)
@@ -265,12 +248,12 @@ def get_target_queries_and_answers(
             topk_similar = [x for x in topk_similar if x not in extended_target_idx]
             extended_target_idx.extend(topk_similar)
             extended_target_answers.extend([target_answer_vlm[i] for _ in range(len(topk_similar))])
-    
+
     # update ground truth answers by malicious answers
     all_answers = ground_truth_answers
     for idx, answer in zip(extended_target_idx, extended_target_answers):
         all_answers[idx] = answer
-    
+
     return extended_target_idx, extended_target_answers, all_answers
 
 def get_embedding_similarity(train_user_queries: list[str], attack_embedder_name: EmbedderName | TextEmbedderName, emb_loss_type, device):

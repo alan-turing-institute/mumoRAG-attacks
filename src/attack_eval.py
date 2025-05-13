@@ -10,7 +10,7 @@ from config.experiment import ExperimentConfig
 from config.task import get_transferability_file_suffix, generate_task_configs, get_defence_file_suffix
 from experiments import DEFAULT_EXPERIMENT
 from experiments.configstore import get_config_name
-from utils.attack import get_all_queries_and_answers, get_target_queries_and_answers
+from utils.attack import get_all_target_queries_and_answers
 from utils.defence import DefenceName, add_noise
 from utils.image_utils import load_adv_image
 from utils.logger import logger
@@ -74,22 +74,17 @@ def run(exp_config: ExperimentConfig):
         ds.use_original_or_paraphrased_queries(task_config.defence)
 
         # update target queries and answers in case the attack is targeted
-        if exp_config.train.is_targeted:
-            all_target_query_idx, all_adv_target_answers_vlm, all_answers_vlm = get_target_queries_and_answers(
-                exp_config.train.target_query_idx,
-                exp_config.train.target_answer_vlm,
-                ds.queries,
-                exp_config.train.n_knn_target_queries,
-                ds.ground_truth_answers,
-                model_name_emb,
-                task_config.emb_train_loss_type,
-                device,
-            )
-        else:
-            all_target_query_idx, all_adv_target_answers_vlm, all_answers_vlm = get_all_queries_and_answers(
-                exp_config.train.target_answer_vlm,
-                ds.ground_truth_answers,
-            )
+        all_target_query_idx, all_adv_target_answers_vlm, all_answers_vlm = get_all_target_queries_and_answers(
+            exp_config.train.is_targeted,
+            exp_config.train.target_query_idx,
+            exp_config.train.target_answer_vlm,
+            ds.queries,
+            exp_config.train.n_knn_target_queries,
+            ds.ground_truth_answers,
+            model_name_emb,
+            task_config.emb_train_loss_type,
+            device,
+        )
 
         retrievals_train, retrievals_test = None, None
         retrieval_metric_dict = None
