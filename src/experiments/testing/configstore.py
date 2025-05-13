@@ -1,0 +1,80 @@
+"""
+This file includes different configurations for the parameters of the attack and the multimodal RAG system
+"""
+
+from hydra.core.config_store import ConfigStore
+
+from config.eval import ExperimentEvalConfig
+from config.experiment import ExperimentConfig
+from config.train import ExperimentTrainConfig
+from wrappers.attack_mask import AttackMask
+from wrappers.dataset import DatasetName
+from wrappers.embedding import EmbedderName, EmbeddingLoss
+from wrappers.judge import JudgeMetric
+from wrappers.vlm import VLMName
+
+
+configstore = ConfigStore.instance()
+
+"""
+Testing Configuration (default)
+"""
+configstore.store(
+    name="testing",
+    node=ExperimentConfig(
+        train=ExperimentTrainConfig(
+            embedder_list=[
+                EmbedderName.JINA_CLIP_2,
+                EmbedderName.CLIP_BASE_PATCH16,
+            ],
+            vlm_list=[VLMName.SMOLVLM_1_256M],
+            n_gradient_steps=2,
+        ),
+        eval=ExperimentEvalConfig(
+        ),
+    ),
+)
+
+
+"""
+Testing Configuration (multi-embedder)
+"""
+configstore.store(
+    name="testing multi-embedder",
+    node=ExperimentConfig(
+        train=ExperimentTrainConfig(
+            embedder_list=[
+                [EmbedderName.JINA_CLIP_2, EmbedderName.CLIP_BASE_PATCH16],
+                EmbedderName.JINA_CLIP_2,
+                EmbedderName.CLIP_BASE_PATCH16,
+            ],
+            vlm_list=[VLMName.SMOLVLM_1_256M],
+            n_gradient_steps=2,
+        ),
+        eval=ExperimentEvalConfig(
+            eval_emb_list=[EmbedderName.JINA_CLIP_2, EmbedderName.CLIP_BASE_PATCH16],
+        ),
+    ),
+)
+
+"""
+RAG evaluation and attack detection through VLM-as-a-judge
+"""
+configstore.store(
+    name="testing judge_defence",
+    node=ExperimentConfig(
+        train=ExperimentTrainConfig(
+            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
+            vlm_list=[VLMName.SMOLVLM_1_2B],
+            lambda_jdg=1,
+            judge_list=[VLMName.SMOLVLM_1_2B],
+            train_jdg_metric_list=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY],
+        ),
+        eval=ExperimentEvalConfig(
+            gen_topk_list=[-1, 1, 5],
+            do_judge=True,
+            eval_jdg_metric_list=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY],
+        ),
+    ),
+)
+
