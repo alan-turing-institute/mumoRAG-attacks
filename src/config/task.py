@@ -1,7 +1,7 @@
 import hashlib
 from dataclasses import dataclass, asdict
 from itertools import product
-from typing import Optional, Any
+from typing import Optional
 
 from experiments.configstore import get_config_name
 from utils.logger import logger
