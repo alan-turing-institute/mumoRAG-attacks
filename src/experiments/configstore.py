@@ -42,16 +42,9 @@ configstore.store(
     name="dev",
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
-            embedder_list=[
-                [EmbedderName.JINA_CLIP_2, EmbedderName.CLIP_BASE_PATCH16],
-                EmbedderName.JINA_CLIP_2,
-                EmbedderName.CLIP_BASE_PATCH16,
-            ],
+            embedder_list=[EmbedderName.QWEN2_GME_2B],
             vlm_list=[VLMName.SMOLVLM_1_256M],
             gen_topk_list=[1],
-            print_every=5,
-            n_gradient_steps=250,
-            optimize_nontargeted_queries_list=[False],
         ),
         eval=ExperimentEvalConfig(
             eval_emb_list=[EmbedderName.JINA_CLIP_2, EmbedderName.CLIP_BASE_PATCH16],

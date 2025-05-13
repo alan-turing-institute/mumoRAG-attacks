@@ -23,6 +23,7 @@ class EmbedderName(StrEnum):
     COLPALI = "vidore/colpali-v1.3"
     QWEN2_GME_2B = "Alibaba-NLP/gme-Qwen2-VL-2B-Instruct"
     QWEN2_GME_7B = "Alibaba-NLP/gme-Qwen2-VL-7B-Instruct"
+    QWEN2_DSE_2B = "MrLight/dse-qwen2-2b-mrl-v1"
 
 
 CLIP_LIKE_MODELS = [
@@ -64,9 +65,13 @@ NON_COLPALI_LOSSES = [
     EmbeddingLoss.MSE
 ]
 
-QWEN2_MODELS = [
+QWEN_GME_MODELS = [
     EmbedderName.QWEN2_GME_2B,
     EmbedderName.QWEN2_GME_7B,
+]
+
+QWEN_DSE_MODELS = [
+    EmbedderName.QWEN2_DSE_2B,
 ]
 
 
@@ -143,6 +148,12 @@ class EmbeddingModel:
         #     self.model = AutoModel.from_pretrained("Alibaba-NLP/gme-Qwen2-VL-2B-Instruct", revision="refs/pr/10", trust_remote_code=True)
         #     self.processor = AutoProcessor.from_pretrained("Alibaba-NLP/gme-Qwen2-VL-2B-Instruct", revision="refs/pr/10", trust_remote_code=True)
         #     self.tokenizer = None
+        if model_name in QWEN_GME_MODELS:
+            self.model = AutoModelForImageTextToText.from_pretrained(model_name).to(device).eval()
+            self.processor = AutoProcessor.from_pretrained(model_name, use_fast=True)
+            self.tokenizer = None
+            self.instruction = "You are a helpful AI model."
+
         else:
             raise ValueError(f"Unknown model {model_name}")
 
@@ -191,6 +202,16 @@ class EmbeddingModel:
             batch_queries = self.processor.process_queries(user_query).to(self.device)
             user_query_embedding = self.model(**batch_queries)
             return user_query_embedding
+        
+        if self.name in QWEN_GME_MODELS:
+            assert isinstance(user_query, list)
+            msg = [f'<|im_start|>system\n{self.instruction}<|im_end|>\n<|im_start|>user\n{q}<|im_end|>\n<|im_start|>assistant\n<|endoftext|>' for q in user_query]
+            inputs = self.processor(text=msg, return_tensors="pt", padding=True, padding_side="left", truncation=True).to(self.device)
+            outputs = self.model(**inputs, output_hidden_states=True)
+            last_hidden_state = outputs.hidden_states[-1]
+            embeddings = last_hidden_state[:, -1].contiguous()
+            return embeddings
+
 
         # if self.name in QWEN2_MODELS:
         #     batch_queries = self.processor(text=user_query).to(self.device)
@@ -267,6 +288,20 @@ class EmbeddingModel:
             else:
                 image_embedding = self.model(**image_input_emb)
             return image_embedding
+        
+        if self.name in QWEN_GME_MODELS: 
+            # if not isinstance(image, list) and len(image.shape) == 3: image = image.unsqueeze(0) # batch dimension
+            if isinstance(image, list):
+                image = torch.cat([T.Resize((512,512))(T.PILToTensor()(im)).unsqueeze(0) for im in image], dim=0)
+            n_image = 1 if len(image.shape) == 3 else image.shape[0]
+            image_text = '<|vision_start|><|image_pad|><|vision_end|>'
+            msg = [f'<|im_start|>system\n{self.instruction}<|im_end|>\n<|im_start|>user\n{image_text}<|im_end|>\n<|im_start|>assistant\n<|endoftext|>' for _ in range(n_image)]
+            inputs = self.processor(text=msg, images=image, return_tensors="pt", padding=True, padding_side="left", truncation=True).to(self.device)
+            outputs = self.model(**inputs, output_hidden_states=True)
+            last_hidden_state = outputs.hidden_states[-1]
+            embeddings = last_hidden_state[:, -1]
+            return embeddings
+
 
         raise ValueError(f"Not supported model {self.name}!")
 
@@ -363,7 +398,7 @@ def score_multi_vector_modified(
                     scores_batch.append((all_scores * all_scores.softmax(dim=3)).sum(dim=3).sum(dim=2))
                 case EmbeddingLoss.COS_AVGEMB:
                     # take the average of embeddings over tokens then compute cosine similarity
-                    print(qs_batch.shape, ps_batch.shape)
+                    # print(qs_batch.shape, ps_batch.shape)
                     scores_batch.append(torch.nn.CosineSimilarity()(qs_batch.mean(dim=1), ps_batch.mean(dim=1)))
         scores_batch = torch.cat(scores_batch, dim=1).cpu()
         scores_list.append(scores_batch)
