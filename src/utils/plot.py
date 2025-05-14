@@ -4,7 +4,6 @@ from collections.abc import Iterable
 from dataclasses import replace
 from enum import IntEnum
 from itertools import product
-from pprint import pformat
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -17,7 +16,6 @@ from wrappers.embedding import EmbedderName, is_loss_compatible
 from wrappers.vlm import VLMName
 from .logger import logger
 from wrappers.cache import get_dataset
-from experiments.configstore import get_config_name
 
 
 class MetricIdx(IntEnum):
@@ -129,11 +127,7 @@ def plot_heatmap(num_plots, metric_tables: np.array, xaxis, yaxis, xlabel: str, 
 
 
 def get_metrics(exp_config: ExperimentConfig, task_config: TaskConfig, metrics_to_show):
-    filename = (
-            exp_config.eval.results_folder
-            / f"metrics_{exp_config.config_name}_{task_config.create_hash_string()}{get_transferability_file_suffix(task_config.eval_emb_name, task_config.eval_vlm_name, task_config.eval_jdg_name)}.json"
-        )
-    # filename = exp_config.eval.results_folder / f"metrics_{hash_string}{get_transferability_file_suffix(task_config.eval_emb_name, task_config.eval_vlm_name)}.json"
+    filename = task_config.get_result_filename(exp_config.eval.results_folder)
     with open(filename, "r") as file:
         metric_dict = json.loads(file.read())
     metrics_to_output = []

@@ -4,6 +4,8 @@ import random
 from collections import defaultdict
 from typing import Optional
 from ast import literal_eval
+from pathlib import Path
+import json
 
 import torch
 from datasets import load_dataset
@@ -11,9 +13,11 @@ from strenum import StrEnum
 from tqdm import tqdm
 
 from utils.logger import logger
+from utils.defence import DefenceName
 from wrappers.text_embedding import TextEmbeddingModel
 from wrappers.judge import JudgeVLM, JudgeMetric, METRIC_2_PROMPT
 from wrappers.vlm import VLM, VLMEvaluationMetric
+from config import DATA_FOLDER
 
 
 class DatasetName(StrEnum):
@@ -46,15 +50,18 @@ class Dataset:
         self.images = images
         self.num_images_orig = len(self.images)
 
-        self.queries = queries
+        self.queries_orig = queries
         self.ground_truth_answers = answers
         self.ground_truth_retrievals = ground_truth_retrievals
 
-        self.train_ratio = train_ratio
-        self.num_train = int(len(self.queries) * train_ratio)
-        self.num_test = len(self.queries) - self.num_train
+        self.queries_para = self.load_paraphrased_queries()
 
-        self.queries_train, self.queries_test = self.split_train_test(self.queries)
+        self.train_ratio = train_ratio
+        self.num_train = int(len(self.queries_orig) * train_ratio)
+        self.num_test = len(self.queries_orig) - self.num_train
+
+        self.queries_orig_train, self.queries_orig_test = self.split_train_test(self.queries_orig)
+        self.queries_para_train, self.queries_para_test = self.split_train_test(self.queries_para)
         self.ground_truth_answers_train, self.ground_truth_answers_test = self.split_train_test(self.ground_truth_answers)
         self.ground_truth_retrievals_train, self.ground_truth_retrievals_test = self.split_train_test(self.ground_truth_retrievals)
 
@@ -67,6 +74,30 @@ class Dataset:
             self.images.append(adv_img)
         else:
             self.images[-1] = adv_img
+        
+    def load_paraphrased_queries(self,):
+        match self.ds_name:
+            case DatasetName.VIDORE_SYN_AI:
+                filename = "vidore_v1_ai_paraphrased.json"
+            case DatasetName.VIDORE_V2_ESG:
+                filename = "vidore_v2_esg_paraphrased.json"
+            case _:
+                raise ValueError(f"Praphrased queries not available for dataset {self.ds_name}!")
+
+        PARAPHRASE_FOLDER = DATA_FOLDER / "paraphrased-queries"
+        with open(PARAPHRASE_FOLDER / filename, "r") as f:
+            paraphrased_queries = json.load(f)
+
+        return paraphrased_queries
+
+    def use_original_or_paraphrased_queries(self, defence):
+        # sets the variable self.queries, which will be later used during attack training or evaluation
+        if defence == DefenceName.PARAPHRASE:
+            self.queries = self.queries_para
+        else:
+            self.queries = self.queries_orig
+        self.queries_train, self.queries_test = self.split_train_test(self.queries)
+
 
     def sample_images_from_ds(self, fraction: float):
         n_images = math.floor(fraction * self.num_images_orig)

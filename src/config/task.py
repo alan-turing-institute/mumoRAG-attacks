@@ -1,18 +1,34 @@
 import hashlib
 from dataclasses import dataclass, asdict
+from pathlib import Path
+from typing import Iterator
 from itertools import product
-from typing import Optional
 
 from experiments.configstore import get_config_name
+from utils.logger import logger
+from utils.defence import DefenceName
+from utils.scheduler import LearningRateConfig
+from wrappers.attack_mask import AttackMask
 from wrappers.dataset import DatasetName
-from wrappers.embedding import EmbedderName, EmbeddingLoss, COLPALI_MODELS
+from wrappers.embedding import EmbedderName, EmbeddingLoss, COLPALI_MODELS, is_loss_compatible, get_loss_with_default
 from wrappers.judge import JudgeMetric
 from wrappers.vlm import VLMName
-from wrappers.attack_mask import AttackMask
-from wrappers.text_embedding import TextEmbedderName
-
-
 from .experiment import ExperimentConfig
+
+@dataclass
+class TaskVLMConfig:
+    lambda_: float
+    models: list[VLMName]
+    target_answers: list[str]
+    gen_topk: int
+
+
+@dataclass
+class TaskJudgeConfig:
+    lambda_: float
+    model_name: VLMName
+    target_answer: str
+    metrics: list[JudgeMetric]
 
 
 @dataclass
@@ -24,63 +40,67 @@ class TaskConfig:
     """
 
     ds_name: DatasetName
-    model_name_emb: EmbedderName
-    model_name_vlm: VLMName
-    target_answer_vlm: list[str]
+    model_name_embs: list[EmbedderName]
+    vlm: TaskVLMConfig | None
     chosen_index: int
     max_perturbation: float
     n_gradient_steps: int
-    lr_start: float
-    lr_end: float
     max_batch_size_per_iter: int
     gradient_acc_steps: int
     lambda_emb: float
-    lambda_vlm: float
     emb_train_loss_type: EmbeddingLoss
     is_adaptive: bool
     lambda_constant: float
-    model_name_jdg: VLMName
-    lambda_jdg: float
-    target_answer_jdg: str
-    train_jdg_metric_list: list[JudgeMetric]
     attack_mask: AttackMask
     image_size: list[int]
     target_query_idx: list[int]  # we assume the target queries are always from the training dataset
     is_targeted: bool
     n_knn_target_queries: int
-    attack_embedder_name: TextEmbedderName
     optimize_nontargeted_queries: bool
-    eval_emb_name: Optional[EmbedderName] = None
-    eval_vlm_name: Optional[VLMName] = None
-    eval_jdg_name: Optional[VLMName] = None
+    judge: TaskJudgeConfig | None
+    lr: LearningRateConfig
     colpali_only_images: bool = False
-    gen_topk: int = 1
     kb_compromised_fraction: float = 0.1
+    # eval
+    eval_emb_name: EmbedderName | None = None
+    eval_vlm_name: VLMName | None = None
+    eval_jdg_name: VLMName | None = None
+    defence: DefenceName = DefenceName.NONE
 
     def create_hash_string(self):
         target_str = (
             ",".join([str(query_id) for query_id in self.target_query_idx])
             + f"{self.n_knn_target_queries}"
-            + f"{self.attack_embedder_name}"
             + f"{self.optimize_nontargeted_queries}"
             if self.is_targeted
             else ""
         )
-        target_answer_str = ",".join(self.target_answer_vlm)
+        target_answer_str = ",".join(self.vlm.target_answers) if self.vlm else ""
 
-        config_str = f"{self.model_name_emb}{self.model_name_vlm}{self.ds_name}{self.chosen_index}{target_answer_str}{self.max_perturbation}{self.emb_train_loss_type}{self.is_adaptive}{self.gen_topk}{self.kb_compromised_fraction}{target_str}{self.attack_mask}"
+        model_name_embs = self.model_name_embs[0] if len(self.model_name_embs) == 1 else self.model_name_embs
+
+        if self.vlm:
+            model_name_vlms = self.vlm.models[0] if len(self.vlm.models) == 1 else self.vlm.models
+            gen_topk = self.vlm.gen_topk
+            vlm_float = float(self.vlm.lambda_)
+        else:
+            gen_topk = ""
+            model_name_vlms = ""
+            vlm_float = ""
+
+        config_str = f"{model_name_embs}{model_name_vlms}{self.ds_name}{self.chosen_index}{target_answer_str}{self.max_perturbation}{self.emb_train_loss_type}{self.is_adaptive}{gen_topk}{self.kb_compromised_fraction}{target_str}{self.attack_mask}"
 
         if self.is_adaptive:
             config_str += f"{float(self.lambda_constant)}"
         else:
-            config_str += f"{float(self.lambda_emb)}{float(self.lambda_vlm)}"
+            config_str += f"{float(self.lambda_emb)}{vlm_float}"
 
-        if self.model_name_emb in COLPALI_MODELS and self.colpali_only_images:
+        if any([model_name in COLPALI_MODELS for model_name in self.model_name_embs]) and self.colpali_only_images:
             config_str += f"{self.colpali_only_images}"
 
-        if self.lambda_jdg > 0:
-            jdg_metric_str = "".join(self.train_jdg_metric_list)
-            config_str += f"{self.model_name_jdg}{self.lambda_jdg}{self.target_answer_jdg}{jdg_metric_str}"
+        if self.judge:
+            jdg_metric_str = "".join(self.judge.metrics)
+            config_str += f"{self.judge.model_name}{self.judge.lambda_}{self.judge.target_answer}{jdg_metric_str}"
 
         hash_str = hashlib.md5(config_str.encode()).hexdigest()
         return hash_str
@@ -92,72 +112,137 @@ class TaskConfig:
     def to_dict(self):
         return asdict(self)
 
+    def get_result_filename(self, results_folder: Path) -> Path:
+        hash_string = self.create_hash_string()
+        transferability_suffix = get_transferability_file_suffix(self.eval_emb_name, self.eval_vlm_name)
+        return results_folder / f"metrics_{get_config_name()}_{hash_string}{transferability_suffix}.json"
 
-# standalone function
-def get_transferability_file_suffix(eval_emb_name: EmbedderName, eval_vlm_name: VLMName, eval_jdg_name: VLMName = ""):
-    if eval_emb_name == "" and eval_vlm_name == "" and eval_jdg_name == "":
+
+# standalone functions
+def get_transferability_file_suffix(
+    eval_emb_name: EmbedderName | None,
+    eval_vlm_name: VLMName | None,
+    eval_jdg_name: VLMName | None = None,
+) -> str:
+    if not eval_emb_name and not eval_vlm_name and not eval_jdg_name:
         return ""
-
-    transfer_str = f"{eval_emb_name}{eval_vlm_name}{eval_jdg_name}"
+    transfer_str = f"{eval_emb_name or ''}{eval_vlm_name or ''}{eval_jdg_name or ''}"
     return f"_{hashlib.md5(transfer_str.encode()).hexdigest()}"
 
 
+def get_defence_file_suffix(defence: DefenceName) -> str:
+    if defence == DefenceName.NONE:
+        return ""
+    return f"_{defence.value}"
+
 def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = False) -> list[TaskConfig]:
-    parameter_collection = product(
+    if exp_config.train.is_targeted and exp_config.train.vlm is None:
+        raise ValueError("Cannot run targeted experiment without specifying VLMs.")
+
+    if include_eval and exp_config.train.vlm is None and exp_config.eval.do_generation and exp_config.eval.eval_vlm_list is None:
+        raise ValueError("Cannot evaluate without specifying VLMs.")
+
+    parameter_collection: Iterator[
+        tuple[
+            DatasetName,
+            EmbedderName | list[EmbedderName],
+            VLMName | list[VLMName],
+            int,
+            VLMName,
+            float,
+            EmbeddingLoss,
+            bool,
+            int,
+            AttackMask,
+            bool,
+            EmbedderName | None,
+            VLMName | None,
+            VLMName | None,
+            DefenceName,
+        ]
+    ] = product(# type: ignore
         exp_config.train.dataset_list,
         exp_config.train.embedder_list,
-        exp_config.train.vlm_list,
-        exp_config.train.judge_list,
+        exp_config.train.vlm.models if exp_config.train.vlm else [None],
+        exp_config.train.vlm.gen_topk_list if exp_config.train.vlm else [None],
+        exp_config.train.judge.models if exp_config.train.judge else [None],
         exp_config.train.max_perturbation_list,
         exp_config.train.emb_train_loss_type_list,
         exp_config.train.is_adaptive_list,
         exp_config.train.chosen_index_list,
-        exp_config.train.gen_topk_list,
         exp_config.train.attack_mask_list,
         exp_config.train.optimize_nontargeted_queries_list,
-        (exp_config.eval.eval_emb_list if include_eval else None) or [""],
-        (exp_config.eval.eval_vlm_list if include_eval else None) or [""],
-        (exp_config.eval.eval_jdg_list if include_eval else None) or [""],
+        (exp_config.eval.eval_emb_list if include_eval else None) or [None],
+        (exp_config.eval.eval_vlm_list if include_eval else None) or [None],
+        (exp_config.eval.eval_jdg_list if include_eval else None) or [None],
+        (exp_config.eval.defences_list if include_eval else None) or [DefenceName.NONE],
     )
     attack_configs = []
     for params in parameter_collection:
         (
             ds_name,
-            model_name_emb,
-            model_name_vlm,
+            model_name_embs,
+            model_name_vlms,
+            gen_topk,
             model_name_jdg,
             max_perturbation,
             emb_train_loss_type,
             is_adaptive,
             chosen_index,
-            gen_topk,
             attack_mask,
             optimize_nontargeted_queries,
             eval_emb_name,
             eval_vlm_name,
             eval_jdg_name,
+            defence,
         ) = params
 
-        if len(exp_config.train.target_answer_vlm) not in [1, len(exp_config.train.target_query_idx)]:
+
+        if exp_config.train.vlm and len(exp_config.train.vlm.target_answers) > 1 and not exp_config.train.is_targeted:
+            raise ValueError("Multiple target answers supported only for targeted attacks.")
+
+        if isinstance(model_name_embs, list):
+            if include_eval and not eval_emb_name:
+                raise ValueError("If trained with multiple embedders, evaluation config must specify a single embedder to test transferability")
+            if exp_config.train.is_targeted and exp_config.train.n_knn_target_queries > 1:
+                raise ValueError("Multi-embedder tasks do not k-nearest neighbour targeted attacks.")
+            if emb_train_loss_type != EmbeddingLoss.DEFAULT:
+                raise ValueError("Multi-embedder tasks do not support choosing non-default loss type.")
+        else:
+            emb_train_loss_type = get_loss_with_default(model_name_embs, emb_train_loss_type)
+            if not is_loss_compatible(model_name_embs, emb_train_loss_type):
+                logger.warning(f"Loss {emb_train_loss_type} not compatible with {model_name_embs}; skipping task config")
+                continue
+            model_name_embs = [model_name_embs]
+
+        if isinstance(model_name_vlms, list):
+            if include_eval and not eval_vlm_name:
+                raise ValueError("If trained with multiple VLMs, evaluation config must specify a single VLM to test transferability")
+        else:
+            model_name_vlms = [model_name_vlms]
+
+        if exp_config.train.vlm and len(exp_config.train.vlm.target_answers) not in [1, len(exp_config.train.target_query_idx)]:
             raise ValueError(
-                f"VLM target answers array has incompatible length ({len(exp_config.train.target_answer_vlm)}) with target queries ({len(exp_config.train.target_query_idx)})"
+                f"VLM target answers array has incompatible length ({len(exp_config.train.vlm.target_answers)}) with target queries ({len(exp_config.train.target_query_idx)})"
             )
 
         attack_configs.append(
             TaskConfig(
                 ds_name=ds_name,
-                model_name_emb=model_name_emb,
-                model_name_vlm=model_name_vlm,
-                target_answer_vlm=exp_config.train.target_answer_vlm,
+                model_name_embs=model_name_embs,
+                vlm=TaskVLMConfig(
+                    models=model_name_vlms,
+                    target_answers=exp_config.train.vlm.target_answers,
+                    lambda_=exp_config.train.vlm.lambda_,
+                    gen_topk=gen_topk,
+                ) if exp_config.train.vlm else None,
                 chosen_index=chosen_index,
                 max_perturbation=max_perturbation,
                 n_gradient_steps=exp_config.train.n_gradient_steps,
-                lr_start=exp_config.train.lr_start,
-                lr_end=exp_config.train.lr_end,
+                lr=exp_config.train.lr,
                 max_batch_size_per_iter=exp_config.train.max_batch_size_per_iter,
                 gradient_acc_steps=exp_config.train.gradient_acc_steps,
                 lambda_emb=exp_config.train.lambda_emb,
-                lambda_vlm=exp_config.train.lambda_vlm,
                 emb_train_loss_type=emb_train_loss_type,
                 is_adaptive=is_adaptive,
                 lambda_constant=exp_config.train.lambda_constant,
@@ -165,19 +250,20 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
                 eval_vlm_name=eval_vlm_name,
                 eval_jdg_name=eval_jdg_name,
                 colpali_only_images=exp_config.train.colpali_only_images,
-                gen_topk=gen_topk,
                 kb_compromised_fraction=exp_config.train.kb_compromised_fraction,
-                model_name_jdg=model_name_jdg,
-                lambda_jdg=exp_config.train.lambda_jdg,
-                target_answer_jdg=exp_config.train.target_answer_jdg,
-                train_jdg_metric_list=exp_config.train.train_jdg_metric_list,
+                judge=TaskJudgeConfig(
+                    model_name=model_name_jdg,
+                    lambda_=exp_config.train.judge.lambda_,
+                    target_answer=exp_config.train.judge.target_answer,
+                    metrics=exp_config.train.judge.metrics,
+                ) if exp_config.train.judge else None,
                 attack_mask=attack_mask,
                 image_size=exp_config.train.image_size,
                 target_query_idx=exp_config.train.target_query_idx,
                 is_targeted=exp_config.train.is_targeted,
                 n_knn_target_queries=exp_config.train.n_knn_target_queries,
-                attack_embedder_name=exp_config.train.attack_embedder_name,
-                optimize_nontargeted_queries=optimize_nontargeted_queries
+                optimize_nontargeted_queries=optimize_nontargeted_queries,
+                defence=defence,
             )
         )
 

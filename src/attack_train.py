@@ -13,7 +13,6 @@ from utils.attack import rag_attack
 from utils.logger import logger
 from utils.utils import get_device
 from wrappers.cache import get_vlm, get_dataset, get_embedder, get_judge
-from wrappers.embedding import is_loss_compatible
 
 
 def run(exp_config: ExperimentConfig):
@@ -22,18 +21,23 @@ def run(exp_config: ExperimentConfig):
     n_evals = len(task_configs)
 
     for i, task_config in enumerate(task_configs):
-        if not is_loss_compatible(task_config.model_name_emb, task_config.emb_train_loss_type): continue
         logger.info(f"{'+' * 20}\nTrain Attack {(i + 1):4d}/{n_evals}, task_config -> {pformat(task_config.to_dict(), indent=4)}")
 
-        vlm = get_vlm(task_config.model_name_vlm, device)
         ds = get_dataset(task_config.ds_name)
-        embedder = get_embedder(
-            task_config.model_name_emb,
+        ds.use_original_or_paraphrased_queries(task_config.defence)
+
+        vlms = [get_vlm(
+            model_name,
+            device,
+        ) for model_name in task_config.vlm.models] if task_config.vlm else None
+
+        embedders = [get_embedder(
+            model_name,
             quantize=False,
             colpali_only_images=exp_config.train.colpali_only_images,
             device=device,
-        )
-        jdg = get_judge(task_config.model_name_jdg, device) if task_config.lambda_jdg > 0 else None
+        ) for model_name in task_config.model_name_embs]
+        jdg = get_judge(task_config.judge.model_name, device) if task_config.judge else None
 
         attack_images = ds.sample_images_from_ds(fraction=task_config.kb_compromised_fraction)  # images included by the attacker in the VLM context (n-1 because the malicious image must be included)
 
@@ -48,8 +52,8 @@ def run(exp_config: ExperimentConfig):
         # train the attack
         image_adv = rag_attack(
             raw_image=chosen_image,
-            embedder=embedder,
-            vlm=vlm,
+            embedders=embedders,
+            vlms=vlms,
             jdg=jdg,
             train_user_queries=ds.queries_train,
             train_ground_truth_vlm_answers=ds.ground_truth_answers_train,

@@ -4,6 +4,7 @@ import time
 
 import torch
 from tqdm import tqdm
+import torchvision.transforms.v2 as T
 
 from config import EMBEDDINGS_FOLDER
 from wrappers.embedding import EmbeddingModel, EmbedderName, EmbeddingLoss, COLPALI_MODELS, score_multi_vector_modified
@@ -34,7 +35,7 @@ class EmbeddedDataset:
             self.attempt_load_embeddings()
         except FileNotFoundError:
             logger.info("Precomputing Embeddings ...")
-            batch_size = 4 if self.embedder.name == EmbedderName.COLPALI else 16
+            batch_size = 2 if self.embedder.name in [EmbedderName.COLPALI, EmbedderName.QWEN2_GME_2B] else 16
             with torch.no_grad():
                 self.compute_embeddings(batch_size=batch_size)
 
@@ -78,10 +79,13 @@ class EmbeddedDataset:
         """
         Adds the adversarial image to the database along with its embedding
         """
+        mock_image = T.ToPILImage()(adv_img/255)
+        adv_img_embeddings = self.embedder.compute_img_embedding(adv_img, mock_image, overwrite=True)
+
         if len(self.dataset.images) == self.dataset.num_images_orig:
-            self.image_embeddings = torch.cat((self.image_embeddings, self.embedder.compute_img_embedding([adv_img], None)), dim=0)
+            self.image_embeddings = torch.cat((self.image_embeddings, adv_img_embeddings), dim=0)
         else:
-            self.image_embeddings[-1,:] = self.embedder.compute_img_embedding([adv_img], None)
+            self.image_embeddings[-1,:] = adv_img_embeddings
         self.dataset.add_adv_image(adv_img)
 
 
@@ -89,16 +93,21 @@ class EmbeddedDataset:
         """
         creates a [num_queries x num_images] tensor of scores/losses
         """
+
         if self.embedder.name in COLPALI_MODELS and loss_type != EmbeddingLoss.COS_AVGEMB:
             return -1 * score_multi_vector_modified(qs=self.query_embeddings, ps=self.image_embeddings, loss=loss_type)
 
         if loss_type == EmbeddingLoss.COS_AVGEMB:
-            img_embs = self.image_embeddings.mean(dim=1).unsqueeze(0).repeat(len(self.dataset.queries), 1, 1)
-            txt_embs = self.query_embeddings.mean(dim=1).unsqueeze(1).repeat(1, len(self.dataset.images), 1)
+            img_emb_avg = self.image_embeddings.mean(dim=1)
+            txt_emb_avg = self.query_embeddings.mean(dim=1)
+
+            img_embs = img_emb_avg.unsqueeze(0).repeat(txt_emb_avg.shape[0], 1, 1)
+            txt_embs = txt_emb_avg.unsqueeze(1).repeat(1, img_embs.shape[1], 1)
+
             return 1 - torch.nn.functional.cosine_similarity(img_embs, txt_embs, dim=-1)
 
-        img_embs = self.image_embeddings.unsqueeze(0).repeat(len(self.dataset.queries), 1, 1)
-        txt_embs = self.query_embeddings.unsqueeze(1).repeat(1, len(self.dataset.images), 1)
+        img_embs = self.image_embeddings.unsqueeze(0).repeat(self.query_embeddings.shape[0], 1, 1)
+        txt_embs = self.query_embeddings.unsqueeze(1).repeat(1,self.image_embeddings.shape[0], 1)
 
         match loss_type:
             case EmbeddingLoss.MSE:
