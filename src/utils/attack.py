@@ -18,8 +18,8 @@ from .utils import get_memory_consumption
 def rag_attack(
     raw_image: torch.Tensor,
     embedders: list[EmbeddingModel],
-    vlm: VLM,
-    jdg: JudgeVLM,
+    vlms: list[VLM] | None,
+    jdg: JudgeVLM | None,
     train_user_queries: list[str],
     train_ground_truth_vlm_answers: list[str],
     config: TaskConfig,
@@ -41,17 +41,14 @@ def rag_attack(
     1. Using batch_size=1 with gradient accumulation is much more effective than using larger batch_size. No idea why?
     """
     # extract config variables
-    target_answer_vlm = config.target_answer_vlm
     max_perturbation = config.max_perturbation
     n_gradient_steps = config.n_gradient_steps
     lr_scheduler = LearningRateScheduler(lr=config.lr, n_iter=config.n_gradient_steps)
     max_batch_size_per_iter = config.max_batch_size_per_iter
     gradient_acc_steps = config.gradient_acc_steps
     lambda_emb = config.lambda_emb
-    lambda_vlm = config.lambda_vlm
     is_adaptive = config.is_adaptive
     lambda_constant = config.lambda_constant
-    gen_topk = config.gen_topk
     is_targeted = config.is_targeted
     target_query_idx = config.target_query_idx
     n_knn_target_queries = config.n_knn_target_queries
@@ -66,10 +63,11 @@ def rag_attack(
     # embedder only required for nearest neighbour attacks which are not currently supported with multi-embedder
     embedder = embedders[0]
     emb_loss_type = get_loss_with_default(embedder.name, config.emb_train_loss_type)
+
     target_query_idx, _, all_answers_vlm = get_all_target_queries_and_answers(
         is_targeted,
         target_query_idx,
-        target_answer_vlm,
+        config.vlm.target_answers if config.vlm else None,
         train_user_queries,
         n_knn_target_queries,
         train_ground_truth_vlm_answers,
@@ -77,21 +75,27 @@ def rag_attack(
         emb_loss_type,
         device,
     )
-
     user_query_embeddings = dict()
     # pre-computing embeddings and prompts for all data
     if lambda_emb > 0:
         for embedder in embedders:
             user_query_embeddings[embedder.name] = embedder.compute_txt_embedding(train_user_queries)
-    if lambda_vlm > 0:
-        full_text_vlm_prompts, target_tokens_vlm = vlm.get_training_prompts(train_user_queries, all_answers_vlm, gen_topk)
+
+    vlm_info = dict()
+    if config.vlm:
+        for vlm in vlms:
+            full_text_vlm_prompts, target_tokens_vlm = vlm.get_training_prompts(train_user_queries, all_answers_vlm, config.vlm.gen_topk)
+            vlm_info[vlm.name] = {
+                "full_text_vlm_prompts": full_text_vlm_prompts,
+                "target_tokens_vlm": target_tokens_vlm,
+            }
         if config.judge:
             full_text_jdg_prompts, target_tokens_jdg = jdg.get_training_prompts(
                 train_user_queries,
                 all_answers_vlm,
                 config.judge.target_answer,
                 config.judge.metrics,
-                gen_topk,
+                config.vlm.gen_topk,
             )
 
     grads = torch.zeros_like(raw_image)
@@ -110,23 +114,26 @@ def rag_attack(
         )
         positive_idx = [i for i in range(len(samples_idx)) if samples_idx[i] in target_query_idx]
 
-        for embedder in embedders:
-            emb_loss_type = get_loss_with_default(embedder.name, config.emb_train_loss_type)
-
-            if lambda_emb > 0:
+        if lambda_emb > 0:
+            for embedder in embedders:
+                emb_loss_type = get_loss_with_default(embedder.name, config.emb_train_loss_type)
                 # retrieval loss function
                 user_query_embedding = user_query_embeddings[embedder.name]
                 user_query_embedding_batch = user_query_embedding[samples_idx, :]
                 image_embedding = embedder.compute_img_embedding(raw_image, initial_image, overwrite=True)
                 loss_emb += embedder.compute_embedding_loss(image_embedding, user_query_embedding_batch, emb_loss_type, is_targeted, positive_idx)
 
-        if lambda_vlm > 0:
-            full_text_vlm_prompt_batch = [full_text_vlm_prompts[i] for i in samples_idx]
-            target_tokens_vlm_batch = [target_tokens_vlm[i] for i in samples_idx]
+        if config.vlm:
             # generation loss function
-            context_images, adv_indices = prepare_context_images(attack_images, T.ToPILImage()(raw_image), batch_size_per_iter, config.gen_topk)
-            out = vlm.forward(raw_image, full_text_vlm_prompt_batch, context_images, adv_indices, overwrite=True)
-            loss_vlm = vlm.compute_gen_loss(out, target_tokens_vlm_batch, positive_idx)
+            context_images, adv_indices = prepare_context_images(attack_images, T.ToPILImage()(raw_image), batch_size_per_iter, config.vlm.gen_topk)
+            for vlm in vlms:
+                full_text_vlm_prompts = vlm_info[vlm.name]["full_text_vlm_prompts"]
+                target_tokens_vlm = vlm_info[vlm.name]["target_tokens_vlm"]
+
+                full_text_vlm_prompt_batch = [full_text_vlm_prompts[i] for i in samples_idx]
+                target_tokens_vlm_batch = [target_tokens_vlm[i] for i in samples_idx]
+                out = vlm.forward(raw_image, full_text_vlm_prompt_batch, context_images, adv_indices, overwrite=True)
+                loss_vlm += vlm.compute_gen_loss(out, target_tokens_vlm_batch, positive_idx)
             if config.judge:
                 samples_jdg_idx = torch.randint(0, len(train_user_queries)*len(config.judge.metrics), (batch_size_per_iter,))
                 full_text_jdg_prompt_batch = [full_text_jdg_prompts[i] for i in samples_jdg_idx]
@@ -136,11 +143,13 @@ def rag_attack(
                 loss_jdg = jdg.compute_gen_loss(out, target_tokens_jdg_batch)
 
         # update loss coefficients if we use the adaptive attack
-        if i==0 and is_adaptive and lambda_emb>0 and lambda_vlm>0:
+        if i==0 and is_adaptive and lambda_emb>0 and config.vlm:
             lambda_emb, lambda_vlm = adaptive_attack_coefficients(loss_emb, loss_vlm, lambda_constant)
 
         # total loss function
-        total_loss = lambda_emb * loss_emb + lambda_vlm * loss_vlm
+        total_loss = lambda_emb * loss_emb
+        if config.vlm:
+            total_loss += config.vlm.lambda_ * loss_vlm
         if config.judge:
             total_loss += config.judge.lambda_ * loss_jdg
         if i==0 or ((i+1)/gradient_acc_steps)%print_every==0:
@@ -226,7 +235,7 @@ def sample_minibatch(n_population, batch_size, is_targeted: bool, target_idx: li
 def get_all_target_queries_and_answers(
         is_targeted: bool,
         target_query_idx: list[int],
-        target_answer_vlm: list[str],
+        target_answer_vlm: list[str] | None,
         train_user_queries: list[str],
         n_knn_target_queries: int,
         ground_truth_answers: list[str],
@@ -239,6 +248,8 @@ def get_all_target_queries_and_answers(
         target_query_idx = [i for i in range(len(ground_truth_answers))]
 
     # make number of answers match number of target queries
+    if target_answer_vlm is None:
+        target_answer_vlm = [""]
     if len(target_answer_vlm) == 1:
         target_answer_vlm = [target_answer_vlm[0] for _ in target_query_idx]
 

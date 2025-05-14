@@ -9,7 +9,7 @@ from omegaconf import OmegaConf
 
 from config.eval import ExperimentEvalConfig
 from config.experiment import ExperimentConfig
-from config.train import ExperimentTrainConfig, JudgeConfig
+from config.train import ExperimentTrainConfig, JudgeConfig, VLMConfig
 from wrappers.attack_mask import AttackMask
 from wrappers.embedding import EmbedderName, EmbeddingLoss
 from wrappers.judge import JudgeMetric
@@ -88,7 +88,6 @@ configstore.store(
         ),
     ),
 )
-
 
 """
 Targeted attacks against a subset of queries
@@ -252,6 +251,9 @@ configstore.store(
             embedder_list=[EmbedderName.COLPALI],
             vlm_list=[VLMName.SMOLVLM_1_2B],
             emb_train_loss_type_list=[EmbeddingLoss.MAXSIM, EmbeddingLoss.AVGSIM, EmbeddingLoss.SOFTMAXSIM, EmbeddingLoss.COS_AVGEMB],
+            vlm=VLMConfig(
+                models=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
+            ),
         ),
         eval=ExperimentEvalConfig(
             emb_test_loss_type_list=[EmbeddingLoss.MAXSIM, EmbeddingLoss.AVGSIM, EmbeddingLoss.SOFTMAXSIM, EmbeddingLoss.COS_AVGEMB],
