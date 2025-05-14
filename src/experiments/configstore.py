@@ -63,8 +63,7 @@ configstore.store(
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
             embedder_list=[EmbedderName.QWEN2_GME_2B],
-            vlm_list=[VLMName.QWEN_2p5_VL_3B],
-            gen_topk_list=[1],
+            vlm=VLMConfig(models=[VLMName.QWEN_2p5_VL_3B], gen_topk_list=[1]),
             print_every=2,
             n_gradient_steps=4,
         ),
@@ -80,7 +79,7 @@ configstore.store(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
             embedder_list=embedders,
-            vlm_list=vlms,
+            vlm=VLMConfig(models=vlms),
         ),
         eval=ExperimentEvalConfig(
             eval_emb_list=embedders,
@@ -98,7 +97,7 @@ configstore.store(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
             embedder_list=embedders,
-            vlm_list=vlms,
+            vlm=VLMConfig(models=vlms),
             is_targeted=True,
             target_query_idx=[0],
             n_knn_target_queries=1,
@@ -116,7 +115,7 @@ configstore.store(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
             embedder_list=embedders,
-            vlm_list=[VLMName.SMOLVLM_1_2B],
+            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B]),
             is_targeted=True,
             target_query_idx=[0],
             n_knn_target_queries=5,
@@ -130,11 +129,13 @@ configstore.store(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
             embedder_list=embedders,
-            vlm_list=[VLMName.SMOLVLM_1_2B],
+            vlm=VLMConfig(
+                models=[VLMName.SMOLVLM_1_2B],
+                target_answers=["Manually match each marker to a generic human template regardless of trial-specific subject calibration.",
+                               "A micromort measures the number of accidents per million vehicles on the road and is used in transportation policy."]
+            ),
             is_targeted=True,
             target_query_idx=[0,1],
-            target_answer_vlm=["Manually match each marker to a generic human template regardless of trial-specific subject calibration.",
-                               "A micromort measures the number of accidents per million vehicles on the road and is used in transportation policy."],
             n_knn_target_queries=1,
             # optimize_nontargeted_queries_list=[True,False],
         ),
@@ -150,7 +151,7 @@ configstore.store(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
             embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
-            vlm_list=[VLMName.SMOLVLM_1_2B],
+            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B]),
         ),
         eval=ExperimentEvalConfig(
             do_judge=True,
@@ -165,7 +166,7 @@ configstore.store(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
             embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
-            vlm_list=[VLMName.SMOLVLM_1_2B],
+            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B]),
             judge=JudgeConfig(
                 lambda_=1,
                 models=vlms,
@@ -186,7 +187,7 @@ configstore.store(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
             embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
-            vlm_list=[VLMName.SMOLVLM_1_2B],
+            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B]),
             is_targeted=True,
             target_query_idx=[0],
             n_knn_target_queries=1,
@@ -205,7 +206,7 @@ configstore.store(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
             embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
-            vlm_list=[VLMName.SMOLVLM_1_2B],
+            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B]),
             is_targeted=True,
             target_query_idx=[0],
             n_knn_target_queries=1,
@@ -233,7 +234,7 @@ configstore.store(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
             embedder_list=embedders,
-            vlm_list=vlms,
+            vlm=VLMConfig(models=vlms),
             max_perturbation_list=[x / 255.0 for x in [1, 2, 4, 8, 16, 32, 64, 128, 256]],
         ),
     ),
@@ -249,11 +250,8 @@ configstore.store(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
             embedder_list=[EmbedderName.COLPALI],
-            vlm_list=[VLMName.SMOLVLM_1_2B],
+            vlm=None,
             emb_train_loss_type_list=[EmbeddingLoss.MAXSIM, EmbeddingLoss.AVGSIM, EmbeddingLoss.SOFTMAXSIM, EmbeddingLoss.COS_AVGEMB],
-            vlm=VLMConfig(
-                models=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
-            ),
         ),
         eval=ExperimentEvalConfig(
             emb_test_loss_type_list=[EmbeddingLoss.MAXSIM, EmbeddingLoss.AVGSIM, EmbeddingLoss.SOFTMAXSIM, EmbeddingLoss.COS_AVGEMB],
@@ -270,7 +268,7 @@ configstore.store(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
             embedder_list=[EmbedderName.COLPALI],
-            vlm_list=[VLMName.SMOLVLM_1_2B],
+            vlm=None,
             emb_train_loss_type_list=[EmbeddingLoss.MAXSIM, EmbeddingLoss.AVGSIM, EmbeddingLoss.SOFTMAXSIM, EmbeddingLoss.COS_AVGEMB],
             colpali_only_images=True
         ),
@@ -290,8 +288,7 @@ configstore.store(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
             embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
-            vlm_list=[VLMName.SMOLVLM_1_2B],
-            gen_topk_list=[1, 5],
+            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B], gen_topk_list=[1,5])
         ),
         eval=ExperimentEvalConfig(
             gen_topk_list=[-1, 1, 5],
@@ -323,7 +320,7 @@ configstore.store(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
             embedder_list=embedders,
-            vlm_list=vlms,
+            vlm=VLMConfig(models=vlms),
             max_perturbation_list=[x / 255.0 for x in [1, 2, 4, 8, 16, 32, 64, 128, 256]],
             is_targeted=True,
             target_query_idx=[1],
@@ -341,7 +338,7 @@ configstore.store(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
             embedder_list=embedders,
-            vlm_list=vlms,
+            vlm=VLMConfig(models=vlms),
             attack_mask_list=[AttackMask.Figure, AttackMask.FirstQuadrant],
             n_gradient_steps= 1000
         ),
@@ -360,7 +357,7 @@ configstore.store(
         train=ExperimentTrainConfig(
             dataset_list=[DatasetName.VIDORE_SYN_AI, DatasetName.VIDORE_V2_ESG],
             embedder_list=embedders + [EmbedderName.COLPALI],
-            vlm_list=vlms,
+            vlm=VLMConfig(models=vlms),
         ),
         eval=ExperimentEvalConfig(
             eval_emb_list=embedders + [EmbedderName.COLPALI],
