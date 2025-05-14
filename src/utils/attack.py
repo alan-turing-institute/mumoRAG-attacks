@@ -89,18 +89,14 @@ def rag_attack(
                 "full_text_vlm_prompts": full_text_vlm_prompts,
                 "target_tokens_vlm": target_tokens_vlm,
             }
-            if config.judge:
-                full_text_jdg_prompts, target_tokens_jdg = jdg.get_training_prompts(
-                    train_user_queries,
-                    all_answers_vlm,
-                    config.judge.target_answer,
-                    config.judge.metrics,
-                    config.vlm.gen_topk,
-                )
-                vlm_info[vlm.name].update({
-                    "full_text_jdg_prompts": full_text_jdg_prompts,
-                    "target_tokens_jdg": target_tokens_jdg,
-                })
+        if config.judge:
+            full_text_jdg_prompts, target_tokens_jdg = jdg.get_training_prompts(
+                train_user_queries,
+                all_answers_vlm,
+                config.judge.target_answer,
+                config.judge.metrics,
+                config.vlm.gen_topk,
+            )
 
     grads = torch.zeros_like(raw_image)
 
@@ -129,25 +125,22 @@ def rag_attack(
 
         if config.vlm:
             # generation loss function
+            context_images, adv_indices = prepare_context_images(attack_images, T.ToPILImage()(raw_image), batch_size_per_iter, config.vlm.gen_topk)
             for vlm in vlms:
                 full_text_vlm_prompts = vlm_info[vlm.name]["full_text_vlm_prompts"]
                 target_tokens_vlm = vlm_info[vlm.name]["target_tokens_vlm"]
 
                 full_text_vlm_prompt_batch = [full_text_vlm_prompts[i] for i in samples_idx]
                 target_tokens_vlm_batch = [target_tokens_vlm[i] for i in samples_idx]
-                context_images, adv_indices = prepare_context_images(attack_images, T.ToPILImage()(raw_image), batch_size_per_iter, config.vlm.gen_topk)
                 out = vlm.forward(raw_image, full_text_vlm_prompt_batch, context_images, adv_indices, overwrite=True)
                 loss_vlm += vlm.compute_gen_loss(out, target_tokens_vlm_batch, positive_idx)
-                if config.judge:
-                    full_text_jdg_prompts = vlm_info[vlm.name]["full_text_jdg_prompts"]
-                    target_tokens_jdg = vlm_info[vlm.name]["target_tokens_jdg"]
-
-                    samples_jdg_idx = torch.randint(0, len(train_user_queries)*len(config.judge.metrics), (batch_size_per_iter,))
-                    full_text_jdg_prompt_batch = [full_text_jdg_prompts[i] for i in samples_jdg_idx]
-                    target_tokens_jdg_batch = [target_tokens_jdg[i] for i in samples_jdg_idx]
-                    # judge loss function
-                    out = jdg.forward(raw_image, full_text_jdg_prompt_batch, context_images, adv_indices, overwrite=True)
-                    loss_jdg += jdg.compute_gen_loss(out, target_tokens_jdg_batch)
+            if config.judge:
+                samples_jdg_idx = torch.randint(0, len(train_user_queries)*len(config.judge.metrics), (batch_size_per_iter,))
+                full_text_jdg_prompt_batch = [full_text_jdg_prompts[i] for i in samples_jdg_idx]
+                target_tokens_jdg_batch = [target_tokens_jdg[i] for i in samples_jdg_idx]
+                # judge loss function
+                out = jdg.forward(raw_image, full_text_jdg_prompt_batch, context_images, adv_indices, overwrite=True)
+                loss_jdg = jdg.compute_gen_loss(out, target_tokens_jdg_batch)
 
         # update loss coefficients if we use the adaptive attack
         if i==0 and is_adaptive and lambda_emb>0 and config.vlm:
