@@ -22,7 +22,7 @@ configstore.store(
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
             embedder_list=[
-                EmbedderName.JINA_CLIP_2,
+                EmbedderName.SIGLIP2_BASE_PATCH16,
                 EmbedderName.CLIP_BASE_PATCH16,
             ],
             vlm=VLMConfig(
@@ -60,8 +60,8 @@ configstore.store(
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
             embedder_list=[
-                [EmbedderName.JINA_CLIP_2, EmbedderName.CLIP_BASE_PATCH16],
-                EmbedderName.JINA_CLIP_2,
+                [EmbedderName.SIGLIP2_BASE_PATCH16, EmbedderName.CLIP_BASE_PATCH16],
+                EmbedderName.SIGLIP2_BASE_PATCH16,
                 EmbedderName.CLIP_BASE_PATCH16,
             ],
             vlm=VLMConfig(
@@ -69,7 +69,7 @@ configstore.store(
             ),
         ),
         eval=ExperimentEvalConfig(
-            eval_emb_list=[EmbedderName.JINA_CLIP_2, EmbedderName.CLIP_BASE_PATCH16],
+            eval_emb_list=[EmbedderName.SIGLIP2_BASE_PATCH16, EmbedderName.CLIP_BASE_PATCH16],
         ),
     ),
 )

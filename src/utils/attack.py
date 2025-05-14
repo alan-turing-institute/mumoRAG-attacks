@@ -97,10 +97,10 @@ def rag_attack(
                     config.judge.metrics,
                     config.vlm.gen_topk,
                 )
-                vlm_info[vlm.name] = {
+                vlm_info[vlm.name].update({
                     "full_text_jdg_prompts": full_text_jdg_prompts,
                     "target_tokens_jdg": target_tokens_jdg,
-                }
+                })
 
     grads = torch.zeros_like(raw_image)
 
