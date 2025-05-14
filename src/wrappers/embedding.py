@@ -23,6 +23,7 @@ class EmbedderName(StrEnum):
     COLPALI = "vidore/colpali-v1.3"
     QWEN2_GME_2B = "Alibaba-NLP/gme-Qwen2-VL-2B-Instruct"
     QWEN2_GME_7B = "Alibaba-NLP/gme-Qwen2-VL-7B-Instruct"
+    QWEN2_DSE_2B = "MrLight/dse-qwen2-2b-mrl-v1"
 
 
 CLIP_LIKE_MODELS = [
@@ -50,6 +51,7 @@ class EmbeddingLoss(StrEnum):
     AVGSIM = "avgsim"
     SOFTMAXSIM = "softmaxsim"
     COS_AVGEMB = "cos_avgemb"
+    DEFAULT = "default"  # call get_loss_with_default
 
 
 COLPALI_LOSSES = [
@@ -63,32 +65,33 @@ NON_COLPALI_LOSSES = [
     EmbeddingLoss.MSE
 ]
 
-QWEN2_MODELS = [
+QWEN_GME_MODELS = [
     EmbedderName.QWEN2_GME_2B,
     EmbedderName.QWEN2_GME_7B,
 ]
 
+QWEN_DSE_MODELS = [
+    EmbedderName.QWEN2_DSE_2B,
+]
+
+
+def get_default_loss(model_name: EmbedderName) -> EmbeddingLoss:
+    if model_name in COLPALI_MODELS:
+        return EmbeddingLoss.MAXSIM
+    return EmbeddingLoss.COS
+
+
+def get_loss_with_default(model_name: EmbedderName, loss_type: EmbeddingLoss) -> EmbeddingLoss:
+    if loss_type == EmbeddingLoss.DEFAULT:
+        return get_default_loss(model_name)
+    return loss_type
+
 
 def is_loss_compatible(model_name_emb: EmbedderName, loss: EmbeddingLoss) -> bool:
-    if (model_name_emb in COLPALI_MODELS and loss not in COLPALI_LOSSES) or (
-            model_name_emb not in COLPALI_MODELS and loss in COLPALI_LOSSES):
-        return False
-    return True
-
-
-# candidate models
-MODEL_NAMES = [
-    "openai/clip-vit-base-patch16",
-    "openai/clip-vit-large-patch14",
-    "google/siglip2-base-patch16-224",
-    "jinaai/jina-clip-v2",
-    "vidore/colSmol-256M",  # maybe not worth trying since it requires installing colpali
-    # larger models: test later
-    "royokong/e5-v",
-    "nomic-ai/nomic-embed-vision-v1.5",
-    # multimodal retrieval requires using this in conjunction with "nomic-ai/nomic-embed-text-v1.5"
-    "vidore/colpali-v1.3",
-]
+    if model_name_emb in COLPALI_MODELS:
+        return loss in COLPALI_LOSSES
+    else:
+        return loss not in COLPALI_LOSSES
 
 
 class EmbeddingModel:
@@ -107,14 +110,14 @@ class EmbeddingModel:
             self.processor = None
             self.tokenizer = None
 
-        if model_name in CLIP_LIKE_MODELS:
+        elif model_name in CLIP_LIKE_MODELS:
             self.model = AutoModel.from_pretrained(
                 model_name,
                 torch_dtype=torch.float32 if device == "mps" else "auto").to(device)
             self.processor = AutoProcessor.from_pretrained(model_name, use_fast=True)
             self.tokenizer = AutoTokenizer.from_pretrained(model_name)
 
-        if model_name == EmbedderName.E5_V:
+        elif model_name == EmbedderName.E5_V:
             self.model = AutoModelForImageTextToText.from_pretrained(model_name,
                                                                      quantization_config=quantization_config).to(device)
             self.processor = AutoProcessor.from_pretrained(model_name)
@@ -124,7 +127,7 @@ class EmbeddingModel:
             self.processor.image_processor.image_grid_pinpoints = [[336, 336]]
             self.processor.image_processor.size['shortest_edge'] = 336
 
-        if model_name == EmbedderName.COLPALI:
+        elif model_name == EmbedderName.COLPALI:
             from colpali_engine.models import ColPali, ColPaliProcessor
 
             self.model = ColPali.from_pretrained(
@@ -133,7 +136,7 @@ class EmbeddingModel:
             self.processor = ColPaliProcessor.from_pretrained(model_name)
             self.tokenizer = None
 
-        if model_name in COLSMOL_MODELS:
+        elif model_name in COLSMOL_MODELS:
             from colpali_engine.models import ColIdefics3, ColIdefics3Processor
             self.model = ColIdefics3.from_pretrained(
                 model_name,
@@ -145,6 +148,14 @@ class EmbeddingModel:
         #     self.model = AutoModel.from_pretrained("Alibaba-NLP/gme-Qwen2-VL-2B-Instruct", revision="refs/pr/10", trust_remote_code=True)
         #     self.processor = AutoProcessor.from_pretrained("Alibaba-NLP/gme-Qwen2-VL-2B-Instruct", revision="refs/pr/10", trust_remote_code=True)
         #     self.tokenizer = None
+        elif model_name in QWEN_GME_MODELS:
+            self.model = AutoModelForImageTextToText.from_pretrained(model_name).to(device).eval()
+            self.processor = AutoProcessor.from_pretrained(model_name, use_fast=True)
+            self.tokenizer = None
+            self.instruction = "You are a helpful AI model."
+
+        else:
+            raise ValueError(f"Unknown model {model_name}")
 
         self.model.requires_grad_(False)
         self.model.eval()
@@ -191,6 +202,22 @@ class EmbeddingModel:
             batch_queries = self.processor.process_queries(user_query).to(self.device)
             user_query_embedding = self.model(**batch_queries)
             return user_query_embedding
+        
+        if self.name in QWEN_GME_MODELS:
+            assert isinstance(user_query, list)
+            msg = [f'<|im_start|>system\n{self.instruction}<|im_end|>\n<|im_start|>user\n{q}<|im_end|>\n<|im_start|>assistant\n<|endoftext|>' for q in user_query]
+            inputs = self.processor(text=msg, return_tensors="pt", padding=True, padding_side="left", truncation=True).to(self.device)
+            outputs = self.model(**inputs, output_hidden_states=True)
+            last_hidden_state = outputs.hidden_states[-1]
+            embeddings = last_hidden_state[:, -1].contiguous()
+            embeddings = torch.nn.functional.normalize(embeddings, p=2, dim=1)
+            return embeddings
+
+
+        # if self.name in QWEN2_MODELS:
+        #     batch_queries = self.processor(text=user_query).to(self.device)
+        #     user_query_embedding = self.model(**batch_queries)
+        #     return user_query_embedding
 
         raise ValueError(f"Not supported model {self.name}!")
 
@@ -262,6 +289,20 @@ class EmbeddingModel:
             else:
                 image_embedding = self.model(**image_input_emb)
             return image_embedding
+        
+        if self.name in QWEN_GME_MODELS: 
+            if isinstance(image, list):
+                image = torch.cat([T.Resize((512,512))(T.PILToTensor()(im)).unsqueeze(0) for im in image], dim=0)
+            n_image = 1 if len(image.shape) == 3 else image.shape[0]
+            image_text = '<|vision_start|><|image_pad|><|vision_end|>'
+            msg = [f'<|im_start|>system\n{self.instruction}<|im_end|>\n<|im_start|>user\n{image_text}<|im_end|>\n<|im_start|>assistant\n<|endoftext|>' for _ in range(n_image)]
+            inputs = self.processor(text=msg, images=image, return_tensors="pt", padding=True, padding_side="left", truncation=True).to(self.device)
+            outputs = self.model(**inputs, output_hidden_states=True)
+            last_hidden_state = outputs.hidden_states[-1]
+            embeddings = last_hidden_state[:, -1]
+            embeddings = torch.nn.functional.normalize(embeddings, p=2, dim=1)
+            return embeddings
+
 
         raise ValueError(f"Not supported model {self.name}!")
 
@@ -358,7 +399,7 @@ def score_multi_vector_modified(
                     scores_batch.append((all_scores * all_scores.softmax(dim=3)).sum(dim=3).sum(dim=2))
                 case EmbeddingLoss.COS_AVGEMB:
                     # take the average of embeddings over tokens then compute cosine similarity
-                    print(qs_batch.shape, ps_batch.shape)
+                    # print(qs_batch.shape, ps_batch.shape)
                     scores_batch.append(torch.nn.CosineSimilarity()(qs_batch.mean(dim=1), ps_batch.mean(dim=1)))
         scores_batch = torch.cat(scores_batch, dim=1).cpu()
         scores_list.append(scores_batch)

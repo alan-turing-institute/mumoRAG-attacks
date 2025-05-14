@@ -7,15 +7,15 @@ from hydra.core.config_store import ConfigStore
 from hydra.core.hydra_config import HydraConfig
 from omegaconf import OmegaConf
 
+from utils.defence import DefenceName
 from config.eval import ExperimentEvalConfig
 from config.experiment import ExperimentConfig
-from config.train import ExperimentTrainConfig
+from config.train import ExperimentTrainConfig, JudgeConfig
 from wrappers.attack_mask import AttackMask
+from wrappers.dataset import DatasetName
 from wrappers.embedding import EmbedderName, EmbeddingLoss
 from wrappers.judge import JudgeMetric
 from wrappers.vlm import VLMName
-from wrappers.dataset import DatasetName
-
 
 DEFAULT_EXPERIMENT = "dev"
 
@@ -41,8 +41,8 @@ eval_vlms = [
     # VLMName.INTERNVL_3_2B
 ]
 
-def load_config(name):
-    with initialize(version_base=None, config_path="pkg://experiments"):
+def load_config(name, config_path="pkg://experiments"):
+    with initialize(version_base=None, config_path=config_path):
         cfg = compose(config_name=name)
     return OmegaConf.to_object(cfg)
 
@@ -52,6 +52,7 @@ def get_config_name() -> str:
         return HydraConfig.get().job.config_name
     except ValueError:
         return "testing"
+
 
 """
 Development Configuration (default)
@@ -63,12 +64,31 @@ configstore.store(
             embedder_list=[EmbedderName.COLPALI],
             vlm_list=[VLMName.QWEN_2p5_VL_3B],
             gen_topk_list=[1],
-            print_every=2,
-            n_gradient_steps=4,
         ),
         eval=ExperimentEvalConfig(
             gen_topk_list=[-1],
-        )
+        ),
+    ),
+)
+
+
+"""
+Simple Defences
+"""
+configstore.store(
+    name="simple_defences",
+    node=ExperimentConfig(
+        train=ExperimentTrainConfig(
+            dataset_list=[DatasetName.VIDORE_SYN_AI, DatasetName.VIDORE_V2_ESG],
+            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14, EmbedderName.SIGLIP2_LARGE_PATCH16, EmbedderName.JINA_CLIP_2, EmbedderName.COLPALI],
+            vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
+            gen_topk_list=[1],
+        ),
+        eval=ExperimentEvalConfig(
+            gen_topk_list=[-1,1],
+            defences_list=[DefenceName.NOISE, DefenceName.PARAPHRASE, DefenceName.NONE],
+            noise_defence_level=8.0,
+        ),
     ),
 )
 
@@ -83,7 +103,7 @@ configstore.store(
             embedder_list=embedders,
             vlm_list=vlms,
             attack_mask_list=[AttackMask.Figure, AttackMask.FirstQuadrant],
-            n_gradient_steps= 1000
+            n_gradient_steps=1000,
         ),
     ),
 )
@@ -101,11 +121,11 @@ configstore.store(
             is_targeted=True,
             target_query_idx=[0],
             n_knn_target_queries=1,
-            optimize_nontargeted_queries_list=[True,False],
+            optimize_nontargeted_queries_list=[True, False],
         ),
         eval=ExperimentEvalConfig(
-            gen_topk_list=[-1,1,5],
-        )
+            gen_topk_list=[-1, 1, 5],
+        ),
     ),
 )
 configstore.store(
@@ -118,11 +138,11 @@ configstore.store(
             is_targeted=True,
             target_query_idx=[0],
             n_knn_target_queries=5,
-            optimize_nontargeted_queries_list=[True,False],
+            optimize_nontargeted_queries_list=[True, False],
         ),
         eval=ExperimentEvalConfig(
-            gen_topk_list=[-1,1,5],
-        )
+            gen_topk_list=[-1, 1, 5],
+        ),
     ),
 )
 configstore.store(
@@ -133,15 +153,17 @@ configstore.store(
             embedder_list=embedders + [EmbedderName.COLPALI],
             vlm_list=vlms,
             is_targeted=True,
-            target_query_idx=[0,1],
-            target_answer_vlm=["Manually match each marker to a generic human template regardless of trial-specific subject calibration.",
-                               "A micromort measures the number of accidents per million vehicles on the road and is used in transportation policy."],
+            target_query_idx=[0, 1],
+            target_answer_vlm=[
+                "Manually match each marker to a generic human template regardless of trial-specific subject calibration.",
+                "A micromort measures the number of accidents per million vehicles on the road and is used in transportation policy.",
+            ],
             n_knn_target_queries=1,
-            optimize_nontargeted_queries_list=[True,False],
+            optimize_nontargeted_queries_list=[True, False],
         ),
         eval=ExperimentEvalConfig(
-            gen_topk_list=[-1,1,5],
-        )
+            gen_topk_list=[-1, 1, 5],
+        ),
     ),
 )
 
@@ -160,11 +182,11 @@ configstore.store(
             train_jdg_metric_list= [JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY]
         ),
         eval=ExperimentEvalConfig(
-            gen_topk_list=[-1,1,5],
+            gen_topk_list=[-1, 1, 5],
             do_judge=True,
             eval_jdg_list=eval_vlms,
             eval_jdg_metric_list=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY],
-        )
+        ),
     ),
 )
 
@@ -187,7 +209,7 @@ configstore.store(
             do_judge=True,
             eval_jdg_list=vlms,
             eval_jdg_metric_list=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY],
-        )
+        ),
     ),
 )
 
@@ -239,7 +261,7 @@ configstore.store(
         ),
         eval=ExperimentEvalConfig(
             emb_test_loss_type_list=[EmbeddingLoss.MAXSIM, EmbeddingLoss.AVGSIM, EmbeddingLoss.SOFTMAXSIM, EmbeddingLoss.COS_AVGEMB],
-        )
+        ),
     ),
 )
 
@@ -254,11 +276,11 @@ configstore.store(
             embedder_list=[EmbedderName.COLPALI],
             vlm_list=vlms,
             emb_train_loss_type_list=[EmbeddingLoss.MAXSIM, EmbeddingLoss.AVGSIM, EmbeddingLoss.SOFTMAXSIM, EmbeddingLoss.COS_AVGEMB],
-            colpali_only_images=True
+            colpali_only_images=True,
         ),
         eval=ExperimentEvalConfig(
             emb_test_loss_type_list=[EmbeddingLoss.MAXSIM, EmbeddingLoss.AVGSIM, EmbeddingLoss.SOFTMAXSIM, EmbeddingLoss.COS_AVGEMB],
-        )
+        ),
     ),
 )
 

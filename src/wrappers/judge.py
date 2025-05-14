@@ -86,8 +86,7 @@ METRIC_2_PROMPT = {
 
 
 class JudgeVLM(VLM):
-
-    def judge_prompt_components(self, template: str, query: object = None, answer: object = None, n_images: object = 0) -> tuple[list[dict[str, str | Any]], list[dict[str, str]], list[dict[str, str | Any]] | list[Any]]:
+    def judge_prompt_components(self, template: str, query=None, answer=None, n_images=0):
         template = template.replace(">>query<<", query).replace(">>answer<<", answer)
         prompt_list = template.split(">>images<<")
         before  = [{"type": "text", "text": prompt_list[0]}] 
@@ -111,20 +110,21 @@ class JudgeVLM(VLM):
         return prompt
 
 
-    def get_training_prompts(self, 
-            queries: list[str],  
-            target_vlm_generation: list[str],
-            target_jdg_generation: str, 
-            jdg_metric_list: list[JudgeMetric],
-            n_images: int
-        ):
+    def get_training_prompts(
+        self,
+        queries: list[str],
+        target_vlm_generation: list[str],
+        target_jdg_generation: str,
+        jdg_metric_list: list[JudgeMetric],
+        n_images: int
+    ):
         """
         builds the prompt skeleton for the VLM including the image placeholder, the user query, and the required response
         """
         all_messages = []
         for metric in jdg_metric_list:
             template = METRIC_2_PROMPT[metric]
-            for query, target in zip(queries,target_vlm_generation):
+            for query, target in zip(queries, target_vlm_generation):
                 before, contexts, after = self.judge_prompt_components(template, query, target, n_images)
                 messages = [
                     {
