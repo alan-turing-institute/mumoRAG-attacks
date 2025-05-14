@@ -9,38 +9,65 @@ from attack_eval import run as eval_run
 from experiments import load_config
 
 
-
 def test_end_to_end():
     with tempfile.TemporaryDirectory() as tmpdirname:
         tmpdirname = Path(tmpdirname)
         exp_config = load_config("testing", "pkg://experiments.testing")
         exp_config = ExperimentConfig(
-            train=replace(exp_config.train, n_gradient_steps=2, save_folder = tmpdirname),
-            eval=replace(exp_config.eval, results_folder = tmpdirname),
+            train=replace(exp_config.train, n_gradient_steps=2, save_folder=tmpdirname),
+            eval=replace(exp_config.eval, results_folder=tmpdirname),
         )
 
         train_run(exp_config)
         eval_run(exp_config)
+
+
+def test_end_to_end_no_vlm():
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        tmpdirname = Path(tmpdirname)
+        exp_config = load_config("testing no vlm", "pkg://experiments.testing")
+        exp_config = ExperimentConfig(
+            train=replace(exp_config.train, n_gradient_steps=2, save_folder=tmpdirname),
+            eval=replace(exp_config.eval, results_folder=tmpdirname),
+        )
+
+        train_run(exp_config)
+        eval_run(exp_config)
+
 
 def test_end_to_end_multi_embedder():
     with tempfile.TemporaryDirectory() as tmpdirname:
         tmpdirname = Path(tmpdirname)
         exp_config = load_config("testing multi-embedder", "pkg://experiments.testing")
         exp_config = ExperimentConfig(
-            train=replace(exp_config.train, n_gradient_steps=2, save_folder = tmpdirname),
-            eval=replace(exp_config.eval, results_folder = tmpdirname),
+            train=replace(exp_config.train, n_gradient_steps=2, save_folder=tmpdirname),
+            eval=replace(exp_config.eval, results_folder=tmpdirname),
         )
 
         train_run(exp_config)
         eval_run(exp_config)
+
+
+def test_end_to_end_multi_vlm():
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        tmpdirname = Path(tmpdirname)
+        exp_config = load_config("testing multi-vlm", "pkg://experiments.testing")
+        exp_config = ExperimentConfig(
+            train=replace(exp_config.train, n_gradient_steps=2, save_folder=tmpdirname),
+            eval=replace(exp_config.eval, results_folder=tmpdirname),
+        )
+
+        train_run(exp_config)
+        eval_run(exp_config)
+
 
 def test_end_to_end_judge():
     with tempfile.TemporaryDirectory() as tmpdirname:
         tmpdirname = Path(tmpdirname)
         exp_config = load_config("testing judge_defence", "pkg://experiments.testing")
         exp_config = ExperimentConfig(
-            train=replace(exp_config.train, n_gradient_steps=2, save_folder = tmpdirname),
-            eval=replace(exp_config.eval, results_folder = tmpdirname),
+            train=replace(exp_config.train, n_gradient_steps=2, save_folder=tmpdirname),
+            eval=replace(exp_config.eval, results_folder=tmpdirname),
         )
 
         train_run(exp_config)

@@ -112,8 +112,7 @@ def plot_heatmap(num_plots, metric_tables: np.array, xaxis, yaxis, xlabel: str, 
 
 
 def get_metrics(exp_config: ExperimentConfig, task_config: TaskConfig, metrics_to_show):
-    hash_string = task_config.create_hash_string()
-    filename = exp_config.eval.results_folder / f"metrics_{hash_string}{get_transferability_file_suffix(task_config.eval_emb_name, task_config.eval_vlm_name)}.json"
+    filename = task_config.get_result_filename(exp_config.eval.results_folder)
     with open(filename, "r") as file:
         metric_dict = json.loads(file.read())
     key1 = f"loss_{exp_config.eval.emb_test_loss_type_list[0]}_topk_{exp_config.eval.topk_list[0]}"
