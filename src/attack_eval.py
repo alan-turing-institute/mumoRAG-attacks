@@ -70,7 +70,6 @@ def run(exp_config: ExperimentConfig):
         else:
             raise ValueError("If trained with multiple embedders, evaluation config must specify a single embedder to test transferability")
         model_name_vlm = task_config.eval_vlm_name if task_config.eval_vlm_name else task_config.model_name_vlm
-        model_name_jdg = task_config.eval_jdg_name if task_config.eval_jdg_name else task_config.model_name_jdg
 
         vlm = get_vlm(model_name_vlm, device)
         ds = get_dataset(task_config.ds_name)
@@ -169,6 +168,7 @@ def run(exp_config: ExperimentConfig):
             }
 
             if exp_config.eval.do_judge:
+                model_name_jdg = task_config.eval_jdg_name if task_config.eval_jdg_name else task_config.judge.model_name
                 judge = get_judge(model_name_jdg, device)
                 logger.info("=== Evaluating using Judge ...")
 

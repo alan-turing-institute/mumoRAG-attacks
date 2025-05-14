@@ -197,7 +197,7 @@ class VLM:
                     inputs['pixel_values'][i][adv_idx] = image_ppd
 
         # Change dtype to bfloat16 for Intern models
-        if self.name in INTERN_VLMS and self.device.type == "cuda":
+        if self.name in INTERN_VLMS and self.device == "cuda":
             inputs['pixel_values'] = inputs['pixel_values'].to(dtype=torch.bfloat16)
         
         return inputs

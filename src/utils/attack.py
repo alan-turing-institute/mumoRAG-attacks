@@ -16,16 +16,16 @@ from .utils import get_memory_consumption
 
 
 def rag_attack(
-        raw_image: torch.tensor,
-        embedders: list[EmbeddingModel],
-        vlm: VLM,
-        jdg: JudgeVLM,
-        train_user_queries: list[str],
-        train_ground_truth_vlm_answers: list[str],
-        config: TaskConfig,
-        attack_images: list,
-        print_every: int,
-        device: str,
+    raw_image: torch.Tensor,
+    embedders: list[EmbeddingModel],
+    vlm: VLM,
+    jdg: JudgeVLM,
+    train_user_queries: list[str],
+    train_ground_truth_vlm_answers: list[str],
+    config: TaskConfig,
+    attack_images: list,
+    print_every: int,
+    device: str,
 ):
     """
     Simulates an attack against the full RAG pipeline.
@@ -44,7 +44,7 @@ def rag_attack(
     target_answer_vlm = config.target_answer_vlm
     max_perturbation = config.max_perturbation
     n_gradient_steps = config.n_gradient_steps
-    lr_scheduler = LearningRateScheduler(lr_start=config.lr_start, lr_end=config.lr_end, n_iter=config.n_gradient_steps)
+    lr_scheduler = LearningRateScheduler(lr=config.lr, n_iter=config.n_gradient_steps)
     max_batch_size_per_iter = config.max_batch_size_per_iter
     gradient_acc_steps = config.gradient_acc_steps
     lambda_emb = config.lambda_emb
@@ -52,9 +52,6 @@ def rag_attack(
     is_adaptive = config.is_adaptive
     lambda_constant = config.lambda_constant
     gen_topk = config.gen_topk
-    lambda_jdg = config.lambda_jdg
-    target_answer_jdg = config.target_answer_jdg
-    jdg_metric_list = config.train_jdg_metric_list
     is_targeted = config.is_targeted
     target_query_idx = config.target_query_idx
     n_knn_target_queries = config.n_knn_target_queries
@@ -83,13 +80,19 @@ def rag_attack(
 
     user_query_embeddings = dict()
     # pre-computing embeddings and prompts for all data
-    for embedder in embedders:
-        if lambda_emb > 0:
+    if lambda_emb > 0:
+        for embedder in embedders:
             user_query_embeddings[embedder.name] = embedder.compute_txt_embedding(train_user_queries)
     if lambda_vlm > 0:
         full_text_vlm_prompts, target_tokens_vlm = vlm.get_training_prompts(train_user_queries, all_answers_vlm, gen_topk)
-        if lambda_jdg > 0:
-            full_text_jdg_prompts, target_tokens_jdg = jdg.get_training_prompts(train_user_queries, all_answers_vlm, target_answer_jdg, jdg_metric_list, gen_topk)
+        if config.judge:
+            full_text_jdg_prompts, target_tokens_jdg = jdg.get_training_prompts(
+                train_user_queries,
+                all_answers_vlm,
+                config.judge.target_answer,
+                config.judge.metrics,
+                gen_topk,
+            )
 
     grads = torch.zeros_like(raw_image)
 
@@ -124,19 +127,22 @@ def rag_attack(
             context_images, adv_indices = prepare_context_images(attack_images, T.ToPILImage()(raw_image), batch_size_per_iter, config.gen_topk)
             out = vlm.forward(raw_image, full_text_vlm_prompt_batch, context_images, adv_indices, overwrite=True)
             loss_vlm = vlm.compute_gen_loss(out, target_tokens_vlm_batch, positive_idx)
-            if lambda_jdg > 0:
-                samples_jdg_idx = torch.randint(0, len(train_user_queries)*len(jdg_metric_list), (batch_size_per_iter,))
+            if config.judge:
+                samples_jdg_idx = torch.randint(0, len(train_user_queries)*len(config.judge.metrics), (batch_size_per_iter,))
                 full_text_jdg_prompt_batch = [full_text_jdg_prompts[i] for i in samples_jdg_idx]
+                target_tokens_jdg_batch = [target_tokens_jdg[i] for i in samples_jdg_idx]
                 # judge loss function
                 out = jdg.forward(raw_image, full_text_jdg_prompt_batch, context_images, adv_indices, overwrite=True)
-                loss_jdg = jdg.compute_gen_loss(out, target_tokens_jdg)
+                loss_jdg = jdg.compute_gen_loss(out, target_tokens_jdg_batch)
 
         # update loss coefficients if we use the adaptive attack
         if i==0 and is_adaptive and lambda_emb>0 and lambda_vlm>0:
             lambda_emb, lambda_vlm = adaptive_attack_coefficients(loss_emb, loss_vlm, lambda_constant)
 
         # total loss function
-        total_loss = lambda_emb * loss_emb + lambda_vlm * loss_vlm + lambda_jdg * loss_jdg
+        total_loss = lambda_emb * loss_emb + lambda_vlm * loss_vlm
+        if config.judge:
+            total_loss += config.judge.lambda_ * loss_jdg
         if i==0 or ((i+1)/gradient_acc_steps)%print_every==0:
             logger.info(f"Iter {(i//gradient_acc_steps)+1:4d}/{n_gradient_steps}, RAM usage -> {get_memory_consumption(device):.2f} GB, Losses -> Embedding: {loss_emb.item():.8f}, VLM: {loss_vlm.item():.8f}, Judge: {loss_jdg.item():.8f}, Total: {total_loss.item():.8f}")
 
@@ -163,11 +169,12 @@ def rag_attack(
 
 
 def attack_step_pgd(
-        raw_image: torch.tensor,
-        grads: torch.tensor,
-        lr: float,
-        max_perturbation_pixels: int,
-        initial_image: torch.tensor):
+    raw_image: torch.Tensor,
+    grads: torch.Tensor,
+    lr: float,
+    max_perturbation_pixels: int,
+    initial_image: torch.Tensor,
+):
     """
     Implement the projected gradient descent (PGD) attack proposed by Madry et al. (2018) 
     """
