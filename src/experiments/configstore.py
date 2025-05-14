@@ -27,14 +27,16 @@ datasets=[
 ]
 embedders = [
     EmbedderName.CLIP_LARGE_PATCH14,
-    EmbedderName.SIGLIP2_LARGE_PATCH16,
-    EmbedderName.JINA_CLIP_2
+    EmbedderName.COLPALI,
+    EmbedderName.QWEN2_GME_2B
 ]
 vlms=[
-    # VLMName.SMOLVLM_1_2B,
+    VLMName.SMOLVLM_1_2B,
     VLMName.QWEN_2p5_VL_3B,
     # VLMName.INTERNVL_3_2B
 ]
+
+
 eval_vlms = [
     VLMName.SMOLVLM_1_2B,
     VLMName.QWEN_2p5_VL_3B,
@@ -60,7 +62,7 @@ configstore.store(
     name="dev",
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
-            embedder_list=[EmbedderName.COLPALI],
+            embedder_list=[EmbedderName.QWEN2_GME_2B],
             vlm_list=[VLMName.QWEN_2p5_VL_3B],
             gen_topk_list=[1],
             print_every=2,
@@ -72,76 +74,71 @@ configstore.store(
     ),
 )
 
-"""
-Performs attack constrained
-"""
 configstore.store(
-    name="mask_attack",
+    name="paper_non_targeted",
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
             embedder_list=embedders,
             vlm_list=vlms,
-            attack_mask_list=[AttackMask.Figure, AttackMask.FirstQuadrant],
-            n_gradient_steps= 1000
+        ),
+        eval=ExperimentEvalConfig(
+            eval_emb_list=embedders,
+            eval_vlm_list=vlms,
         ),
     ),
 )
+
 
 """
 Targeted attacks against a subset of queries
 """
 configstore.store(
-    name="targeted_attacks_oneQ_oneA",
+    name="paper_targeted_attacks_oneQ_oneA",
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
-            embedder_list=embedders +  [EmbedderName.COLPALI],
+            embedder_list=embedders,
             vlm_list=vlms,
             is_targeted=True,
             target_query_idx=[0],
             n_knn_target_queries=1,
-            optimize_nontargeted_queries_list=[True,False],
+            # optimize_nontargeted_queries_list=[True,False],
         ),
         eval=ExperimentEvalConfig(
-            gen_topk_list=[-1,1,5],
+            eval_emb_list=embedders,
+            eval_vlm_list=vlms,
         )
     ),
 )
 configstore.store(
-    name="targeted_attacks_multiQ_oneA",
+    name="paper_targeted_attacks_multiQ_oneA",
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
-            embedder_list=embedders + [EmbedderName.COLPALI],
-            vlm_list=vlms,
+            embedder_list=embedders,
+            vlm_list=[VLMName.SMOLVLM_1_2B,],
             is_targeted=True,
             target_query_idx=[0],
             n_knn_target_queries=5,
-            optimize_nontargeted_queries_list=[True,False],
+            # optimize_nontargeted_queries_list=[True,False],
         ),
-        eval=ExperimentEvalConfig(
-            gen_topk_list=[-1,1,5],
-        )
     ),
 )
 configstore.store(
-    name="targeted_attacks_multiQ_multiA",
+    name="paper_targeted_attacks_multiQ_multiA",
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
-            embedder_list=embedders + [EmbedderName.COLPALI],
-            vlm_list=vlms,
+            embedder_list=embedders,
+            vlm_list=[VLMName.SMOLVLM_1_2B,],
             is_targeted=True,
             target_query_idx=[0,1],
             target_answer_vlm=["Manually match each marker to a generic human template regardless of trial-specific subject calibration.",
                                "A micromort measures the number of accidents per million vehicles on the road and is used in transportation policy."],
             n_knn_target_queries=1,
-            optimize_nontargeted_queries_list=[True,False],
+            # optimize_nontargeted_queries_list=[True,False],
         ),
-        eval=ExperimentEvalConfig(
-            gen_topk_list=[-1,1,5],
-        )
     ),
 )
 
@@ -149,41 +146,73 @@ configstore.store(
 RAG evaluation and attack detection through VLM-as-a-judge
 """
 configstore.store(
-    name="judge_defence",
+    name="paper_judge_defence",
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
-            embedder_list=embedders,
-            vlm_list=vlms,
+            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
+            vlm_list=[VLMName.SMOLVLM_1_2B,],
+        ),
+        eval=ExperimentEvalConfig(
+            do_judge=True,
+            eval_jdg_list=vlms,
+            eval_jdg_metric_list=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY],
+        )
+    ),
+)
+configstore.store(
+    name="paper_judge_defence_adapt",
+    node=ExperimentConfig(
+        train=ExperimentTrainConfig(
+            dataset_list=datasets,
+            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
+            vlm_list=[VLMName.SMOLVLM_1_2B,],
             lambda_jdg=1,
             judge_list=vlms,
             train_jdg_metric_list= [JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY]
         ),
         eval=ExperimentEvalConfig(
-            gen_topk_list=[-1,1,5],
             do_judge=True,
-            eval_jdg_list=eval_vlms,
+            eval_jdg_list=vlms,
             eval_jdg_metric_list=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY],
         )
     ),
 )
-
-"""
-Attack optimized when the malicious image is retrieved within top-k (not top-1)
-Evaluation when image is retrieved within top-k (not top-1)
-"""
 configstore.store(
-    name="topk_context",
+    name="paper_judge_defence_targeted",
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
-            embedder_list=embedders,
-            vlm_list=vlms,
-            gen_topk_list=[1, 3, 5],
+            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
+            vlm_list=[VLMName.SMOLVLM_1_2B,],
+            is_targeted=True,
+            target_query_idx=[0],
+            n_knn_target_queries=1,
+            # optimize_nontargeted_queries_list=[True,False],
         ),
         eval=ExperimentEvalConfig(
-            gen_topk_list=[-1, 1, 3, 5],
-            test_topk_order=True,
+            do_judge=True,
+            eval_jdg_list=vlms,
+            eval_jdg_metric_list=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY],
+        )
+    ),
+)
+configstore.store(
+    name="paper_judge_defence_targeted_adapt",
+    node=ExperimentConfig(
+        train=ExperimentTrainConfig(
+            dataset_list=datasets,
+            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
+            vlm_list=[VLMName.SMOLVLM_1_2B,],
+            is_targeted=True,
+            target_query_idx=[0],
+            n_knn_target_queries=1,
+            # optimize_nontargeted_queries_list=[True,False],
+            lambda_jdg=1,
+            judge_list=vlms,
+            train_jdg_metric_list= [JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY]
+        ),
+        eval=ExperimentEvalConfig(
             do_judge=True,
             eval_jdg_list=vlms,
             eval_jdg_metric_list=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY],
@@ -195,7 +224,7 @@ configstore.store(
 generates data for perturbation plot (full x-axis)
 """
 configstore.store(
-    name="perturbation_plot",
+    name="paper_perturbation_plot",
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
@@ -205,6 +234,78 @@ configstore.store(
         ),
     ),
 )
+
+
+"""
+ColPali ablations (w/ colpali_only_images False)
+"""
+configstore.store(
+    name="paper_copali_ab",
+    node=ExperimentConfig(
+        train=ExperimentTrainConfig(
+            dataset_list=datasets,
+            embedder_list=[EmbedderName.COLPALI],
+            vlm_list=[VLMName.SMOLVLM_1_2B],
+            emb_train_loss_type_list=[EmbeddingLoss.MAXSIM, EmbeddingLoss.AVGSIM, EmbeddingLoss.SOFTMAXSIM, EmbeddingLoss.COS_AVGEMB],
+        ),
+        eval=ExperimentEvalConfig(
+            emb_test_loss_type_list=[EmbeddingLoss.MAXSIM, EmbeddingLoss.AVGSIM, EmbeddingLoss.SOFTMAXSIM, EmbeddingLoss.COS_AVGEMB],
+        )
+    ),
+)
+
+"""
+ColPali ablations (w/ colpali_only_images True)
+"""
+configstore.store(
+    name="paper_copali_ab_cpoiT",
+    node=ExperimentConfig(
+        train=ExperimentTrainConfig(
+            dataset_list=datasets,
+            embedder_list=[EmbedderName.COLPALI],
+            vlm_list=[VLMName.SMOLVLM_1_2B],
+            emb_train_loss_type_list=[EmbeddingLoss.MAXSIM, EmbeddingLoss.AVGSIM, EmbeddingLoss.SOFTMAXSIM, EmbeddingLoss.COS_AVGEMB],
+            colpali_only_images=True
+        ),
+        eval=ExperimentEvalConfig(
+            emb_test_loss_type_list=[EmbeddingLoss.MAXSIM, EmbeddingLoss.AVGSIM, EmbeddingLoss.SOFTMAXSIM, EmbeddingLoss.COS_AVGEMB],
+        )
+    ),
+)
+
+"""
+Attack optimized when the malicious image is retrieved within top-k (not top-1)
+Evaluation when image is retrieved within top-k (not top-1)
+"""
+configstore.store(
+    name="paper_topk_context",
+    node=ExperimentConfig(
+        train=ExperimentTrainConfig(
+            dataset_list=datasets,
+            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
+            vlm_list=[VLMName.SMOLVLM_1_2B],
+            gen_topk_list=[1, 5],
+        ),
+        eval=ExperimentEvalConfig(
+            gen_topk_list=[-1, 1, 5],
+            test_topk_order=False,
+        )
+    ),
+)
+
+# configstore.store(
+#     name="paper_defences",
+#     node=ExperimentConfig(
+#         train=ExperimentTrainConfig(
+#             dataset_list=datasets,
+#             embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
+#             vlm_list=[VLMName.SMOLVLM_1_2B],
+#         ),
+#         eval=ExperimentEvalConfig(
+#             defences_list=[DefenceName.NONE, DefenceName.PARAPHRASE, DefenceName.NOISE]
+#         ),
+#     ),
+# )
 
 """
 generates data for perturbation plot (full x-axis)
@@ -224,41 +325,19 @@ configstore.store(
     ),
 )
 
-
 """
-ColPali ablations (w/ colpali_only_images False)
+Performs attack constrained
 """
 configstore.store(
-    name="copali_ab",
+    name="mask_attack",
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
-            embedder_list=[EmbedderName.COLPALI],
+            embedder_list=embedders,
             vlm_list=vlms,
-            emb_train_loss_type_list=[EmbeddingLoss.MAXSIM, EmbeddingLoss.AVGSIM, EmbeddingLoss.SOFTMAXSIM, EmbeddingLoss.COS_AVGEMB],
+            attack_mask_list=[AttackMask.Figure, AttackMask.FirstQuadrant],
+            n_gradient_steps= 1000
         ),
-        eval=ExperimentEvalConfig(
-            emb_test_loss_type_list=[EmbeddingLoss.MAXSIM, EmbeddingLoss.AVGSIM, EmbeddingLoss.SOFTMAXSIM, EmbeddingLoss.COS_AVGEMB],
-        )
-    ),
-)
-
-"""
-ColPali ablations (w/ colpali_only_images True)
-"""
-configstore.store(
-    name="copali_ab_cpoiT",
-    node=ExperimentConfig(
-        train=ExperimentTrainConfig(
-            dataset_list=datasets,
-            embedder_list=[EmbedderName.COLPALI],
-            vlm_list=vlms,
-            emb_train_loss_type_list=[EmbeddingLoss.MAXSIM, EmbeddingLoss.AVGSIM, EmbeddingLoss.SOFTMAXSIM, EmbeddingLoss.COS_AVGEMB],
-            colpali_only_images=True
-        ),
-        eval=ExperimentEvalConfig(
-            emb_test_loss_type_list=[EmbeddingLoss.MAXSIM, EmbeddingLoss.AVGSIM, EmbeddingLoss.SOFTMAXSIM, EmbeddingLoss.COS_AVGEMB],
-        )
     ),
 )
 
