@@ -10,11 +10,10 @@ from omegaconf import OmegaConf
 from config.eval import ExperimentEvalConfig
 from config.experiment import ExperimentConfig
 from config.train import ExperimentTrainConfig
+from wrappers.dataset import DatasetName
 from wrappers.embedding import EmbedderName, EmbeddingLoss
 from wrappers.judge import JudgeMetric
 from wrappers.vlm import VLMName
-from wrappers.dataset import DatasetName
-
 
 DEFAULT_EXPERIMENT = "dev"
 
@@ -49,7 +48,7 @@ configstore.store(
         ),
         eval=ExperimentEvalConfig(
             gen_topk_list=[-1],
-        )
+        ),
     ),
 )
 
@@ -68,11 +67,11 @@ configstore.store(
             n_knn_target_queries=5,
             print_every=2,
             n_gradient_steps=10,
-            optimize_nontargeted_queries_list=[True,False]
+            optimize_nontargeted_queries_list=[True, False],
         ),
         eval=ExperimentEvalConfig(
             gen_topk_list=[-1],
-        )
+        ),
     ),
 )
 
@@ -93,7 +92,7 @@ configstore.store(
             test_topk_order=True,
             eval_jdg_metric_list=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY],
             do_judge=False,
-        )
+        ),
     ),
 )
 
@@ -107,13 +106,13 @@ configstore.store(
             embedder_list=[EmbedderName.CLIP_LARGE_PATCH14, EmbedderName.JINA_CLIP_2, EmbedderName.COLPALI],
             vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B],
             is_targeted=True,
-            target_query_idx=[2,5],
+            target_query_idx=[2, 5],
             target_answer_vlm=["Question two me no likey", "Five is not my lucky number"],
             n_knn_target_queries=1,
         ),
         eval=ExperimentEvalConfig(
-            gen_topk_list=[-1,1,5],
-        )
+            gen_topk_list=[-1, 1, 5],
+        ),
     ),
 )
 
@@ -128,10 +127,10 @@ configstore.store(
             vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B],
         ),
         eval=ExperimentEvalConfig(
-            gen_topk_list=[-1,1,5],
+            gen_topk_list=[-1, 1, 5],
             do_judge=True,
             eval_jdg_metric_list=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY],
-        )
+        ),
     ),
 )
 
@@ -145,12 +144,12 @@ configstore.store(
         train=ExperimentTrainConfig(
             embedder_list=[EmbedderName.CLIP_LARGE_PATCH14, EmbedderName.JINA_CLIP_2, EmbedderName.COLPALI],
             vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B],
-            gen_topk_list=[1,5],
+            gen_topk_list=[1, 5],
         ),
         eval=ExperimentEvalConfig(
-            gen_topk_list=[-1,1,5],
+            gen_topk_list=[-1, 1, 5],
             eval_jdg_metric_list=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY],
-        )
+        ),
     ),
 )
 
@@ -167,7 +166,7 @@ configstore.store(
         ),
         eval=ExperimentEvalConfig(
             emb_test_loss_type_list=[EmbeddingLoss.MAXSIM, EmbeddingLoss.AVGSIM, EmbeddingLoss.SOFTMAXSIM, EmbeddingLoss.COS_AVGEMB],
-        )
+        ),
     ),
 )
 

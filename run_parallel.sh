@@ -4,8 +4,8 @@
 exps=(
 #    "topk_context"
 #    "targeted_attacks_oneQ_oneA"
-#    "targeted_attacks_multiQ_oneA"
-#    "targeted_attacks_multiQ_multiA"
+    "targeted_attacks_multiQ_oneA"
+    "targeted_attacks_multiQ_multiA"
 #    "mask_attack"
     "judge_defence"
 #    "copali_ab"
@@ -18,12 +18,12 @@ exps=(
 # Define a function to run one experiment
 run_exp() {
     exp="$1"
-    echo "=== [1/2] Training: $exp ==="
-    python src/attack_train.py --config-name "$exp"
-    if [ $? -ne 0 ]; then
-        echo "❌ Training failed for $exp. Skipping eval."
-        return
-    fi
+#    echo "=== [1/2] Training: $exp ==="
+#    python src/attack_train.py --config-name "$exp"
+#    if [ $? -ne 0 ]; then
+#        echo "❌ Training failed for $exp. Skipping eval."
+#        return
+#    fi
 
     echo "=== [2/2] Evaluating: $exp ==="
     python src/attack_eval.py --config-name "$exp"
@@ -35,7 +35,7 @@ run_exp() {
 }
 
 # Run 3 experiments in parallel
-parallel=2
+parallel=1
 count=0
 
 for exp in "${exps[@]}"; do

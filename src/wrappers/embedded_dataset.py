@@ -4,6 +4,7 @@ import time
 
 import torch
 from tqdm import tqdm
+import torchvision.transforms.v2 as T
 
 from config import EMBEDDINGS_FOLDER
 from wrappers.embedding import EmbeddingModel, EmbedderName, EmbeddingLoss, COLPALI_MODELS, score_multi_vector_modified
@@ -34,7 +35,7 @@ class EmbeddedDataset:
             self.attempt_load_embeddings()
         except FileNotFoundError:
             logger.info("Precomputing Embeddings ...")
-            batch_size = 4 if self.embedder.name == EmbedderName.COLPALI else 16
+            batch_size = 2 if self.embedder.name in [EmbedderName.COLPALI, EmbedderName.QWEN2_GME_2B] else 16
             with torch.no_grad():
                 self.compute_embeddings(batch_size=batch_size)
 
@@ -78,10 +79,13 @@ class EmbeddedDataset:
         """
         Adds the adversarial image to the database along with its embedding
         """
+        mock_image = T.ToPILImage()(adv_img/255)
+        adv_img_embeddings = self.embedder.compute_img_embedding(adv_img, mock_image, overwrite=True)
+
         if len(self.dataset.images) == self.dataset.num_images_orig:
-            self.image_embeddings = torch.cat((self.image_embeddings, self.embedder.compute_img_embedding([adv_img], None)), dim=0)
+            self.image_embeddings = torch.cat((self.image_embeddings, adv_img_embeddings), dim=0)
         else:
-            self.image_embeddings[-1,:] = self.embedder.compute_img_embedding([adv_img], None)
+            self.image_embeddings[-1,:] = adv_img_embeddings
         self.dataset.add_adv_image(adv_img)
 
 

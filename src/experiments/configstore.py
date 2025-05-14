@@ -9,7 +9,7 @@ from omegaconf import OmegaConf
 
 from config.eval import ExperimentEvalConfig
 from config.experiment import ExperimentConfig
-from config.train import ExperimentTrainConfig
+from config.train import ExperimentTrainConfig, JudgeConfig
 from wrappers.attack_mask import AttackMask
 from wrappers.embedding import EmbedderName, EmbeddingLoss
 from wrappers.judge import JudgeMetric
@@ -117,7 +117,7 @@ configstore.store(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
             embedder_list=embedders,
-            vlm_list=[VLMName.SMOLVLM_1_2B,],
+            vlm_list=[VLMName.SMOLVLM_1_2B],
             is_targeted=True,
             target_query_idx=[0],
             n_knn_target_queries=5,
@@ -131,7 +131,7 @@ configstore.store(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
             embedder_list=embedders,
-            vlm_list=[VLMName.SMOLVLM_1_2B,],
+            vlm_list=[VLMName.SMOLVLM_1_2B],
             is_targeted=True,
             target_query_idx=[0,1],
             target_answer_vlm=["Manually match each marker to a generic human template regardless of trial-specific subject calibration.",
@@ -151,7 +151,7 @@ configstore.store(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
             embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
-            vlm_list=[VLMName.SMOLVLM_1_2B,],
+            vlm_list=[VLMName.SMOLVLM_1_2B],
         ),
         eval=ExperimentEvalConfig(
             do_judge=True,
@@ -166,10 +166,13 @@ configstore.store(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
             embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
-            vlm_list=[VLMName.SMOLVLM_1_2B,],
-            lambda_jdg=1,
-            judge_list=vlms,
-            train_jdg_metric_list= [JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY]
+            vlm_list=[VLMName.SMOLVLM_1_2B],
+            judge=JudgeConfig(
+                lambda_=1,
+                models=vlms,
+                metrics=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS,
+                         JudgeMetric.ANSWER_RELEVANCY]
+            ),
         ),
         eval=ExperimentEvalConfig(
             do_judge=True,
@@ -184,7 +187,7 @@ configstore.store(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
             embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
-            vlm_list=[VLMName.SMOLVLM_1_2B,],
+            vlm_list=[VLMName.SMOLVLM_1_2B],
             is_targeted=True,
             target_query_idx=[0],
             n_knn_target_queries=1,
@@ -203,14 +206,16 @@ configstore.store(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
             embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
-            vlm_list=[VLMName.SMOLVLM_1_2B,],
+            vlm_list=[VLMName.SMOLVLM_1_2B],
             is_targeted=True,
             target_query_idx=[0],
             n_knn_target_queries=1,
             # optimize_nontargeted_queries_list=[True,False],
-            lambda_jdg=1,
-            judge_list=vlms,
-            train_jdg_metric_list= [JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY]
+            judge=JudgeConfig(
+                lambda_=1,
+                models=vlms,
+                metrics=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY]
+            ),
         ),
         eval=ExperimentEvalConfig(
             do_judge=True,
