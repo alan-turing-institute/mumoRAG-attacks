@@ -29,7 +29,7 @@ def run(exp_config: ExperimentConfig):
         vlms = [get_vlm(
             model_name,
             device,
-        ) for model_name in task_config.model_name_vlms]
+        ) for model_name in task_config.vlm.models] if task_config.vlm else None
 
         embedders = [get_embedder(
             model_name,

@@ -10,7 +10,7 @@ from omegaconf import OmegaConf
 from utils.defence import DefenceName
 from config.eval import ExperimentEvalConfig
 from config.experiment import ExperimentConfig
-from config.train import ExperimentTrainConfig, JudgeConfig
+from config.train import ExperimentTrainConfig, JudgeConfig, VLMConfig
 from wrappers.attack_mask import AttackMask
 from wrappers.dataset import DatasetName
 from wrappers.embedding import EmbedderName, EmbeddingLoss
@@ -43,7 +43,9 @@ configstore.store(
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
             embedder_list=[EmbedderName.CLIP_BASE_PATCH16],
-            vlm_list=[[VLMName.SMOLVLM_1_256M, VLMName.INTERNVL_3_1B], VLMName.SMOLVLM_1_256M, VLMName.INTERNVL_3_1B],
+            vlm=VLMConfig(
+                models=[[VLMName.SMOLVLM_1_256M, VLMName.INTERNVL_3_1B], VLMName.SMOLVLM_1_256M, VLMName.INTERNVL_3_1B],
+            )
         ),
         eval=ExperimentEvalConfig(
             eval_vlm_list=[VLMName.SMOLVLM_1_256M, VLMName.INTERNVL_3_1B],
@@ -60,8 +62,10 @@ configstore.store(
         train=ExperimentTrainConfig(
             dataset_list=[DatasetName.VIDORE_SYN_AI, DatasetName.VIDORE_V2_ESG],
             embedder_list=[EmbedderName.CLIP_LARGE_PATCH14, EmbedderName.SIGLIP2_LARGE_PATCH16, EmbedderName.JINA_CLIP_2, EmbedderName.COLPALI],
-            vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
-            gen_topk_list=[1],
+            vlm=VLMConfig(
+                models=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
+                gen_topk_list=[1],
+            ),
         ),
         eval=ExperimentEvalConfig(
             gen_topk_list=[-1,1],
@@ -80,7 +84,9 @@ configstore.store(
         train=ExperimentTrainConfig(
             dataset_list=[DatasetName.VIDORE_SYN_AI],
             embedder_list=[EmbedderName.CLIP_LARGE_PATCH14, EmbedderName.SIGLIP2_LARGE_PATCH16, EmbedderName.JINA_CLIP_2],
-            vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
+            vlm=VLMConfig(
+                models=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
+            ),
             attack_mask_list=[AttackMask.Figure, AttackMask.FirstQuadrant],
             n_gradient_steps=1000,
         ),
@@ -101,7 +107,9 @@ configstore.store(
                 EmbedderName.JINA_CLIP_2,
                 EmbedderName.COLPALI,
             ],
-            vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
+            vlm=VLMConfig(
+                models=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
+            ),
             is_targeted=True,
             target_query_idx=[0],
             n_knn_target_queries=1,
@@ -123,7 +131,9 @@ configstore.store(
                 EmbedderName.JINA_CLIP_2,
                 EmbedderName.COLPALI,
             ],
-            vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
+            vlm=VLMConfig(
+                models=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
+            ),
             is_targeted=True,
             target_query_idx=[0],
             n_knn_target_queries=5,
@@ -145,13 +155,15 @@ configstore.store(
                 EmbedderName.JINA_CLIP_2,
                 EmbedderName.COLPALI,
             ],
-            vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
+            vlm=VLMConfig(
+                models=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
+                target_answers=[
+                    "Manually match each marker to a generic human template regardless of trial-specific subject calibration.",
+                    "A micromort measures the number of accidents per million vehicles on the road and is used in transportation policy.",
+                ],
+            ),
             is_targeted=True,
             target_query_idx=[0, 1],
-            target_answer_vlm=[
-                "Manually match each marker to a generic human template regardless of trial-specific subject calibration.",
-                "A micromort measures the number of accidents per million vehicles on the road and is used in transportation policy.",
-            ],
             n_knn_target_queries=1,
             optimize_nontargeted_queries_list=[True, False],
         ),
@@ -170,7 +182,9 @@ configstore.store(
         train=ExperimentTrainConfig(
             dataset_list=[DatasetName.VIDORE_SYN_AI],
             embedder_list=[EmbedderName.CLIP_LARGE_PATCH14, EmbedderName.SIGLIP2_LARGE_PATCH16, EmbedderName.JINA_CLIP_2],
-            vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
+            vlm=VLMConfig(
+                models=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
+            ),
             judge=JudgeConfig(
                 lambda_=1,
                 models=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
@@ -195,8 +209,10 @@ configstore.store(
         train=ExperimentTrainConfig(
             dataset_list=[DatasetName.VIDORE_SYN_AI],
             embedder_list=[EmbedderName.CLIP_LARGE_PATCH14, EmbedderName.SIGLIP2_LARGE_PATCH16, EmbedderName.JINA_CLIP_2],
-            vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
-            gen_topk_list=[1, 3, 5],
+            vlm=VLMConfig(
+                models=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
+                gen_topk_list=[1, 3, 5],
+            ),
         ),
         eval=ExperimentEvalConfig(
             gen_topk_list=[-1, 1, 3, 5],
@@ -216,7 +232,9 @@ configstore.store(
         train=ExperimentTrainConfig(
             dataset_list=[DatasetName.VIDORE_SYN_AI],
             embedder_list=[EmbedderName.CLIP_LARGE_PATCH14, EmbedderName.SIGLIP2_LARGE_PATCH16, EmbedderName.JINA_CLIP_2],
-            vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
+            vlm=VLMConfig(
+                models=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
+            ),
             max_perturbation_list=[x / 255.0 for x in [1, 2, 4, 8, 16, 32, 64, 128, 256]],
         ),
     ),
@@ -231,7 +249,9 @@ configstore.store(
         train=ExperimentTrainConfig(
             dataset_list=[DatasetName.VIDORE_SYN_AI],
             embedder_list=[EmbedderName.CLIP_LARGE_PATCH14, EmbedderName.SIGLIP2_LARGE_PATCH16, EmbedderName.JINA_CLIP_2],
-            vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
+            vlm=VLMConfig(
+                models=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
+            ),
             max_perturbation_list=[x / 255.0 for x in [1, 2, 4, 8, 16, 32, 64, 128, 256]],
             is_targeted=True,
             target_query_idx=[1],
@@ -250,8 +270,10 @@ configstore.store(
         train=ExperimentTrainConfig(
             dataset_list=[DatasetName.VIDORE_SYN_AI],
             embedder_list=[EmbedderName.COLPALI],
-            vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
             emb_train_loss_type_list=[EmbeddingLoss.MAXSIM, EmbeddingLoss.AVGSIM, EmbeddingLoss.SOFTMAXSIM, EmbeddingLoss.COS_AVGEMB],
+            vlm=VLMConfig(
+                models=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
+            ),
         ),
         eval=ExperimentEvalConfig(
             emb_test_loss_type_list=[EmbeddingLoss.MAXSIM, EmbeddingLoss.AVGSIM, EmbeddingLoss.SOFTMAXSIM, EmbeddingLoss.COS_AVGEMB],
@@ -268,7 +290,9 @@ configstore.store(
         train=ExperimentTrainConfig(
             dataset_list=[DatasetName.VIDORE_SYN_AI],
             embedder_list=[EmbedderName.COLPALI],
-            vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
+            vlm=VLMConfig(
+                models=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
+            ),
             emb_train_loss_type_list=[EmbeddingLoss.MAXSIM, EmbeddingLoss.AVGSIM, EmbeddingLoss.SOFTMAXSIM, EmbeddingLoss.COS_AVGEMB],
             colpali_only_images=True,
         ),
@@ -295,7 +319,9 @@ configstore.store(
                 EmbedderName.JINA_CLIP_2,
                 EmbedderName.COLPALI,
             ],
-            vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
+            vlm=VLMConfig(
+                models=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
+            ),
         ),
         eval=ExperimentEvalConfig(
             eval_emb_list=[

@@ -1,7 +1,7 @@
 import hashlib
 from dataclasses import dataclass, asdict
 from pathlib import Path
-from typing import Literal, Iterator
+from typing import Iterator
 from itertools import product
 
 from experiments.configstore import get_config_name
@@ -14,6 +14,13 @@ from wrappers.embedding import EmbedderName, EmbeddingLoss, COLPALI_MODELS, is_l
 from wrappers.judge import JudgeMetric
 from wrappers.vlm import VLMName
 from .experiment import ExperimentConfig
+
+@dataclass
+class TaskVLMConfig:
+    lambda_: float
+    models: list[VLMName]
+    target_answers: list[str]
+    gen_topk: int
 
 
 @dataclass
@@ -34,15 +41,13 @@ class TaskConfig:
 
     ds_name: DatasetName
     model_name_embs: list[EmbedderName]
-    model_name_vlms: list[VLMName]
-    target_answer_vlm: list[str]
+    vlm: TaskVLMConfig | None
     chosen_index: int
     max_perturbation: float
     n_gradient_steps: int
     max_batch_size_per_iter: int
     gradient_acc_steps: int
     lambda_emb: float
-    lambda_vlm: float
     emb_train_loss_type: EmbeddingLoss
     is_adaptive: bool
     lambda_constant: float
@@ -55,7 +60,6 @@ class TaskConfig:
     judge: TaskJudgeConfig | None
     lr: LearningRateConfig
     colpali_only_images: bool = False
-    gen_topk: int = 1
     kb_compromised_fraction: float = 0.1
     # eval
     eval_emb_name: EmbedderName | None = None
@@ -71,17 +75,25 @@ class TaskConfig:
             if self.is_targeted
             else ""
         )
-        target_answer_str = ",".join(self.target_answer_vlm)
+        target_answer_str = ",".join(self.vlm.target_answers) if self.vlm else ""
 
         model_name_embs = self.model_name_embs[0] if len(self.model_name_embs) == 1 else self.model_name_embs
-        model_name_vlms = self.model_name_vlms[0] if len(self.model_name_vlms) == 1 else self.model_name_vlms
 
-        config_str = f"{model_name_embs}{model_name_vlms}{self.ds_name}{self.chosen_index}{target_answer_str}{self.max_perturbation}{self.emb_train_loss_type}{self.is_adaptive}{self.gen_topk}{self.kb_compromised_fraction}{target_str}{self.attack_mask}"
+        if self.vlm:
+            model_name_vlms = self.vlm.models[0] if len(self.vlm.models) == 1 else self.vlm.models
+            gen_topk = self.vlm.gen_topk
+            vlm_float = float(self.vlm.lambda_)
+        else:
+            gen_topk = ""
+            model_name_vlms = ""
+            vlm_float = ""
+
+        config_str = f"{model_name_embs}{model_name_vlms}{self.ds_name}{self.chosen_index}{target_answer_str}{self.max_perturbation}{self.emb_train_loss_type}{self.is_adaptive}{gen_topk}{self.kb_compromised_fraction}{target_str}{self.attack_mask}"
 
         if self.is_adaptive:
             config_str += f"{float(self.lambda_constant)}"
         else:
-            config_str += f"{float(self.lambda_emb)}{float(self.lambda_vlm)}"
+            config_str += f"{float(self.lambda_emb)}{vlm_float}"
 
         if any([model_name in COLPALI_MODELS for model_name in self.model_name_embs]) and self.colpali_only_images:
             config_str += f"{self.colpali_only_images}"
@@ -124,16 +136,22 @@ def get_defence_file_suffix(defence: DefenceName) -> str:
     return f"_{defence.value}"
 
 def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = False) -> list[TaskConfig]:
+    if exp_config.train.is_targeted and exp_config.train.vlm is None:
+        raise ValueError("Cannot run targeted experiment without specifying VLMs.")
+
+    if include_eval and exp_config.train.vlm is None and exp_config.eval.do_generation and exp_config.eval.eval_vlm_list is None:
+        raise ValueError("Cannot evaluate without specifying VLMs.")
+
     parameter_collection: Iterator[
         tuple[
             DatasetName,
             EmbedderName | list[EmbedderName],
             VLMName | list[VLMName],
+            int,
             VLMName,
             float,
             EmbeddingLoss,
             bool,
-            int,
             int,
             AttackMask,
             bool,
@@ -145,13 +163,13 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
     ] = product(# type: ignore
         exp_config.train.dataset_list,
         exp_config.train.embedder_list,
-        exp_config.train.vlm_list,
+        exp_config.train.vlm.models if exp_config.train.vlm else [None],
+        exp_config.train.vlm.gen_topk_list if exp_config.train.vlm else [None],
         exp_config.train.judge.models if exp_config.train.judge else [None],
         exp_config.train.max_perturbation_list,
         exp_config.train.emb_train_loss_type_list,
         exp_config.train.is_adaptive_list,
         exp_config.train.chosen_index_list,
-        exp_config.train.gen_topk_list,
         exp_config.train.attack_mask_list,
         exp_config.train.optimize_nontargeted_queries_list,
         (exp_config.eval.eval_emb_list if include_eval else None) or [None],
@@ -165,12 +183,12 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
             ds_name,
             model_name_embs,
             model_name_vlms,
+            gen_topk,
             model_name_jdg,
             max_perturbation,
             emb_train_loss_type,
             is_adaptive,
             chosen_index,
-            gen_topk,
             attack_mask,
             optimize_nontargeted_queries,
             eval_emb_name,
@@ -180,7 +198,7 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
         ) = params
 
 
-        if len(exp_config.train.target_answer_vlm) > 1 and not exp_config.train.is_targeted:
+        if exp_config.train.vlm and len(exp_config.train.vlm.target_answers) > 1 and not exp_config.train.is_targeted:
             raise ValueError("Multiple target answers supported only for targeted attacks.")
 
         if isinstance(model_name_embs, list):
@@ -203,17 +221,21 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
         else:
             model_name_vlms = [model_name_vlms]
 
-        if len(exp_config.train.target_answer_vlm) not in [1, len(exp_config.train.target_query_idx)]:
+        if exp_config.train.vlm and len(exp_config.train.vlm.target_answers) not in [1, len(exp_config.train.target_query_idx)]:
             raise ValueError(
-                f"VLM target answers array has incompatible length ({len(exp_config.train.target_answer_vlm)}) with target queries ({len(exp_config.train.target_query_idx)})"
+                f"VLM target answers array has incompatible length ({len(exp_config.train.vlm.target_answers)}) with target queries ({len(exp_config.train.target_query_idx)})"
             )
 
         attack_configs.append(
             TaskConfig(
                 ds_name=ds_name,
                 model_name_embs=model_name_embs,
-                model_name_vlms=model_name_vlms,
-                target_answer_vlm=exp_config.train.target_answer_vlm,
+                vlm=TaskVLMConfig(
+                    models=model_name_vlms,
+                    target_answers=exp_config.train.vlm.target_answers,
+                    lambda_=exp_config.train.vlm.lambda_,
+                    gen_topk=gen_topk,
+                ) if exp_config.train.vlm else None,
                 chosen_index=chosen_index,
                 max_perturbation=max_perturbation,
                 n_gradient_steps=exp_config.train.n_gradient_steps,
@@ -221,7 +243,6 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
                 max_batch_size_per_iter=exp_config.train.max_batch_size_per_iter,
                 gradient_acc_steps=exp_config.train.gradient_acc_steps,
                 lambda_emb=exp_config.train.lambda_emb,
-                lambda_vlm=exp_config.train.lambda_vlm,
                 emb_train_loss_type=emb_train_loss_type,
                 is_adaptive=is_adaptive,
                 lambda_constant=exp_config.train.lambda_constant,
@@ -229,7 +250,6 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
                 eval_vlm_name=eval_vlm_name,
                 eval_jdg_name=eval_jdg_name,
                 colpali_only_images=exp_config.train.colpali_only_images,
-                gen_topk=gen_topk,
                 kb_compromised_fraction=exp_config.train.kb_compromised_fraction,
                 judge=TaskJudgeConfig(
                     model_name=model_name_jdg,
