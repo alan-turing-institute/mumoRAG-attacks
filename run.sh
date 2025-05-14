@@ -2,16 +2,16 @@
 
 # Define your experiments
 exps=(
-    "mask_attack"
+    "topk_context"
     "targeted_attacks_oneQ_oneA"
     "targeted_attacks_multiQ_oneA"
     "targeted_attacks_multiQ_multiA"
+    "mask_attack"
     "judge_defence"
-    "topk_context"
-    "perturbation_plot"
-    "perturbation_plot_targeted"
     "copali_ab"
     "copali_ab_cpoiT"
+    "perturbation_plot"
+    "perturbation_plot_targeted"
     "transferability"
 )
 
