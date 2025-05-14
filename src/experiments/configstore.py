@@ -21,6 +21,25 @@ DEFAULT_EXPERIMENT = "dev"
 
 configstore = ConfigStore.instance()
 
+datasets=[
+    DatasetName.VIDORE_SYN_AI
+    # DatasetName.VIDORE_V2_ESG
+]
+embedders = [
+    EmbedderName.CLIP_LARGE_PATCH14,
+    EmbedderName.SIGLIP2_LARGE_PATCH16,
+    EmbedderName.JINA_CLIP_2
+]
+vlms=[
+    # VLMName.SMOLVLM_1_2B,
+    VLMName.QWEN_2p5_VL_3B,
+    # VLMName.INTERNVL_3_2B
+]
+eval_vlms = [
+    VLMName.SMOLVLM_1_2B,
+    VLMName.QWEN_2p5_VL_3B,
+    # VLMName.INTERNVL_3_2B
+]
 
 def load_config(name):
     with initialize(version_base=None, config_path="pkg://experiments"):
@@ -41,7 +60,7 @@ configstore.store(
     name="dev",
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
-            embedder_list=[EmbedderName.CLIP_BASE_PATCH16],
+            embedder_list=[EmbedderName.COLPALI],
             vlm_list=[VLMName.QWEN_2p5_VL_3B],
             gen_topk_list=[1],
             print_every=2,
@@ -60,9 +79,9 @@ configstore.store(
     name="mask_attack",
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
-            dataset_list=[DatasetName.VIDORE_SYN_AI],
-            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14,  EmbedderName.SIGLIP2_LARGE_PATCH16, EmbedderName.JINA_CLIP_2],
-            vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
+            dataset_list=datasets,
+            embedder_list=embedders,
+            vlm_list=vlms,
             attack_mask_list=[AttackMask.Figure, AttackMask.FirstQuadrant],
             n_gradient_steps= 1000
         ),
@@ -76,10 +95,9 @@ configstore.store(
     name="targeted_attacks_oneQ_oneA",
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
-            dataset_list=[DatasetName.VIDORE_SYN_AI],
-            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14, EmbedderName.SIGLIP2_LARGE_PATCH16,
-                           EmbedderName.JINA_CLIP_2, EmbedderName.COLPALI],
-            vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
+            dataset_list=datasets,
+            embedder_list=embedders +  [EmbedderName.COLPALI],
+            vlm_list=vlms,
             is_targeted=True,
             target_query_idx=[0],
             n_knn_target_queries=1,
@@ -94,10 +112,9 @@ configstore.store(
     name="targeted_attacks_multiQ_oneA",
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
-            dataset_list=[DatasetName.VIDORE_SYN_AI],
-            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14, EmbedderName.SIGLIP2_LARGE_PATCH16,
-                           EmbedderName.JINA_CLIP_2, EmbedderName.COLPALI],
-            vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
+            dataset_list=datasets,
+            embedder_list=embedders + [EmbedderName.COLPALI],
+            vlm_list=vlms,
             is_targeted=True,
             target_query_idx=[0],
             n_knn_target_queries=5,
@@ -112,10 +129,9 @@ configstore.store(
     name="targeted_attacks_multiQ_multiA",
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
-            dataset_list=[DatasetName.VIDORE_SYN_AI],
-            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14, EmbedderName.SIGLIP2_LARGE_PATCH16,
-                           EmbedderName.JINA_CLIP_2, EmbedderName.COLPALI],
-            vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
+            dataset_list=datasets,
+            embedder_list=embedders + [EmbedderName.COLPALI],
+            vlm_list=vlms,
             is_targeted=True,
             target_query_idx=[0,1],
             target_answer_vlm=["Manually match each marker to a generic human template regardless of trial-specific subject calibration.",
@@ -136,17 +152,17 @@ configstore.store(
     name="judge_defence",
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
-            dataset_list=[DatasetName.VIDORE_SYN_AI],
-            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14, EmbedderName.SIGLIP2_LARGE_PATCH16,
-                           EmbedderName.JINA_CLIP_2],
-            vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
+            dataset_list=datasets,
+            embedder_list=embedders,
+            vlm_list=vlms,
             lambda_jdg=1,
-            judge_list=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
+            judge_list=vlms,
             train_jdg_metric_list= [JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY]
         ),
         eval=ExperimentEvalConfig(
             gen_topk_list=[-1,1,5],
             do_judge=True,
+            eval_jdg_list=eval_vlms,
             eval_jdg_metric_list=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY],
         )
     ),
@@ -160,15 +176,16 @@ configstore.store(
     name="topk_context",
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
-            dataset_list=[DatasetName.VIDORE_SYN_AI],
-            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14,  EmbedderName.SIGLIP2_LARGE_PATCH16, EmbedderName.JINA_CLIP_2],
-            vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
+            dataset_list=datasets,
+            embedder_list=embedders,
+            vlm_list=vlms,
             gen_topk_list=[1, 3, 5],
         ),
         eval=ExperimentEvalConfig(
             gen_topk_list=[-1, 1, 3, 5],
             test_topk_order=True,
             do_judge=True,
+            eval_jdg_list=vlms,
             eval_jdg_metric_list=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY],
         )
     ),
@@ -181,9 +198,9 @@ configstore.store(
     name="perturbation_plot",
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
-            dataset_list=[DatasetName.VIDORE_SYN_AI],
-            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14,  EmbedderName.SIGLIP2_LARGE_PATCH16, EmbedderName.JINA_CLIP_2],
-            vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
+            dataset_list=datasets,
+            embedder_list=embedders,
+            vlm_list=vlms,
             max_perturbation_list=[x / 255.0 for x in [1, 2, 4, 8, 16, 32, 64, 128, 256]],
         ),
     ),
@@ -196,9 +213,9 @@ configstore.store(
     name="perturbation_plot_targeted",
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
-            dataset_list=[DatasetName.VIDORE_SYN_AI],
-            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14,  EmbedderName.SIGLIP2_LARGE_PATCH16, EmbedderName.JINA_CLIP_2],
-            vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
+            dataset_list=datasets,
+            embedder_list=embedders,
+            vlm_list=vlms,
             max_perturbation_list=[x / 255.0 for x in [1, 2, 4, 8, 16, 32, 64, 128, 256]],
             is_targeted=True,
             target_query_idx=[1],
@@ -215,9 +232,9 @@ configstore.store(
     name="copali_ab",
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
-            dataset_list=[DatasetName.VIDORE_SYN_AI],
+            dataset_list=datasets,
             embedder_list=[EmbedderName.COLPALI],
-            vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
+            vlm_list=vlms,
             emb_train_loss_type_list=[EmbeddingLoss.MAXSIM, EmbeddingLoss.AVGSIM, EmbeddingLoss.SOFTMAXSIM, EmbeddingLoss.COS_AVGEMB],
         ),
         eval=ExperimentEvalConfig(
@@ -233,9 +250,9 @@ configstore.store(
     name="copali_ab_cpoiT",
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
-            dataset_list=[DatasetName.VIDORE_SYN_AI],
+            dataset_list=datasets,
             embedder_list=[EmbedderName.COLPALI],
-            vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
+            vlm_list=vlms,
             emb_train_loss_type_list=[EmbeddingLoss.MAXSIM, EmbeddingLoss.AVGSIM, EmbeddingLoss.SOFTMAXSIM, EmbeddingLoss.COS_AVGEMB],
             colpali_only_images=True
         ),
@@ -256,22 +273,12 @@ configstore.store(
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
             dataset_list=[DatasetName.VIDORE_SYN_AI, DatasetName.VIDORE_V2_ESG],
-            embedder_list=[
-                EmbedderName.CLIP_LARGE_PATCH14,
-                EmbedderName.SIGLIP2_LARGE_PATCH16,
-                EmbedderName.JINA_CLIP_2,
-                EmbedderName.COLPALI,
-            ],
-            vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
+            embedder_list=embedders + [EmbedderName.COLPALI],
+            vlm_list=vlms,
         ),
         eval=ExperimentEvalConfig(
-            eval_emb_list=[
-                EmbedderName.CLIP_LARGE_PATCH14,
-                EmbedderName.SIGLIP2_LARGE_PATCH16,
-                EmbedderName.JINA_CLIP_2,
-                EmbedderName.COLPALI,
-            ],
-            eval_vlm_list=[VLMName.SMOLVLM_1_2B, VLMName.QWEN_2p5_VL_3B, VLMName.INTERNVL_3_2B],
+            eval_emb_list=embedders + [EmbedderName.COLPALI],
+            eval_vlm_list=eval_vlms,
         ),
     ),
 )
