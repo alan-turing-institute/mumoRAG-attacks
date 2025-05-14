@@ -42,16 +42,14 @@ configstore.store(
     name="dev",
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
-            embedder_list=[EmbedderName.QWEN2_GME_2B],
-            vlm_list=[VLMName.SMOLVLM_1_256M],
-            gen_topk_list=[1],
+            embedder_list=[EmbedderName.CLIP_BASE_PATCH16],
+            vlm_list=[[VLMName.SMOLVLM_1_256M, VLMName.INTERNVL_3_1B], VLMName.SMOLVLM_1_256M, VLMName.INTERNVL_3_1B],
         ),
         eval=ExperimentEvalConfig(
-            gen_topk_list=[-1],
+            eval_vlm_list=[VLMName.SMOLVLM_1_256M, VLMName.INTERNVL_3_1B],
         ),
     ),
 )
-
 
 """
 Simple Defences

@@ -1,6 +1,7 @@
 import hashlib
 from dataclasses import dataclass, asdict
-from typing import Literal
+from pathlib import Path
+from typing import Literal, Iterator
 from itertools import product
 
 from experiments.configstore import get_config_name
@@ -33,7 +34,7 @@ class TaskConfig:
 
     ds_name: DatasetName
     model_name_embs: list[EmbedderName]
-    model_name_vlm: VLMName
+    model_name_vlms: list[VLMName]
     target_answer_vlm: list[str]
     chosen_index: int
     max_perturbation: float
@@ -73,8 +74,9 @@ class TaskConfig:
         target_answer_str = ",".join(self.target_answer_vlm)
 
         model_name_embs = self.model_name_embs[0] if len(self.model_name_embs) == 1 else self.model_name_embs
+        model_name_vlms = self.model_name_vlms[0] if len(self.model_name_vlms) == 1 else self.model_name_vlms
 
-        config_str = f"{model_name_embs}{self.model_name_vlm}{self.ds_name}{self.chosen_index}{target_answer_str}{self.max_perturbation}{self.emb_train_loss_type}{self.is_adaptive}{self.gen_topk}{self.kb_compromised_fraction}{target_str}{self.attack_mask}"
+        config_str = f"{model_name_embs}{model_name_vlms}{self.ds_name}{self.chosen_index}{target_answer_str}{self.max_perturbation}{self.emb_train_loss_type}{self.is_adaptive}{self.gen_topk}{self.kb_compromised_fraction}{target_str}{self.attack_mask}"
 
         if self.is_adaptive:
             config_str += f"{float(self.lambda_constant)}"
@@ -98,17 +100,23 @@ class TaskConfig:
     def to_dict(self):
         return asdict(self)
 
+    def get_result_filename(self, results_folder: Path) -> Path:
+        hash_string = self.create_hash_string()
+        transferability_suffix = get_transferability_file_suffix(self.eval_emb_name, self.eval_vlm_name)
+        return results_folder / f"metrics_{get_config_name()}_{hash_string}{transferability_suffix}.json"
+
 
 # standalone functions
 def get_transferability_file_suffix(
-        eval_emb_name: EmbedderName | Literal[""],
-        eval_vlm_name: VLMName | Literal[""],
-        eval_jdg_name: VLMName | Literal[""] = "",
+    eval_emb_name: EmbedderName | None,
+    eval_vlm_name: VLMName | None,
+    eval_jdg_name: VLMName | None = None,
 ) -> str:
-    if eval_emb_name == "" and eval_vlm_name == "" and eval_jdg_name == "":
+    if not eval_emb_name and not eval_vlm_name and not eval_jdg_name:
         return ""
-    transfer_str = f"{eval_emb_name}{eval_vlm_name}{eval_jdg_name}"
+    transfer_str = f"{eval_emb_name or ''}{eval_vlm_name or ''}{eval_jdg_name or ''}"
     return f"_{hashlib.md5(transfer_str.encode()).hexdigest()}"
+
 
 def get_defence_file_suffix(defence: DefenceName) -> str:
     if defence == DefenceName.NONE:
@@ -116,11 +124,29 @@ def get_defence_file_suffix(defence: DefenceName) -> str:
     return f"_{defence.value}"
 
 def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = False) -> list[TaskConfig]:
-    parameter_collection = product(
+    parameter_collection: Iterator[
+        tuple[
+            DatasetName,
+            EmbedderName | list[EmbedderName],
+            VLMName | list[VLMName],
+            VLMName,
+            float,
+            EmbeddingLoss,
+            bool,
+            int,
+            int,
+            AttackMask,
+            bool,
+            EmbedderName | None,
+            VLMName | None,
+            VLMName | None,
+            DefenceName,
+        ]
+    ] = product(# type: ignore
         exp_config.train.dataset_list,
         exp_config.train.embedder_list,
         exp_config.train.vlm_list,
-        exp_config.train.judge.models if exp_config.train.judge else [""],
+        exp_config.train.judge.models if exp_config.train.judge else [None],
         exp_config.train.max_perturbation_list,
         exp_config.train.emb_train_loss_type_list,
         exp_config.train.is_adaptive_list,
@@ -128,9 +154,9 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
         exp_config.train.gen_topk_list,
         exp_config.train.attack_mask_list,
         exp_config.train.optimize_nontargeted_queries_list,
-        (exp_config.eval.eval_emb_list if include_eval else None) or [""],
-        (exp_config.eval.eval_vlm_list if include_eval else None) or [""],
-        (exp_config.eval.eval_jdg_list if include_eval else None) or [""],
+        (exp_config.eval.eval_emb_list if include_eval else None) or [None],
+        (exp_config.eval.eval_vlm_list if include_eval else None) or [None],
+        (exp_config.eval.eval_jdg_list if include_eval else None) or [None],
         (exp_config.eval.defences_list if include_eval else None) or [DefenceName.NONE],
     )
     attack_configs = []
@@ -138,7 +164,7 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
         (
             ds_name,
             model_name_embs,
-            model_name_vlm,
+            model_name_vlms,
             model_name_jdg,
             max_perturbation,
             emb_train_loss_type,
@@ -152,10 +178,14 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
             eval_jdg_name,
             defence,
         ) = params
+
+
         if len(exp_config.train.target_answer_vlm) > 1 and not exp_config.train.is_targeted:
             raise ValueError("Multiple target answers supported only for targeted attacks.")
 
         if isinstance(model_name_embs, list):
+            if include_eval and not eval_emb_name:
+                raise ValueError("If trained with multiple embedders, evaluation config must specify a single embedder to test transferability")
             if exp_config.train.is_targeted and exp_config.train.n_knn_target_queries > 1:
                 raise ValueError("Multi-embedder tasks do not k-nearest neighbour targeted attacks.")
             if emb_train_loss_type != EmbeddingLoss.DEFAULT:
@@ -167,6 +197,12 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
                 continue
             model_name_embs = [model_name_embs]
 
+        if isinstance(model_name_vlms, list):
+            if include_eval and not eval_vlm_name:
+                raise ValueError("If trained with multiple VLMs, evaluation config must specify a single VLM to test transferability")
+        else:
+            model_name_vlms = [model_name_vlms]
+
         if len(exp_config.train.target_answer_vlm) not in [1, len(exp_config.train.target_query_idx)]:
             raise ValueError(
                 f"VLM target answers array has incompatible length ({len(exp_config.train.target_answer_vlm)}) with target queries ({len(exp_config.train.target_query_idx)})"
@@ -176,7 +212,7 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
             TaskConfig(
                 ds_name=ds_name,
                 model_name_embs=model_name_embs,
-                model_name_vlm=model_name_vlm,
+                model_name_vlms=model_name_vlms,
                 target_answer_vlm=exp_config.train.target_answer_vlm,
                 chosen_index=chosen_index,
                 max_perturbation=max_perturbation,

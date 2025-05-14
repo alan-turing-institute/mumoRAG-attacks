@@ -26,7 +26,6 @@ configstore.store(
                 EmbedderName.CLIP_BASE_PATCH16,
             ],
             vlm_list=[VLMName.SMOLVLM_1_256M],
-            n_gradient_steps=2,
         ),
         eval=ExperimentEvalConfig(
         ),
@@ -47,10 +46,25 @@ configstore.store(
                 EmbedderName.CLIP_BASE_PATCH16,
             ],
             vlm_list=[VLMName.SMOLVLM_1_256M],
-            n_gradient_steps=2,
         ),
         eval=ExperimentEvalConfig(
             eval_emb_list=[EmbedderName.JINA_CLIP_2, EmbedderName.CLIP_BASE_PATCH16],
+        ),
+    ),
+)
+
+"""
+Testing Configuration (multi-vlm)
+"""
+configstore.store(
+    name="testing multi-vlm",
+    node=ExperimentConfig(
+        train=ExperimentTrainConfig(
+            embedder_list=[EmbedderName.CLIP_BASE_PATCH16],
+            vlm_list=[[VLMName.SMOLVLM_1_256M, VLMName.INTERNVL_3_1B ], VLMName.SMOLVLM_1_256M, VLMName.INTERNVL_3_1B],
+        ),
+        eval=ExperimentEvalConfig(
+            eval_vlm_list=[VLMName.SMOLVLM_1_256M, VLMName.INTERNVL_3_1B],
         ),
     ),
 )

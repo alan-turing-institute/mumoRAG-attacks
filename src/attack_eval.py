@@ -65,11 +65,13 @@ def run(exp_config: ExperimentConfig):
         # update model names in case we test transferability
         if task_config.eval_emb_name:
             model_name_emb = task_config.eval_emb_name
-        elif len(task_config.model_name_embs) == 1:
-            model_name_emb = task_config.model_name_embs[0]
         else:
-            raise ValueError("If trained with multiple embedders, evaluation config must specify a single embedder to test transferability")
-        model_name_vlm = task_config.eval_vlm_name if task_config.eval_vlm_name else task_config.model_name_vlm
+            model_name_emb = task_config.model_name_embs[0]
+
+        if task_config.eval_vlm_name:
+            model_name_vlm = task_config.eval_vlm_name
+        else:
+            model_name_vlm = task_config.model_name_vlms[0]
 
         vlm = get_vlm(model_name_vlm, device)
         ds = get_dataset(task_config.ds_name)
@@ -211,10 +213,7 @@ def run(exp_config: ExperimentConfig):
             "attack_config": task_config.to_dict(),
         }
 
-        results_filename = (
-            exp_config.eval.results_folder
-            / f"metrics_{get_config_name()}_{task_config.create_hash_string()}{get_transferability_file_suffix(task_config.eval_emb_name, task_config.eval_vlm_name, task_config.eval_jdg_name)}{get_defence_file_suffix(task_config.defence)}.json"
-        )
+        results_filename = task_config.get_result_filename(exp_config.eval.results_folder)
 
         with open(
             results_filename,
