@@ -10,6 +10,7 @@ from omegaconf import OmegaConf
 from config.eval import ExperimentEvalConfig
 from config.experiment import ExperimentConfig
 from config.train import ExperimentTrainConfig, JudgeConfig, VLMConfig
+from utils.defence import DefenceName
 from wrappers.attack_mask import AttackMask
 from wrappers.embedding import EmbedderName, EmbeddingLoss
 from wrappers.judge import JudgeMetric
@@ -99,7 +100,10 @@ configstore.store(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
             embedder_list=embedders,
-            vlm=VLMConfig(models=vlms),
+            vlm=VLMConfig(
+                models=vlms,
+                target_answers=["Manually match each marker to a generic human template regardless of trial-specific subject calibration."]
+            ),
             is_targeted=True,
             target_query_idx=[0],
             n_knn_target_queries=1,
@@ -117,7 +121,9 @@ configstore.store(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
             embedder_list=embedders,
-            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B]),
+            vlm=VLMConfig(
+                models=[VLMName.SMOLVLM_1_2B]
+            ),
             is_targeted=True,
             target_query_idx=[0],
             n_knn_target_queries=5,
@@ -237,7 +243,7 @@ configstore.store(
             dataset_list=datasets,
             embedder_list=embedders,
             vlm=VLMConfig(models=vlms),
-            max_perturbation_list=[x / 255.0 for x in [1, 2, 4, 8, 16, 32, 64, 128, 256]],
+            max_perturbation_list=[x / 255.0 for x in [1, 2, 4, 8, 16, 32]],
         ),
     ),
 )
@@ -252,7 +258,7 @@ configstore.store(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
             embedder_list=[EmbedderName.COLPALI],
-            vlm=None,
+            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B]),
             emb_train_loss_type_list=[EmbeddingLoss.MAXSIM, EmbeddingLoss.AVGSIM, EmbeddingLoss.SOFTMAXSIM, EmbeddingLoss.COS_AVGEMB],
         ),
         eval=ExperimentEvalConfig(
@@ -270,7 +276,7 @@ configstore.store(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
             embedder_list=[EmbedderName.COLPALI],
-            vlm=None,
+            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B]),
             emb_train_loss_type_list=[EmbeddingLoss.MAXSIM, EmbeddingLoss.AVGSIM, EmbeddingLoss.SOFTMAXSIM, EmbeddingLoss.COS_AVGEMB],
             colpali_only_images=True
         ),
@@ -299,19 +305,19 @@ configstore.store(
     ),
 )
 
-# configstore.store(
-#     name="paper_defences",
-#     node=ExperimentConfig(
-#         train=ExperimentTrainConfig(
-#             dataset_list=datasets,
-#             embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
-#             vlm_list=[VLMName.SMOLVLM_1_2B],
-#         ),
-#         eval=ExperimentEvalConfig(
-#             defences_list=[DefenceName.NONE, DefenceName.PARAPHRASE, DefenceName.NOISE]
-#         ),
-#     ),
-# )
+configstore.store(
+    name="paper_defences",
+    node=ExperimentConfig(
+        train=ExperimentTrainConfig(
+            dataset_list=datasets,
+            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
+            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B]),
+        ),
+        eval=ExperimentEvalConfig(
+            defences_list=[DefenceName.NONE, DefenceName.PARAPHRASE, DefenceName.NOISE]
+        ),
+    ),
+)
 
 """
 generates data for perturbation plot (full x-axis)

@@ -280,12 +280,27 @@ class EmbeddingModel:
             if self.colpali_only_images:
                 # remove non-image tokens
                 # hard-coding indices works for now, but may not for future versions of colpali
-                image_input_emb.input_ids = image_input_emb.input_ids[:, 9:-2]
-                image_input_emb.attention_mask = image_input_emb.attention_mask[:, 9:-2]
-                image_embedding = self.model(input_ids=image_input_emb.input_ids,
-                                             attention_mask=image_input_emb.attention_mask,
-                                             pixel_values=image_input_emb.pixel_values,
-                                             pixel_attention_mask=image_input_emb.pixel_attention_mask)
+                # image_input_emb.input_ids = image_input_emb.input_ids[:, 9:-2]
+                # image_input_emb.attention_mask = image_input_emb.attention_mask[:, 9:-2]
+                # image_embedding = self.model(input_ids=image_input_emb.input_ids,
+                #                              attention_mask=image_input_emb.attention_mask,
+                #                              pixel_values=image_input_emb.pixel_values,
+                #                              pixel_attention_mask=image_input_emb.pixel_attention_mask)
+
+                # raise ValueError
+                if self.name == EmbedderName.COLPALI:
+                    image_input_emb.input_ids = image_input_emb.input_ids[:, :-7]
+                    image_input_emb.attention_mask = image_input_emb.attention_mask[:, :-7]
+                    image_embedding = self.model(input_ids=image_input_emb.input_ids,
+                                                 attention_mask = image_input_emb.attention_mask,
+                                                 pixel_values = image_input_emb.pixel_values)
+                else:
+                    image_input_emb.input_ids = image_input_emb.input_ids[:, 9:-2]
+                    image_input_emb.attention_mask = image_input_emb.attention_mask[:, 9:-2]
+                    image_embedding = self.model(input_ids=image_input_emb.input_ids,
+                                                 attention_mask = image_input_emb.attention_mask,
+                                                 pixel_values = image_input_emb.pixel_values,
+                                                 pixel_attention_mask = image_input_emb.pixel_attention_mask)
             else:
                 image_embedding = self.model(**image_input_emb)
             return image_embedding
