@@ -45,6 +45,8 @@ eval_vlms = [
 
 def load_config(name):
     with initialize(version_base=None, config_path="pkg://experiments"):
+        cfg = compose(config_name=name, return_hydra_config=True)
+        HydraConfig().set_config(cfg)
         cfg = compose(config_name=name)
     return OmegaConf.to_object(cfg)
 

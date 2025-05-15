@@ -9,10 +9,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 from torchvision import transforms as T
 
-from config.task import get_transferability_file_suffix, generate_task_configs, TaskConfig
+from config.task import generate_task_configs, TaskConfig
 from config.experiment import ExperimentConfig
 from .image_utils import load_adv_image
-from wrappers.embedding import EmbedderName, is_loss_compatible
+from wrappers.embedding import EmbedderName
 from wrappers.vlm import VLMName
 from .logger import logger
 from wrappers.cache import get_dataset
@@ -86,7 +86,9 @@ MODEL_NICKNAME_DICT = {
 
 def shorten_model_name(model_name):
     if isinstance(model_name, str): return shorten_model_name_str(model_name)
-    if isinstance(model_name, Iterable):
+    if isinstance(model_name, list):
+        if len(model_name) == 1:
+            return shorten_model_name_str(model_name[0])
         if isinstance(model_name[0], str):
             return [shorten_model_name_str(name) for name in model_name]
         if isinstance(model_name[0], tuple): 
@@ -156,11 +158,7 @@ def get_metrics(exp_config: ExperimentConfig, task_config: TaskConfig, metrics_t
     )
 
 def get_metrics_2(exp_config: ExperimentConfig, task_config: TaskConfig, metrics_to_show, ret_topk_idx, gen_topk_idx, loss_idx):
-    filename = (
-            exp_config.eval.results_folder
-            / f"metrics_{exp_config.config_name}_{task_config.create_hash_string()}{get_transferability_file_suffix(task_config.eval_emb_name, task_config.eval_vlm_name, task_config.eval_jdg_name)}.json"
-        )
-    # filename = exp_config.eval.results_folder / f"metrics_{hash_string}{get_transferability_file_suffix(task_config.eval_emb_name, task_config.eval_vlm_name)}.json"
+    filename = task_config.get_result_filename(exp_config.eval.results_folder)
     with open(filename, "r") as file:
         metric_dict = json.loads(file.read())
     metrics_to_output = {}
@@ -199,21 +197,18 @@ def plot_metrics_vs_perturbation(exp_config: ExperimentConfig, metrics_to_show, 
     plot_dict_x = [defaultdict(list) for _ in range(num_plots)]
     plot_dict_y = [defaultdict(list) for _ in range(num_plots)]
     for task_config in task_configs:
-        if not is_loss_compatible(task_config.model_name_emb, task_config.emb_train_loss_type):
-            continue
         metrics, titles = get_metrics_2(exp_config, task_config, metrics_to_show, ret_topk_idx, gen_topk_idx, loss_idx)
 
         for i, metric_name in enumerate(metrics_to_show):
         # for i, (metric, title) in enumerate(zip(metrics, titles)):
             metric = metrics[metric_name]
-            label = f"{shorten_model_name(task_config.model_name_emb)} + {shorten_model_name(task_config.model_name_vlm)}"
+            label = f"{shorten_model_name(task_config.model_name_embs)} + {shorten_model_name(task_config.vlm.models) if task_config.vlm else ''}"
             plot_dict_x[i][label].append(task_config.max_perturbation*255)
             plot_dict_y[i][label].append(metric)
-
     markers = ["o", "v", "s", "x", "+", "^"]
     n_plots = len(plot_dict_x[0].keys())
-    fig, ax = plt.subplots(1,n_plots, figsize=(15,3))
-    for k, label in enumerate(plot_dict_x[i].keys()):
+    fig, ax = plt.subplots(1, n_plots, figsize=(15,3))
+    for k, label in enumerate(plot_dict_x[0].keys()):
         for i in range(len(metrics_to_show)):
             ax[k].plot(plot_dict_x[i][label], plot_dict_y[i][label], label=titles[i], marker=markers[i])
             # axs[i].set_title(titles[i])
@@ -228,7 +223,7 @@ def plot_metrics_vs_perturbation(exp_config: ExperimentConfig, metrics_to_show, 
         ax[k].set_title(label)
 
 
-def plot_colpali_ablations(exp_config: ExperimentConfig, ds_idx, metrics_to_show, ret_topk_idx=0, gen_topk_idx=0):
+def plot_colpali_ablations(exp_config: ExperimentConfig, metrics_to_show, ret_topk_idx=0, gen_topk_idx=0):
     """
     This function generates one heatmap per wrappers
     x-axis -> embedder models
@@ -239,27 +234,22 @@ def plot_colpali_ablations(exp_config: ExperimentConfig, ds_idx, metrics_to_show
     task_config = task_configs[0]
     losses_train = exp_config.train.emb_train_loss_type_list
     losses_eval = exp_config.eval.emb_test_loss_type_list
-    ds_name = exp_config.train.dataset_list[ds_idx]
-    task_config = replace(task_config, ds_name=ds_name)
 
-    for vlm in exp_config.train.vlm_list:
-        print(vlm)
-        task_config = replace(task_config, model_name_vlm=vlm)
-        # populate matrices to be used as heatmap
-        metric_tables = [np.zeros((len(losses_train), len(losses_eval))) for _ in range(num_plots)]
-        for loss_train_idx, loss_train in enumerate(losses_train):
-            for loss_eval_idx, loss_eval in enumerate(losses_eval):
-                task_config = replace(task_config,
-                    emb_train_loss_type=loss_train,
-                )
-                metrics, titles = get_metrics_2(exp_config, task_config, metrics_to_show, ret_topk_idx, gen_topk_idx, loss_eval_idx)
-                # metrics, titles = get_metrics(exp_config, task_config, metrics_to_show)
+    # populate matrices to be used as heatmap
+    metric_tables = [np.zeros((len(losses_train), len(losses_eval))) for _ in range(num_plots)]
+    for loss_train_idx, loss_train in enumerate(losses_train):
+        for loss_eval_idx, loss_eval in enumerate(losses_eval):
+            task_config = replace(task_config,
+                emb_train_loss_type=loss_train,
+            )
+            metrics, titles = get_metrics_2(exp_config, task_config, metrics_to_show, ret_topk_idx, gen_topk_idx, loss_eval_idx)
+            # metrics, titles = get_metrics(exp_config, task_config, metrics_to_show)
 
-                for m_idx, (metric_name, metric_value) in enumerate(metrics.items()):
-                    metric_tables[m_idx][loss_train_idx][loss_eval_idx] = metric_value
+            for m_idx, (metric_name, metric_value) in enumerate(metrics.items()):
+                metric_tables[m_idx][loss_train_idx][loss_eval_idx] = metric_value
 
-        # show heatmaps
-        plot_heatmap(num_plots=num_plots, metric_tables=metric_tables, xaxis=losses_train, yaxis=losses_train, xlabel="Training Loss", ylabel="Evaluation Loss", titles=titles)
+    # show heatmaps
+    plot_heatmap(num_plots=num_plots, metric_tables=metric_tables, xaxis=losses_train, yaxis=losses_train, xlabel="Training Loss", ylabel="Evaluation Loss", titles=titles)
 
 
 def plot_model_heatmap(exp_config: ExperimentConfig, ds_idx, metrics_to_show = None):
