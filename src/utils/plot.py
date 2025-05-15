@@ -1,8 +1,9 @@
 import json
 from collections import defaultdict
-from collections.abc import Iterable
 from dataclasses import replace
 from enum import IntEnum
+from pprint import pprint
+
 from itertools import product
 
 import matplotlib.pyplot as plt
@@ -12,7 +13,7 @@ from torchvision import transforms as T
 from config.task import generate_task_configs, TaskConfig
 from config.experiment import ExperimentConfig
 from .image_utils import load_adv_image
-from wrappers.embedding import EmbedderName
+from wrappers.embedding import EmbedderName, is_loss_compatible
 from wrappers.vlm import VLMName
 from .logger import logger
 from wrappers.cache import get_dataset
@@ -165,11 +166,23 @@ def get_metrics_2(exp_config: ExperimentConfig, task_config: TaskConfig, metrics
 
     # retrieval metrics
     # for topk in exp_config.eval.topk_list:
-    key = f"loss_{exp_config.eval.emb_test_loss_type_list[loss_idx]}_topk_{exp_config.eval.topk_list[ret_topk_idx]}"
-    metrics_to_output[MetricIdx.RETRIEVAL_RECALL_BEFORE] = metric_dict["retrieval"][key]["recall_before"] 
-    metrics_to_output[MetricIdx.RETRIEVAL_RECALL_AFTER] = metric_dict["retrieval"][key]["recall_after"] 
-    metrics_to_output[MetricIdx.RETRIEVAL_ASR_TRAIN] = metric_dict["retrieval"][key]["asr_train"] 
-    metrics_to_output[MetricIdx.RETRIEVAL_ASR_TEST] = metric_dict["retrieval"][key]["asr_test"]
+    if task_config.eval_emb_name:
+        model_name_emb = task_config.eval_emb_name
+    else:
+        model_name_emb = task_config.model_name_embs[0]
+    emb_test_loss_type_list_compatible = [loss for loss in exp_config.eval.emb_test_loss_type_list if is_loss_compatible(model_name_emb, loss)]
+    key = f"loss_{emb_test_loss_type_list_compatible[loss_idx]}_topk_{exp_config.eval.topk_list[ret_topk_idx]}"
+
+    try:
+        metrics_to_output[MetricIdx.RETRIEVAL_RECALL_BEFORE] = metric_dict["retrieval"][key]["recall_before"]
+        metrics_to_output[MetricIdx.RETRIEVAL_RECALL_AFTER] = metric_dict["retrieval"][key]["recall_after"]
+        metrics_to_output[MetricIdx.RETRIEVAL_ASR_TRAIN] = metric_dict["retrieval"][key]["asr_train"]
+        metrics_to_output[MetricIdx.RETRIEVAL_ASR_TEST] = metric_dict["retrieval"][key]["asr_test"]
+    except KeyError:
+        pprint(exp_config)
+        pprint(task_config)
+        print(key)
+        raise
         
     # for gen_topk in exp_config.eval.gen_topk_list:
     key = f"gen_topk_{exp_config.eval.gen_topk_list[gen_topk_idx]}"
@@ -257,12 +270,13 @@ def plot_model_heatmap(exp_config: ExperimentConfig, ds_idx, metrics_to_show = N
     This function generates one heatmap per wrappers
     x-axis -> embedder models
     """
-    if metrics_to_show is None: metrics_to_show = [i for i in range(len(METRIC_NAMES))]
+    if metrics_to_show is None:
+        metrics_to_show = [i for i in range(len(METRIC_NAMES))]
     num_plots = len(metrics_to_show)
     task_configs = generate_task_configs(exp_config, include_eval=True)
     task_config = task_configs[0]
     embs = exp_config.train.embedder_list
-    vlms = exp_config.train.vlm_list
+    vlms = exp_config.train.vlm.models
     ds_name = exp_config.train.dataset_list[ds_idx]
     task_config = replace(task_config, ds_name=ds_name)
 
@@ -271,8 +285,8 @@ def plot_model_heatmap(exp_config: ExperimentConfig, ds_idx, metrics_to_show = N
     for emb_idx, model_name_emb in enumerate(embs):
         for vlm_idx, model_name_vlm in enumerate(vlms):
             task_config = replace(task_config,
-                model_name_emb=model_name_emb,
-                model_name_vlm=model_name_vlm,
+                model_name_embs=model_name_emb,
+                vlm=replace(task_config.vlm, models=model_name_vlm),
             )
             metrics, titles = get_metrics(exp_config, task_config, metrics_to_show)
 
@@ -285,7 +299,8 @@ def plot_model_heatmap(exp_config: ExperimentConfig, ds_idx, metrics_to_show = N
 
 
 def plot_transferability(exp_config, metrics_to_show = None):
-    if metrics_to_show is None: metrics_to_show = [i for i in range(len(METRIC_NAMES))]
+    if metrics_to_show is None:
+        metrics_to_show = [i for i in range(len(METRIC_NAMES))]
     num_plots = len(metrics_to_show)
     task_configs = generate_task_configs(exp_config, include_eval=True)
     task_config = task_configs[0]
@@ -316,7 +331,8 @@ def plot_transferability(exp_config, metrics_to_show = None):
 
 
 def plot_images_side_by_side(exp_config, metrics_to_show):
-    if metrics_to_show is None: metrics_to_show = [i for i in range(len(METRIC_NAMES))]
+    if metrics_to_show is None:
+        metrics_to_show = [i for i in range(len(METRIC_NAMES))]
     task_configs = generate_task_configs(exp_config, include_eval=True)
     task_config = task_configs[0]
 
