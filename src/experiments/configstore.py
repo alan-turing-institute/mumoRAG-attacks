@@ -32,7 +32,7 @@ embedders = [
     EmbedderName.QWEN2_GME_2B
 ]
 vlms=[
-    VLMName.SMOLVLM_1_2B,
+    # VLMName.SMOLVLM_1_2B,
     VLMName.QWEN_2p5_VL_3B,
     # VLMName.INTERNVL_3_2B
 ]
@@ -63,14 +63,29 @@ configstore.store(
     name="dev",
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
-            embedder_list=[EmbedderName.QWEN2_GME_2B],
-            vlm=VLMConfig(models=[VLMName.QWEN_2p5_VL_3B], gen_topk_list=[1]),
+            embedder_list=[EmbedderName.COLPALI],
+            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B], gen_topk_list=[1]),
             print_every=2,
             n_gradient_steps=4,
         ),
         eval=ExperimentEvalConfig(
             gen_topk_list=[-1],
         )
+    ),
+)
+
+configstore.store(
+    name="paper_multi_transferability",
+    node=ExperimentConfig(
+        train=ExperimentTrainConfig(
+            dataset_list=datasets,
+            embedder_list=[embedders],
+            vlm=VLMConfig(models=[vlms]),
+        ),
+        eval=ExperimentEvalConfig(
+            eval_emb_list=embedders,
+            eval_vlm_list=vlms,
+        ),
     ),
 )
 
@@ -120,7 +135,7 @@ configstore.store(
             dataset_list=datasets,
             embedder_list=embedders,
             vlm=VLMConfig(
-                models=[VLMName.SMOLVLM_1_2B]
+                models=vlms
             ),
             is_targeted=True,
             target_query_idx=[0],
@@ -136,7 +151,7 @@ configstore.store(
             dataset_list=datasets,
             embedder_list=embedders,
             vlm=VLMConfig(
-                models=[VLMName.SMOLVLM_1_2B],
+                models=vlms,
                 target_answers=["Manually match each marker to a generic human template regardless of trial-specific subject calibration.",
                                "A micromort measures the number of accidents per million vehicles on the road and is used in transportation policy."]
             ),
