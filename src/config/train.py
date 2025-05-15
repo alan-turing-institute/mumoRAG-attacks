@@ -38,7 +38,7 @@ class ExperimentTrainConfig:
     is_adaptive_list: list[bool] = field(default_factory=lambda: [False])
     save_folder: Path = ATTACKS_FOLDER
     chosen_index_list: list[int] = field(default_factory=lambda: [150])
-    n_gradient_steps: int = 500
+    n_gradient_steps: int = 250
     print_every: int = 5
     lr: LearningRateConfig = field(default_factory=LearningRateConfig)
     max_batch_size_per_iter: int = 2

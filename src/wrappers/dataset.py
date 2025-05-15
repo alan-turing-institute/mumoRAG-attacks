@@ -19,6 +19,8 @@ from wrappers.judge import JudgeVLM, JudgeMetric, METRIC_2_PROMPT
 from wrappers.vlm import VLM, VLMEvaluationMetric
 from config import DATA_FOLDER
 
+import torchvision.transforms.v2 as T
+
 
 class DatasetName(StrEnum):
     VIDORE_SYN_AI = "vidore/syntheticDocQA_artificial_intelligence_test"
@@ -316,7 +318,8 @@ class Dataset:
             # use top retrieved images
             retrieved_images = [
                 [
-                    self.images[i] for i in indices_per_query[:topk]
+                    self.images[i] if type(self.images[i]) == type(torch.tensor([])) else T.PILToTensor()(self.images[i])
+                    for i in indices_per_query[:topk]
                 ]
                 for indices_per_query in retrieved_indices
             ]
