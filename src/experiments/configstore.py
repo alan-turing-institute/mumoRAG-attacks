@@ -63,14 +63,17 @@ configstore.store(
     name="dev",
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
-            embedder_list=[EmbedderName.COLPALI],
-            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B], gen_topk_list=[1]),
-            print_every=2,
-            n_gradient_steps=4,
+            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
+            vlm_list=[VLMName.SMOLVLM_1_2B],
+            gen_topk_list=[1],
+            is_targeted=True,
+            target_query_idx=[0],
+            target_answer_vlm=["Manually match each marker to a generic human template regardless of trial-specific subject calibration."],
         ),
         eval=ExperimentEvalConfig(
             gen_topk_list=[-1],
-        )
+            test_gpt_attack=True,
+        ),
     ),
 )
 
