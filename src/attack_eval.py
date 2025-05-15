@@ -12,7 +12,7 @@ from experiments import DEFAULT_EXPERIMENT
 from experiments.configstore import get_config_name
 from utils.attack import get_all_target_queries_and_answers
 from utils.defence import DefenceName, add_noise
-from utils.image_utils import load_adv_image, load_gpt_image
+from utils.image_utils import load_adv_image, load_gpt_image, gpt_filename
 from utils.logger import logger
 from utils.utils import get_device
 from wrappers.cache import get_vlm, get_text_embedder, get_dataset, get_embedded_dataset, get_judge
@@ -216,9 +216,7 @@ def run(exp_config: ExperimentConfig):
         }
 
         if exp_config.eval.test_gpt_attack:
-            filename = "metrics_gpt_targeted_" if exp_config.train.is_targeted else "metrics_gpt_univerasal_"
-            filename = filename + make_safe_filename(f"{model_name_emb}_{model_name_vlm}") + ".json"
-            results_filename = exp_config.eval.results_folder / filename
+            results_filename = exp_config.eval.results_folder / f"metrics_{gpt_filename(task_config)}_{make_safe_filename(f'{model_name_emb}_{model_name_vlm}')}.json"
         else:
             results_filename = (
                 exp_config.eval.results_folder
