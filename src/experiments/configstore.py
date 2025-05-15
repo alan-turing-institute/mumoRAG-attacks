@@ -327,9 +327,8 @@ configstore.store(
 """
 Attack optimized when the malicious image is retrieved within top-k (not top-1)
 Evaluation when image is retrieved within top-k (not top-1)
-
-# todo dan: how to present this info
 """
+# todo dan: how to present this info
 configstore.store(
     name="paper_topk_context",
     node=ExperimentConfig(
