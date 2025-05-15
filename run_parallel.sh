@@ -2,28 +2,30 @@
 
 # Define your experiments
 exps=(
-#    "topk_context"
-#    "targeted_attacks_oneQ_oneA"
-    "targeted_attacks_multiQ_oneA"
-    "targeted_attacks_multiQ_multiA"
-#    "mask_attack"
-    "judge_defence"
-#    "copali_ab"
-#    "copali_ab_cpoiT"
-#    "perturbation_plot"
-#    "perturbation_plot_targeted"
-#    "transferability"
+  "paper_non_targeted"
+  "paper_targeted_attacks_oneQ_oneA"
+   "paper_targeted_attacks_multiQ_oneA"
+   "paper_targeted_attacks_multiQ_multiA"
+  "paper_judge_defence"
+  "paper_judge_defence_adapt"
+  "paper_judge_defence_targeted"
+  "paper_judge_defence_targeted_adapt"
+   "paper_defences"
+  "paper_perturbation_plot"
+   "paper_copali_ab"
+   "paper_copali_ab_cpoiT"
+   "paper_topk_context"
 )
 
 # Define a function to run one experiment
 run_exp() {
     exp="$1"
-#    echo "=== [1/2] Training: $exp ==="
-#    python src/attack_train.py --config-name "$exp"
-#    if [ $? -ne 0 ]; then
-#        echo "❌ Training failed for $exp. Skipping eval."
-#        return
-#    fi
+    echo "=== [1/2] Training: $exp ==="
+    python src/attack_train.py --config-name "$exp"
+    if [ $? -ne 0 ]; then
+        echo "❌ Training failed for $exp. Skipping eval."
+        return
+    fi
 
     echo "=== [2/2] Evaluating: $exp ==="
     python src/attack_eval.py --config-name "$exp"
