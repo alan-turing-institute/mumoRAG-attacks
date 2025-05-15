@@ -269,7 +269,7 @@ configstore.store(
 """
 Varies max perturbation to measure effect on attack success.
 Produces:
-- Graphs for embedder x vlm with perturbation on x-axis  # todo dan: fix graphs
+- Graphs for embedder x vlm with perturbation on x-axis
 """
 configstore.store(
     name="paper_perturbation_plot",
@@ -289,7 +289,6 @@ ColPali ablations (w/ colpali_only_images False)
 Produces:
 - (combined (w/ colpali_only_images True)) table emb_loss_train x emb_loss_eval x only_images
 """
-# todo dan: make table
 configstore.store(
     name="paper_copali_ab",
     node=ExperimentConfig(
