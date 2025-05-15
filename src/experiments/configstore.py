@@ -393,6 +393,28 @@ configstore.store(
     ),
 )
 
+"""
+Attack optimized when the malicious image is retrieved within top-k (not top-1)
+Evaluation when image is retrieved within top-k (not top-1)
+"""
+configstore.store(
+    name="paper_topk_context_targeted",
+    node=ExperimentConfig(
+        train=ExperimentTrainConfig(
+            dataset_list=datasets,
+            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
+            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B], gen_topk_list=[1,5]),
+            is_targeted=True,
+            target_query_idx=[0],
+            n_knn_target_queries=1,
+        ),
+        eval=ExperimentEvalConfig(
+            gen_topk_list=[-1, 1, 5],
+            test_topk_order=False,
+        )
+    ),
+)
+
 configstore.store(
     name="paper_defences",
     node=ExperimentConfig(
