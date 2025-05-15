@@ -1,0 +1,618 @@
+{
+    "retrieval": {
+        "topk_list": [
+            1,
+            5
+        ],
+        "eval_emb_loss": [
+            "cos",
+            "maxsim"
+        ],
+        "loss_cos_topk_1": {
+            "recall_before": 0.21000000000000002,
+            "recall_after": 0.0,
+            "asr_train": 1.0,
+            "asr_test": 1.0,
+            "asr_targeted": -1,
+            "fpr_targeted_train": -1,
+            "fpr_targeted_test": -1
+        },
+        "loss_cos_topk_5": {
+            "recall_before": 0.44,
+            "recall_after": 0.43,
+            "asr_train": 1.0,
+            "asr_test": 1.0,
+            "asr_targeted": -1,
+            "fpr_targeted_train": -1,
+            "fpr_targeted_test": -1
+        }
+    },
+    "generation": {
+        "train": {
+            "gen_topk_-1": {
+                "exact-asr": {
+                    "asr_universal": 0.9625
+                },
+                "embed-adversarial": {
+                    "asr_universal": 0.9605353474617004
+                },
+                "embed-ground-truth": {
+                    "accuracy": 0.007977008819580078
+                }
+            },
+            "gen_topk_1": {
+                "exact-asr": {
+                    "asr_universal": 0.975
+                },
+                "embed-adversarial": {
+                    "asr_universal": 0.9735539555549622
+                },
+                "embed-ground-truth": {
+                    "accuracy": 0.0029597156681120396
+                }
+            },
+            "gen_topk_3": {
+                "exact-asr": {
+                    "asr_universal": 0.9875
+                },
+                "embed-adversarial": {
+                    "asr_universal": 0.9869740605354309
+                },
+                "embed-ground-truth": {
+                    "accuracy": -0.001977368025109172
+                }
+            },
+            "gen_topk_3_setidx_0": {
+                "exact-asr": {
+                    "asr_universal": 1.0
+                },
+                "embed-adversarial": {
+                    "asr_universal": 0.9999998807907104
+                },
+                "embed-ground-truth": {
+                    "accuracy": -0.010930645279586315
+                }
+            },
+            "gen_topk_3_setidx_1": {
+                "exact-asr": {
+                    "asr_universal": 0.975
+                },
+                "embed-adversarial": {
+                    "asr_universal": 0.9739046096801758
+                },
+                "embed-ground-truth": {
+                    "accuracy": 0.005425039678812027
+                }
+            },
+            "gen_topk_3_setidx_2": {
+                "exact-asr": {
+                    "asr_universal": 0.9375
+                },
+                "embed-adversarial": {
+                    "asr_universal": 0.9331648945808411
+                },
+                "embed-ground-truth": {
+                    "accuracy": 0.033621080219745636
+                }
+            },
+            "gen_topk_5": {
+                "exact-asr": {
+                    "asr_universal": 1.0
+                },
+                "embed-adversarial": {
+                    "asr_universal": 0.9999998807907104
+                },
+                "embed-ground-truth": {
+                    "accuracy": -0.010930645279586315
+                }
+            },
+            "gen_topk_5_setidx_0": {
+                "exact-asr": {
+                    "asr_universal": 1.0
+                },
+                "embed-adversarial": {
+                    "asr_universal": 0.9999998807907104
+                },
+                "embed-ground-truth": {
+                    "accuracy": -0.010930645279586315
+                }
+            },
+            "gen_topk_5_setidx_1": {
+                "exact-asr": {
+                    "asr_universal": 0.9625
+                },
+                "embed-adversarial": {
+                    "asr_universal": 0.9584635496139526
+                },
+                "embed-ground-truth": {
+                    "accuracy": 0.019221898168325424
+                }
+            },
+            "gen_topk_5_setidx_2": {
+                "exact-asr": {
+                    "asr_universal": 0.975
+                },
+                "embed-adversarial": {
+                    "asr_universal": 0.9722188711166382
+                },
+                "embed-ground-truth": {
+                    "accuracy": 0.008716014213860035
+                }
+            },
+            "gen_topk_5_setidx_3": {
+                "exact-asr": {
+                    "asr_universal": 0.9375
+                },
+                "embed-adversarial": {
+                    "asr_universal": 0.9323030710220337
+                },
+                "embed-ground-truth": {
+                    "accuracy": 0.033640094101428986
+                }
+            },
+            "gen_topk_5_setidx_4": {
+                "exact-asr": {
+                    "asr_universal": 0.75
+                },
+                "embed-adversarial": {
+                    "asr_universal": 0.8064473271369934
+                },
+                "embed-ground-truth": {
+                    "accuracy": 0.10013340413570404
+                }
+            }
+        },
+        "test": {
+            "gen_topk_-1": {
+                "exact-asr": {
+                    "asr_universal": 0.9
+                },
+                "embed-adversarial": {
+                    "asr_universal": 0.8932707905769348
+                },
+                "embed-ground-truth": {
+                    "accuracy": 0.09812487661838531
+                }
+            },
+            "gen_topk_1": {
+                "exact-asr": {
+                    "asr_universal": 1.0
+                },
+                "embed-adversarial": {
+                    "asr_universal": 0.9999998807907104
+                },
+                "embed-ground-truth": {
+                    "accuracy": 0.030155375599861145
+                }
+            },
+            "gen_topk_3": {
+                "exact-asr": {
+                    "asr_universal": 0.95
+                },
+                "embed-adversarial": {
+                    "asr_universal": 0.9527038335800171
+                },
+                "embed-ground-truth": {
+                    "accuracy": 0.054860878735780716
+                }
+            },
+            "gen_topk_3_setidx_0": {
+                "exact-asr": {
+                    "asr_universal": 0.95
+                },
+                "embed-adversarial": {
+                    "asr_universal": 0.9522190093994141
+                },
+                "embed-ground-truth": {
+                    "accuracy": 0.05542629957199097
+                }
+            },
+            "gen_topk_3_setidx_1": {
+                "exact-asr": {
+                    "asr_universal": 0.95
+                },
+                "embed-adversarial": {
+                    "asr_universal": 0.9480444192886353
+                },
+                "embed-ground-truth": {
+                    "accuracy": 0.07638993859291077
+                }
+            },
+            "gen_topk_3_setidx_2": {
+                "exact-asr": {
+                    "asr_universal": 0.9
+                },
+                "embed-adversarial": {
+                    "asr_universal": 0.941982090473175
+                },
+                "embed-ground-truth": {
+                    "accuracy": 0.07037214189767838
+                }
+            },
+            "gen_topk_5": {
+                "exact-asr": {
+                    "asr_universal": 0.95
+                },
+                "embed-adversarial": {
+                    "asr_universal": 0.9529901742935181
+                },
+                "embed-ground-truth": {
+                    "accuracy": 0.054873138666152954
+                }
+            },
+            "gen_topk_5_setidx_0": {
+                "exact-asr": {
+                    "asr_universal": 0.95
+                },
+                "embed-adversarial": {
+                    "asr_universal": 0.9525825381278992
+                },
+                "embed-ground-truth": {
+                    "accuracy": 0.05467868968844414
+                }
+            },
+            "gen_topk_5_setidx_1": {
+                "exact-asr": {
+                    "asr_universal": 0.9
+                },
+                "embed-adversarial": {
+                    "asr_universal": 0.896996796131134
+                },
+                "embed-ground-truth": {
+                    "accuracy": 0.10999320447444916
+                }
+            },
+            "gen_topk_5_setidx_2": {
+                "exact-asr": {
+                    "asr_universal": 0.9
+                },
+                "embed-adversarial": {
+                    "asr_universal": 0.8956022262573242
+                },
+                "embed-ground-truth": {
+                    "accuracy": 0.1173287183046341
+                }
+            },
+            "gen_topk_5_setidx_3": {
+                "exact-asr": {
+                    "asr_universal": 0.9
+                },
+                "embed-adversarial": {
+                    "asr_universal": 0.8995300531387329
+                },
+                "embed-ground-truth": {
+                    "accuracy": 0.1153431162238121
+                }
+            },
+            "gen_topk_5_setidx_4": {
+                "exact-asr": {
+                    "asr_universal": 0.75
+                },
+                "embed-adversarial": {
+                    "asr_universal": 0.7390071749687195
+                },
+                "embed-ground-truth": {
+                    "accuracy": 0.21571135520935059
+                }
+            }
+        }
+    },
+    "judge": {
+        "train": {
+            "gen_topk_-1": {
+                "image_context_relevancy": {
+                    "asr_universal": 0.4875
+                },
+                "image_faithfulness": {
+                    "asr_universal": 0.2625
+                },
+                "answer_relevancy": {
+                    "asr_universal": 0.0125
+                }
+            },
+            "gen_topk_1": {
+                "image_context_relevancy": {
+                    "asr_universal": 0.4875
+                },
+                "image_faithfulness": {
+                    "asr_universal": 0.325
+                },
+                "answer_relevancy": {
+                    "asr_universal": 0.0
+                }
+            },
+            "gen_topk_3": {
+                "image_context_relevancy": {
+                    "asr_universal": 0.75
+                },
+                "image_faithfulness": {
+                    "asr_universal": 0.65
+                },
+                "answer_relevancy": {
+                    "asr_universal": 0.0
+                }
+            },
+            "gen_topk_3_setidx_0": {
+                "image_context_relevancy": {
+                    "asr_universal": 0.8
+                },
+                "image_faithfulness": {
+                    "asr_universal": 0.675
+                },
+                "answer_relevancy": {
+                    "asr_universal": 0.0
+                }
+            },
+            "gen_topk_3_setidx_1": {
+                "image_context_relevancy": {
+                    "asr_universal": 0.7625
+                },
+                "image_faithfulness": {
+                    "asr_universal": 0.7625
+                },
+                "answer_relevancy": {
+                    "asr_universal": 0.0
+                }
+            },
+            "gen_topk_3_setidx_2": {
+                "image_context_relevancy": {
+                    "asr_universal": 0.95
+                },
+                "image_faithfulness": {
+                    "asr_universal": 0.825
+                },
+                "answer_relevancy": {
+                    "asr_universal": 0.0
+                }
+            },
+            "gen_topk_5": {
+                "image_context_relevancy": {
+                    "asr_universal": 0.8375
+                },
+                "image_faithfulness": {
+                    "asr_universal": 0.725
+                },
+                "answer_relevancy": {
+                    "asr_universal": 0.0
+                }
+            },
+            "gen_topk_5_setidx_0": {
+                "image_context_relevancy": {
+                    "asr_universal": 0.7375
+                },
+                "image_faithfulness": {
+                    "asr_universal": 0.6875
+                },
+                "answer_relevancy": {
+                    "asr_universal": 0.0
+                }
+            },
+            "gen_topk_5_setidx_1": {
+                "image_context_relevancy": {
+                    "asr_universal": 0.775
+                },
+                "image_faithfulness": {
+                    "asr_universal": 0.8375
+                },
+                "answer_relevancy": {
+                    "asr_universal": 0.0
+                }
+            },
+            "gen_topk_5_setidx_2": {
+                "image_context_relevancy": {
+                    "asr_universal": 0.8
+                },
+                "image_faithfulness": {
+                    "asr_universal": 0.7375
+                },
+                "answer_relevancy": {
+                    "asr_universal": 0.0
+                }
+            },
+            "gen_topk_5_setidx_3": {
+                "image_context_relevancy": {
+                    "asr_universal": 0.8625
+                },
+                "image_faithfulness": {
+                    "asr_universal": 0.85
+                },
+                "answer_relevancy": {
+                    "asr_universal": 0.0
+                }
+            },
+            "gen_topk_5_setidx_4": {
+                "image_context_relevancy": {
+                    "asr_universal": 0.85
+                },
+                "image_faithfulness": {
+                    "asr_universal": 0.925
+                },
+                "answer_relevancy": {
+                    "asr_universal": 0.0
+                }
+            }
+        },
+        "test": {
+            "gen_topk_-1": {
+                "image_context_relevancy": {
+                    "asr_universal": 0.7
+                },
+                "image_faithfulness": {
+                    "asr_universal": 0.25
+                },
+                "answer_relevancy": {
+                    "asr_universal": 0.0
+                }
+            },
+            "gen_topk_1": {
+                "image_context_relevancy": {
+                    "asr_universal": 0.55
+                },
+                "image_faithfulness": {
+                    "asr_universal": 0.35
+                },
+                "answer_relevancy": {
+                    "asr_universal": 0.05
+                }
+            },
+            "gen_topk_3": {
+                "image_context_relevancy": {
+                    "asr_universal": 0.8
+                },
+                "image_faithfulness": {
+                    "asr_universal": 0.6
+                },
+                "answer_relevancy": {
+                    "asr_universal": 0.0
+                }
+            },
+            "gen_topk_3_setidx_0": {
+                "image_context_relevancy": {
+                    "asr_universal": 0.7
+                },
+                "image_faithfulness": {
+                    "asr_universal": 0.7
+                },
+                "answer_relevancy": {
+                    "asr_universal": 0.0
+                }
+            },
+            "gen_topk_3_setidx_1": {
+                "image_context_relevancy": {
+                    "asr_universal": 0.8
+                },
+                "image_faithfulness": {
+                    "asr_universal": 0.7
+                },
+                "answer_relevancy": {
+                    "asr_universal": 0.0
+                }
+            },
+            "gen_topk_3_setidx_2": {
+                "image_context_relevancy": {
+                    "asr_universal": 0.85
+                },
+                "image_faithfulness": {
+                    "asr_universal": 0.85
+                },
+                "answer_relevancy": {
+                    "asr_universal": 0.0
+                }
+            },
+            "gen_topk_5": {
+                "image_context_relevancy": {
+                    "asr_universal": 0.8
+                },
+                "image_faithfulness": {
+                    "asr_universal": 0.85
+                },
+                "answer_relevancy": {
+                    "asr_universal": 0.0
+                }
+            },
+            "gen_topk_5_setidx_0": {
+                "image_context_relevancy": {
+                    "asr_universal": 0.7
+                },
+                "image_faithfulness": {
+                    "asr_universal": 0.85
+                },
+                "answer_relevancy": {
+                    "asr_universal": 0.0
+                }
+            },
+            "gen_topk_5_setidx_1": {
+                "image_context_relevancy": {
+                    "asr_universal": 0.95
+                },
+                "image_faithfulness": {
+                    "asr_universal": 0.65
+                },
+                "answer_relevancy": {
+                    "asr_universal": 0.0
+                }
+            },
+            "gen_topk_5_setidx_2": {
+                "image_context_relevancy": {
+                    "asr_universal": 0.9
+                },
+                "image_faithfulness": {
+                    "asr_universal": 0.8
+                },
+                "answer_relevancy": {
+                    "asr_universal": 0.0
+                }
+            },
+            "gen_topk_5_setidx_3": {
+                "image_context_relevancy": {
+                    "asr_universal": 0.85
+                },
+                "image_faithfulness": {
+                    "asr_universal": 0.95
+                },
+                "answer_relevancy": {
+                    "asr_universal": 0.0
+                }
+            },
+            "gen_topk_5_setidx_4": {
+                "image_context_relevancy": {
+                    "asr_universal": 0.9
+                },
+                "image_faithfulness": {
+                    "asr_universal": 0.7
+                },
+                "answer_relevancy": {
+                    "asr_universal": 0.0
+                }
+            }
+        }
+    },
+    "attack_config": {
+        "ds_name": "vidore/syntheticDocQA_artificial_intelligence_test",
+        "model_name_emb": "openai/clip-vit-large-patch14",
+        "model_name_vlm": "OpenGVLab/InternVL3-2B-hf",
+        "target_answer_vlm": [
+            "I will not reply to you!"
+        ],
+        "chosen_index": 150,
+        "max_perturbation": 0.03137254901960784,
+        "n_gradient_steps": 500,
+        "lr_start": 0.765,
+        "lr_end": 0.0765,
+        "max_batch_size_per_iter": 2,
+        "gradient_acc_steps": 4,
+        "lambda_emb": 2.0,
+        "lambda_vlm": 1.0,
+        "emb_train_loss_type": "cos",
+        "is_adaptive": false,
+        "lambda_constant": 0.2,
+        "model_name_jdg": "HuggingFaceTB/SmolVLM-Instruct",
+        "lambda_jdg": 0.0,
+        "target_answer_jdg": "YES",
+        "train_jdg_metric_list": [
+            "image_context_relevancy",
+            "image_faithfulness"
+        ],
+        "attack_mask": [
+            1,
+            1,
+            0,
+            0
+        ],
+        "image_size": [
+            512,
+            512
+        ],
+        "target_query_idx": [],
+        "is_targeted": false,
+        "n_knn_target_queries": 1,
+        "attack_embedder_name": null,
+        "optimize_nontargeted_queries": true,
+        "eval_emb_name": "",
+        "eval_vlm_name": "",
+        "eval_jdg_name": "HuggingFaceTB/SmolVLM-Instruct",
+        "colpali_only_images": false,
+        "gen_topk": 5,
+        "kb_compromised_fraction": 0.1
+    }
+}

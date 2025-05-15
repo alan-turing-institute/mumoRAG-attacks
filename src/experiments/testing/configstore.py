@@ -6,7 +6,7 @@ from hydra.core.config_store import ConfigStore
 
 from config.eval import ExperimentEvalConfig
 from config.experiment import ExperimentConfig
-from config.train import ExperimentTrainConfig, JudgeConfig
+from config.train import ExperimentTrainConfig, JudgeConfig, VLMConfig
 from wrappers.embedding import EmbedderName
 from wrappers.judge import JudgeMetric
 from wrappers.vlm import VLMName
@@ -22,13 +22,31 @@ configstore.store(
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
             embedder_list=[
-                EmbedderName.JINA_CLIP_2,
+                EmbedderName.SIGLIP2_BASE_PATCH16,
                 EmbedderName.CLIP_BASE_PATCH16,
             ],
-            vlm_list=[VLMName.SMOLVLM_1_256M],
-            n_gradient_steps=2,
+            vlm=VLMConfig(
+                models=[VLMName.SMOLVLM_1_256M],
+            ),
+        ),
+    ),
+)
+
+
+"""
+Testing Configuration (no vlm)
+"""
+configstore.store(
+    name="testing no vlm",
+    node=ExperimentConfig(
+        train=ExperimentTrainConfig(
+            embedder_list=[
+                EmbedderName.CLIP_BASE_PATCH16,
+            ],
+            vlm=None,
         ),
         eval=ExperimentEvalConfig(
+            do_generation=False,
         ),
     ),
 )
@@ -42,15 +60,34 @@ configstore.store(
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
             embedder_list=[
-                [EmbedderName.JINA_CLIP_2, EmbedderName.CLIP_BASE_PATCH16],
-                EmbedderName.JINA_CLIP_2,
+                [EmbedderName.SIGLIP2_BASE_PATCH16, EmbedderName.CLIP_BASE_PATCH16],
+                EmbedderName.SIGLIP2_BASE_PATCH16,
                 EmbedderName.CLIP_BASE_PATCH16,
             ],
-            vlm_list=[VLMName.SMOLVLM_1_256M],
-            n_gradient_steps=2,
+            vlm=VLMConfig(
+                models=[VLMName.SMOLVLM_1_256M],
+            ),
         ),
         eval=ExperimentEvalConfig(
-            eval_emb_list=[EmbedderName.JINA_CLIP_2, EmbedderName.CLIP_BASE_PATCH16],
+            eval_emb_list=[EmbedderName.SIGLIP2_BASE_PATCH16, EmbedderName.CLIP_BASE_PATCH16],
+        ),
+    ),
+)
+
+"""
+Testing Configuration (multi-vlm)
+"""
+configstore.store(
+    name="testing multi-vlm",
+    node=ExperimentConfig(
+        train=ExperimentTrainConfig(
+            embedder_list=[EmbedderName.CLIP_BASE_PATCH16],
+            vlm=VLMConfig(
+                models=[[VLMName.SMOLVLM_1_256M, VLMName.INTERNVL_3_1B ], VLMName.SMOLVLM_1_256M, VLMName.INTERNVL_3_1B],
+            ),
+        ),
+        eval=ExperimentEvalConfig(
+            eval_vlm_list=[VLMName.SMOLVLM_1_256M, VLMName.INTERNVL_3_1B],
         ),
     ),
 )
@@ -63,7 +100,9 @@ configstore.store(
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
             embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
-            vlm_list=[VLMName.SMOLVLM_1_2B],
+            vlm=VLMConfig(
+                models=[VLMName.SMOLVLM_1_2B],
+            ),
             judge=JudgeConfig(
                 lambda_=1,
                 models=[VLMName.SMOLVLM_1_2B],

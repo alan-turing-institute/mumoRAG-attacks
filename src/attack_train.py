@@ -23,9 +23,14 @@ def run(exp_config: ExperimentConfig):
     for i, task_config in enumerate(task_configs):
         logger.info(f"{'+' * 20}\nTrain Attack {(i + 1):4d}/{n_evals}, task_config -> {pformat(task_config.to_dict(), indent=4)}")
 
-        vlm = get_vlm(task_config.model_name_vlm, device)
         ds = get_dataset(task_config.ds_name)
         ds.use_original_or_paraphrased_queries(task_config.defence)
+
+        vlms = [get_vlm(
+            model_name,
+            device,
+        ) for model_name in task_config.vlm.models] if task_config.vlm else None
+
         embedders = [get_embedder(
             model_name,
             quantize=False,
@@ -48,7 +53,7 @@ def run(exp_config: ExperimentConfig):
         image_adv = rag_attack(
             raw_image=chosen_image,
             embedders=embedders,
-            vlm=vlm,
+            vlms=vlms,
             jdg=jdg,
             train_user_queries=ds.queries_train,
             train_ground_truth_vlm_answers=ds.ground_truth_answers_train,

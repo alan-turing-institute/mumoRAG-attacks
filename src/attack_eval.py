@@ -7,9 +7,8 @@ from omegaconf import OmegaConf
 
 from config.eval import ExperimentEvalConfig
 from config.experiment import ExperimentConfig
-from config.task import get_transferability_file_suffix, generate_task_configs, get_defence_file_suffix
+from config.task import generate_task_configs
 from experiments import DEFAULT_EXPERIMENT
-from experiments.configstore import get_config_name
 from utils.attack import get_all_target_queries_and_answers
 from utils.defence import DefenceName, add_noise
 from utils.image_utils import load_adv_image, load_gpt_image, gpt_filename
@@ -69,13 +68,9 @@ def run(exp_config: ExperimentConfig):
         # update model names in case we test transferability
         if task_config.eval_emb_name:
             model_name_emb = task_config.eval_emb_name
-        elif len(task_config.model_name_embs) == 1:
-            model_name_emb = task_config.model_name_embs[0]
         else:
-            raise ValueError("If trained with multiple embedders, evaluation config must specify a single embedder to test transferability")
-        model_name_vlm = task_config.eval_vlm_name if task_config.eval_vlm_name else task_config.model_name_vlm
+            model_name_emb = task_config.model_name_embs[0]
 
-        vlm = get_vlm(model_name_vlm, device)
         ds = get_dataset(task_config.ds_name)
         ds.use_original_or_paraphrased_queries(task_config.defence)
 
@@ -83,7 +78,7 @@ def run(exp_config: ExperimentConfig):
         all_target_query_idx, all_adv_target_answers_vlm, all_answers_vlm = get_all_target_queries_and_answers(
             exp_config.train.is_targeted,
             exp_config.train.target_query_idx,
-            exp_config.train.target_answer_vlm,
+            exp_config.train.vlm.target_answers if exp_config.train.vlm else None,
             ds.queries,
             exp_config.train.n_knn_target_queries,
             ds.ground_truth_answers,
@@ -135,6 +130,14 @@ def run(exp_config: ExperimentConfig):
         # test generation
         if exp_config.eval.do_generation:
             logger.info("=== Evaluating generation ...")
+
+            if task_config.eval_vlm_name:
+                model_name_vlm = task_config.eval_vlm_name
+            else:
+                model_name_vlm = task_config.vlm.models[0]
+
+            vlm = get_vlm(model_name_vlm, device)
+
             target_answer_vlm_train, target_answer_vlm_test = ds.split_train_test(all_answers_vlm)
             metric_vlm_dict_test, gs_vlm_dict_test = ds.evaluate_generation(
                 vlm,
@@ -218,10 +221,7 @@ def run(exp_config: ExperimentConfig):
         if exp_config.eval.test_gpt_attack:
             results_filename = exp_config.eval.results_folder / f"metrics_{gpt_filename(task_config)}_{make_safe_filename(f'{model_name_emb}_{model_name_vlm}')}.json"
         else:
-            results_filename = (
-                exp_config.eval.results_folder
-                / f"metrics_{get_config_name()}_{task_config.create_hash_string()}{get_transferability_file_suffix(task_config.eval_emb_name, task_config.eval_vlm_name, task_config.eval_jdg_name)}{get_defence_file_suffix(task_config.defence)}.json"
-            )
+            results_filename = task_config.get_result_filename(exp_config.eval.results_folder)
 
         with open(
             results_filename,
