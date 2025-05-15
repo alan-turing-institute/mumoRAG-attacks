@@ -156,11 +156,11 @@ configstore.store(
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
-            embedder_list=[embedders],
+            embedder_list=[[EmbedderName.CLIP_LARGE_PATCH14, EmbedderName.QWEN2_GME_2B]],
             vlm=VLMConfig(models=[vlms]),
         ),
         eval=ExperimentEvalConfig(
-            eval_emb_list=embedders,
+            eval_emb_list=[EmbedderName.CLIP_LARGE_PATCH14, EmbedderName.QWEN2_GME_2B],
             eval_vlm_list=vlms,
         ),
     ),
