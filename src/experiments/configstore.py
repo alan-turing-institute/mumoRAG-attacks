@@ -42,9 +42,12 @@ configstore.store(
     name="dev",
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
-            embedder_list=[EmbedderName.CLIP_BASE_PATCH16],
-            vlm_list=[VLMName.SMOLVLM_1_256M],
+            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
+            vlm_list=[VLMName.SMOLVLM_1_2B],
             gen_topk_list=[1],
+            is_targeted=True,
+            target_query_idx=[0],
+            target_answer_vlm=["Manually match each marker to a generic human template regardless of trial-specific subject calibration."],
         ),
         eval=ExperimentEvalConfig(
             gen_topk_list=[-1],
