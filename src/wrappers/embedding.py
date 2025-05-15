@@ -302,7 +302,9 @@ class EmbeddingModel:
                                                  pixel_values = image_input_emb.pixel_values,
                                                  pixel_attention_mask = image_input_emb.pixel_attention_mask)
             else:
-                image_embedding = self.model(**image_input_emb)
+                image_embedding = self.model(input_ids=image_input_emb.input_ids,
+                                             attention_mask=image_input_emb.attention_mask,
+                                             pixel_values=image_input_emb.pixel_values)
             return image_embedding
         
         if self.name in QWEN_GME_MODELS: 

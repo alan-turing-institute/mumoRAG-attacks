@@ -9,21 +9,21 @@
             "maxsim"
         ],
         "loss_maxsim_topk_1": {
-            "recall_before": 0.0,
-            "recall_after": 0.0,
-            "asr_train": 0.0,
+            "recall_before": 0.6599999999999999,
+            "recall_after": 0.65,
+            "asr_train": 0.025,
             "asr_test": 0.0,
-            "asr_targeted": 0.0,
-            "fpr_targeted_train": 0.0,
+            "asr_targeted": 1.0,
+            "fpr_targeted_train": 0.012658227848101266,
             "fpr_targeted_test": 0.0
         },
         "loss_maxsim_topk_5": {
-            "recall_before": 0.0,
-            "recall_after": 0.0,
-            "asr_train": 0.0,
+            "recall_before": 0.98,
+            "recall_after": 0.98,
+            "asr_train": 0.025,
             "asr_test": 0.0,
-            "asr_targeted": 0.0,
-            "fpr_targeted_train": 0.0,
+            "asr_targeted": 1.0,
+            "fpr_targeted_train": 0.012658227848101266,
             "fpr_targeted_test": 0.0
         }
     },
@@ -36,12 +36,12 @@
                     "fpr_targeted": 0.0
                 },
                 "embed-adversarial": {
-                    "asr_universal": 0.5111997127532959,
-                    "asr_targeted": 0.48378443717956543,
-                    "fpr_targeted": 0.22273307106210083
+                    "asr_universal": 0.5118342041969299,
+                    "asr_targeted": 0.48061949014663696,
+                    "fpr_targeted": 0.2217738529360747
                 },
                 "embed-ground-truth": {
-                    "accuracy": 0.5145822167396545
+                    "accuracy": 0.5153797268867493
                 }
             }
         },
@@ -52,11 +52,11 @@
                     "fpr_targeted": 0.0
                 },
                 "embed-adversarial": {
-                    "asr_universal": 0.5910183191299438,
-                    "fpr_targeted": 0.20765150673687457
+                    "asr_universal": 0.5552407503128052,
+                    "fpr_targeted": 0.23131098523736
                 },
                 "embed-ground-truth": {
-                    "accuracy": 0.5910183191299438
+                    "accuracy": 0.5552407503128052
                 }
             }
         }
