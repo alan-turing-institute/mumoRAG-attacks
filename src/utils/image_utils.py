@@ -181,7 +181,7 @@ def gpt_filename(task_config: "TaskConfig"):
         filename = "gpt-universal"
     elif len(task_config.target_query_idx) == 1 and task_config.n_knn_target_queries == 1:
         filename = "gpt-targeted-one-one"
-    elif len(task_config.target_answer_vlm) == 1:
+    elif len(task_config.vlm.target_answers) == 1:
         filename = "gpt-targeted-many-one"
     else:
         filename = "gpt-targeted-many-many"

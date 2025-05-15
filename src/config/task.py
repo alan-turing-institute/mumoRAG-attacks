@@ -102,6 +102,10 @@ class TaskConfig:
             jdg_metric_str = "".join(self.judge.metrics)
             config_str += f"{self.judge.model_name}{self.judge.lambda_}{self.judge.target_answer}{jdg_metric_str}"
 
+        # if self.defence != DefenceName.NONE:
+        #     defence_str = "".join(self.defence)
+        #     config_str += f"{defence_str}"
+
         hash_str = hashlib.md5(config_str.encode()).hexdigest()
         return hash_str
 
@@ -114,7 +118,7 @@ class TaskConfig:
 
     def get_result_filename(self, results_folder: Path) -> Path:
         hash_string = self.create_hash_string()
-        transferability_suffix = get_transferability_file_suffix(self.eval_emb_name, self.eval_vlm_name)
+        transferability_suffix = get_transferability_file_suffix(self.eval_emb_name, self.eval_vlm_name, self.eval_jdg_name)
         return results_folder / f"metrics_{get_config_name()}_{hash_string}{transferability_suffix}.json"
 
 
