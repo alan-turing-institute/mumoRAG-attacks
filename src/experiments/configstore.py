@@ -420,7 +420,6 @@ configstore.store(
 Attack optimized when the malicious image is retrieved within top-k (not top-1)
 Evaluation when image is retrieved within top-k (not top-1)
 """
-# todo dan: how to present this info
 configstore.store(
     name="paper_topk_context",
     node=ExperimentConfig(
@@ -436,8 +435,6 @@ configstore.store(
     ),
 )
 
-# todo dan: what is this?
-# todo dan: how to present this info
 configstore.store(
     name="paper_defences",
     node=ExperimentConfig(
@@ -472,7 +469,6 @@ configstore.store(
 """
 generates data for perturbation plot (full x-axis)
 """
-# todo dan: how to present this info
 configstore.store(
     name="perturbation_plot_targeted",
     node=ExperimentConfig(
@@ -491,7 +487,6 @@ configstore.store(
 """
 Performs attack constrained
 """
-# todo dan: how to present this info
 configstore.store(
     name="mask_attack",
     node=ExperimentConfig(

@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 
 from config.task import generate_task_configs, TaskConfig
 from config.experiment import ExperimentConfig
+from utils.image_utils import gpt_filename
+from wrappers.embedded_dataset import make_safe_filename
 from wrappers.embedding import EmbedderName, is_loss_compatible
 from wrappers.vlm import VLMName
 
@@ -81,15 +83,24 @@ def shorten_model_name_str(model_name: str):
     return MODEL_NICKNAME_DICT.get(model_name, -1) if MODEL_NICKNAME_DICT.get(model_name, -1) != -1 else model_name
 
 def get_metrics(exp_config: ExperimentConfig, task_config: TaskConfig, metrics_to_show: list[Metric], ret_topk_idx: int|None = None, gen_topk_idx: int|None = None, loss_idx: int|None = None):
-    filename = task_config.get_result_filename(exp_config.eval.results_folder)
-    with open(filename, "r") as file:
-        metric_dict = json.loads(file.read())
-    metrics_to_output = {}
-
     if task_config.eval_emb_name:
         model_name_emb = task_config.eval_emb_name
     else:
         model_name_emb = task_config.model_name_embs[0]
+
+    if exp_config.eval.test_gpt_attack:
+        if task_config.eval_vlm_name:
+            model_name_vlm = task_config.eval_vlm_name
+        else:
+            model_name_vlm = task_config.vlm.models[0]
+
+        filename = exp_config.eval.results_folder / f"metrics_{gpt_filename(task_config)}_{make_safe_filename(f'{model_name_emb}_{model_name_vlm}')}.json"
+    else:
+        filename = task_config.get_result_filename(exp_config.eval.results_folder)
+    with open(filename, "r") as file:
+        metric_dict = json.loads(file.read())
+    metrics_to_output = {}
+
     emb_test_loss_type_list_compatible = [loss for loss in exp_config.eval.emb_test_loss_type_list if is_loss_compatible(model_name_emb, loss)]
     if loss_idx is not None:
         emb_test_loss_type_list_compatible = emb_test_loss_type_list_compatible[loss_idx:loss_idx+1]
@@ -134,8 +145,8 @@ def get_metrics(exp_config: ExperimentConfig, task_config: TaskConfig, metrics_t
                 metrics_to_output[f"{Metric.GENERATION_FPR_EMBED_TARGETED_TEST.value}@{gen_topk}"] = metric_dict["generation"]["test"][key]["embed-adversarial"]["fpr_targeted"]
 
         if metric_dict["judge"]:
-            metrics_to_output[f"{Metric.GENERATION_ASR_EXACT_TRAIN.value}@{gen_topk}"] = metric_dict["judge"]["train"][key]["image_context_relevancy"]["asr_universal"]
-            metrics_to_output[f"{Metric.GENERATION_ASR_EXACT_TEST.value}@{gen_topk}"] = metric_dict["judge"]["test"][key]["image_context_relevancy"]["asr_universal"]
+            metrics_to_output[f"{Metric.JUDGE_IMAGE_CONTXT_REL_TRAIN.value}@{gen_topk}"] = metric_dict["judge"]["train"][key]["image_context_relevancy"]["asr_universal"]
+            metrics_to_output[f"{Metric.JUDGE_IMAGE_CONTXT_REL_TEST.value}@{gen_topk}"] = metric_dict["judge"]["test"][key]["image_context_relevancy"]["asr_universal"]
             metrics_to_output[f"{Metric.JUDGE_IMAGE_FAITH_TRAIN.value}@{gen_topk}"] = metric_dict["judge"]["train"][key]["image_faithfulness"]["asr_universal"]
             metrics_to_output[f"{Metric.JUDGE_IMAGE_FAITH_TEST.value}@{gen_topk}"] = metric_dict["judge"]["test"][key]["image_faithfulness"]["asr_universal"]
             metrics_to_output[f"{Metric.JUDGE_ANS_REL_TRAIN.value}@{gen_topk}"] = metric_dict["judge"]["train"][key]["answer_relevancy"]["asr_universal"]
