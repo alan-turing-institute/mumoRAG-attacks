@@ -169,7 +169,7 @@ configstore.store(
 """
 RAG evaluation and attack detection through VLM-as-a-judge.
 Produces:
-- Table of judge VLMS -> judge metrics. # todo dan
+- Table of judge VLMS -> judge metrics.
 """
 configstore.store(
     name="paper_judge_defence",
@@ -190,7 +190,7 @@ configstore.store(
 """
 RAG evaluation and attack detection through VLM-as-a-judge.
 Produces:
-- Table of judge VLMs (same for both train and eval)-> judge metrics. # todo dan
+- Table of judge VLMs (same for both train and eval)-> judge metrics.
 """
 configstore.store(
     name="paper_judge_defence_adapt",
@@ -216,7 +216,7 @@ configstore.store(
 """
 RAG evaluation and attack detection through VLM-as-a-judge with specific query.
 Produces:
-- Table of judge VLMs -> judge metrics. # todo dan
+- Table of judge VLMs -> judge metrics.
 """
 configstore.store(
     name="paper_judge_defence_targeted",
@@ -240,7 +240,7 @@ configstore.store(
 """
 RAG evaluation and attack detection through VLM-as-a-judge with specific query adaptive.
 Produces:
-- Table of judge VLMs (same for eval and train) -> judge metrics. # todo dan
+- Table of judge VLMs (same for eval and train) -> judge metrics.
 """
 configstore.store(
     name="paper_judge_defence_targeted_adapt",
@@ -289,6 +289,7 @@ ColPali ablations (w/ colpali_only_images False)
 Produces:
 - (combined (w/ colpali_only_images True)) table emb_loss_train x emb_loss_eval x only_images
 """
+# todo dan: make table
 configstore.store(
     name="paper_copali_ab",
     node=ExperimentConfig(

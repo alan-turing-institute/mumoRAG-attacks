@@ -18,8 +18,15 @@ class Metric(StrEnum):
     GENERATION_ASR_EMBED_TRAIN = "Generation ASR - Embedding (train)"
     GENERATION_ASR_EXACT_TEST = "Generation Accuracy - Embedding (train)"
     GENERATION_ASR_EMBED_TEST = "Generation ASR - Exact (test)"
-    Generation_ACC_EMBED_GT_TRAIN = "Generation ASR - Embedding (test)"
-    Generation_ACC_EMBED_GT_TEST = "Generation Accuracy - Embedding(test)"
+    GENERATION_ACC_EMBED_GT_TRAIN = "Generation ASR - Embedding (test)"
+    GENERATION_ACC_EMBED_GT_TEST = "Generation Accuracy - Embedding (test)"
+    JUDGE_IMAGE_CONTXT_REL_TRAIN = "Judge Image Content Relevancy (train)"
+    JUDGE_IMAGE_CONTXT_REL_TEST = "Judge Image Content Relevancy (test)"
+    JUDGE_IMAGE_FAITH_TRAIN = "Judge Image Faithfulness (train)"
+    JUDGE_IMAGE_FAITH_TEST = "Judge Image Faithfulness (test)"
+    JUDGE_ANS_REL_TRAIN = "Judge Answer Relevancy (train)"
+    JUDGE_ANS_REL_TEST = "Judge Answer Relevancy (test)"
+    
 
 
 def strip_hf_org(model_name):
@@ -84,14 +91,23 @@ def get_metrics(exp_config: ExperimentConfig, task_config: TaskConfig, metrics_t
     metrics_to_output[Metric.RETRIEVAL_ASR_TRAIN] = metric_dict["retrieval"][key]["asr_train"]
     metrics_to_output[Metric.RETRIEVAL_ASR_TEST] = metric_dict["retrieval"][key]["asr_test"]
 
-    # for gen_topk in exp_config.eval.gen_topk_list:
     key = f"gen_topk_{exp_config.eval.gen_topk_list[gen_topk_idx]}"
-    metrics_to_output[Metric.GENERATION_ASR_EXACT_TRAIN] = metric_dict["generation"]["train"][key]["exact-asr"]["asr_universal"]
-    metrics_to_output[Metric.GENERATION_ASR_EMBED_TRAIN] = metric_dict["generation"]["train"][key]["embed-adversarial"]["asr_universal"]
-    metrics_to_output[Metric.Generation_ACC_EMBED_GT_TRAIN] = metric_dict["generation"]["train"][key]["embed-ground-truth"]["accuracy"]
-    metrics_to_output[Metric.GENERATION_ASR_EXACT_TEST] = metric_dict["generation"]["test"][key]["exact-asr"]["asr_universal"]
-    metrics_to_output[Metric.GENERATION_ASR_EMBED_TEST] = metric_dict["generation"]["test"][key]["embed-adversarial"]["asr_universal"]
-    metrics_to_output[Metric.Generation_ACC_EMBED_GT_TEST] = metric_dict["generation"]["test"][key]["embed-ground-truth"]["accuracy"]
+    if metric_dict["generation"]:
+        metrics_to_output[Metric.GENERATION_ASR_EXACT_TRAIN] = metric_dict["generation"]["train"][key]["exact-asr"]["asr_universal"]
+        metrics_to_output[Metric.GENERATION_ASR_EMBED_TRAIN] = metric_dict["generation"]["train"][key]["embed-adversarial"]["asr_universal"]
+        metrics_to_output[Metric.GENERATION_ACC_EMBED_GT_TRAIN] = metric_dict["generation"]["train"][key]["embed-ground-truth"]["accuracy"]
+        metrics_to_output[Metric.GENERATION_ASR_EXACT_TEST] = metric_dict["generation"]["test"][key]["exact-asr"]["asr_universal"]
+        metrics_to_output[Metric.GENERATION_ASR_EMBED_TEST] = metric_dict["generation"]["test"][key]["embed-adversarial"]["asr_universal"]
+        metrics_to_output[Metric.GENERATION_ACC_EMBED_GT_TEST] = metric_dict["generation"]["test"][key]["embed-ground-truth"]["accuracy"]
+        
+    if metric_dict["judge"]:
+        metrics_to_output[Metric.GENERATION_ASR_EXACT_TRAIN] = metric_dict["judge"]["train"][key]["image_context_relevancy"]["asr_universal"]
+        metrics_to_output[Metric.GENERATION_ASR_EXACT_TEST] = metric_dict["judge"]["test"][key]["image_context_relevancy"]["asr_universal"]
+        metrics_to_output[Metric.JUDGE_IMAGE_FAITH_TRAIN] = metric_dict["judge"]["train"][key]["image_faithfulness"]["asr_universal"]
+        metrics_to_output[Metric.JUDGE_IMAGE_FAITH_TEST] = metric_dict["judge"]["test"][key]["image_faithfulness"]["asr_universal"]
+        metrics_to_output[Metric.JUDGE_ANS_REL_TRAIN] = metric_dict["judge"]["train"][key]["answer_relevancy"]["asr_universal"]
+        metrics_to_output[Metric.JUDGE_ANS_REL_TEST] = metric_dict["judge"]["test"][key]["answer_relevancy"]["asr_universal"]
+
 
     metrics_filtered = {k: v for (k,v) in metrics_to_output.items() if k in metrics_to_show}
     metric_titles = [k.value for k in metrics_to_show]
