@@ -12,25 +12,25 @@ from wrappers.vlm import VLMName
 
 
 class Metric(StrEnum):
-    RETRIEVAL_RECALL_BEFORE = "Clean Retrieval Recall"
-    RETRIEVAL_RECALL_AFTER = "Poisoned Retrieval Recall"
-    RETRIEVAL_ASR_TRAIN = "Retrieval ASR (train)"
-    RETRIEVAL_ASR_TEST =  "Retrieval ASR (test)"
-    RETRIEVAL_ASR_TARGETED =  "Retrieval ASR targeted"
-    RETRIEVAL_FPR_TARGETED_TRAIN =  "Retrieval FPR targeted (train)"
-    RETRIEVAL_FPR_TARGETED_TEST =  "Retrieval FPR targeted (test)"
-    GENERATION_ASR_EXACT_TRAIN = "Generation ASR - Exact (train)"
-    GENERATION_ASR_EMBED_TRAIN = "Generation ASR - Embedding (train)"
-    GENERATION_ASR_EXACT_TEST = "Generation Accuracy - Embedding (train)"
-    GENERATION_ASR_EMBED_TEST = "Generation ASR - Exact (test)"
-    GENERATION_ACC_EMBED_GT_TRAIN = "Generation ASR - Embedding (test)"
-    GENERATION_ACC_EMBED_GT_TEST = "Generation Accuracy - Embedding (test)"
-    GENERATION_ASR_EXACT_TARGETED_TRAIN = "Generation ASR - Exact targeted (train)"
-    GENERATION_FPR_TARGETED_TRAIN = "Generation FPR targeted - Exact targeted (train)"
-    GENERATION_ASR_EMBED_TARGETED_TRAIN = "Generation ASR targeted - Embedding (train)"
-    GENERATION_FPR_EMBED_TARGETED_TRAIN = "Generation FPR targeted - Embedding (train)"
-    GENERATION_FPR_TARGETED_TEST = "Generation FPR targeted - Exact (test)"
-    GENERATION_FPR_EMBED_TARGETED_TEST = "Generation FPR targeted- Embedding (test)"
+    RETRIEVAL_RECALL_BEFORE = "Recall-B"
+    RETRIEVAL_RECALL_AFTER = "Recall-A"
+    RETRIEVAL_ASR_TRAIN = "ASR-R (train)"
+    RETRIEVAL_ASR_TEST =  "ASR-R (test)"
+    RETRIEVAL_ASR_TARGETED =  "ASR-R targeted"
+    RETRIEVAL_FPR_TARGETED_TRAIN =  "FPR-R targeted (train)"
+    RETRIEVAL_FPR_TARGETED_TEST =  "FPR-R targeted (test)"
+    GENERATION_ASR_EXACT_TRAIN = "ASR-G-HARD (train)"
+    GENERATION_ASR_EMBED_TRAIN = "SIM-G-ADV (train)"
+    GENERATION_ASR_EXACT_TEST = "ACC-G-HARD (test)"
+    GENERATION_ASR_EMBED_TEST = "SIM-G-ADV (test)"
+    GENERATION_ACC_EMBED_GT_TRAIN = "SIM-G-GT (train)"
+    GENERATION_ACC_EMBED_GT_TEST = "SIM-G-GT (test)"
+    GENERATION_ASR_EXACT_TARGETED_TRAIN = "ASR-G-HARD targeted (train)"
+    GENERATION_FPR_TARGETED_TRAIN = "FPR-G-HARD targeted (train)"
+    GENERATION_ASR_EMBED_TARGETED_TRAIN = "SIM-G-ADV-POS targeted (train)"
+    GENERATION_FPR_EMBED_TARGETED_TRAIN = "SIM-G-ADV-NEG targeted (train)"
+    GENERATION_FPR_TARGETED_TEST = "FPR-G-HARD targeted (test)"
+    GENERATION_FPR_EMBED_TARGETED_TEST = "SIM-G-ADV-NEG targeted (test)"
     JUDGE_IMAGE_CONTXT_REL_TRAIN = "Judge Image Content Relevancy (train)"
     JUDGE_IMAGE_CONTXT_REL_TEST = "Judge Image Content Relevancy (test)"
     JUDGE_IMAGE_FAITH_TRAIN = "Judge Image Faithfulness (train)"
@@ -38,6 +38,54 @@ class Metric(StrEnum):
     JUDGE_ANS_REL_TRAIN = "Judge Answer Relevancy (train)"
     JUDGE_ANS_REL_TEST = "Judge Answer Relevancy (test)"
     
+    
+class PlotFilter:
+    # condition lambdas (useful for selecting task configs from the tabulate object)
+    CONDITION_SAME_MODELS = lambda row: row["eval vlm"] == row["vlm"] and row["eval emb"] == row["embedder"]
+
+    # metric_lists
+    METRICS_TEST = [
+        Metric.RETRIEVAL_ASR_TEST,
+        Metric.GENERATION_ASR_EXACT_TEST,
+        Metric.GENERATION_ASR_EMBED_TEST,
+        Metric.GENERATION_ACC_EMBED_GT_TEST,
+        Metric.JUDGE_ANS_REL_TEST,
+        Metric.JUDGE_IMAGE_FAITH_TEST,
+        Metric.JUDGE_IMAGE_CONTXT_REL_TEST,
+    ]
+    METRICS_JUDGE = [
+        Metric.JUDGE_ANS_REL_TEST,
+        Metric.JUDGE_ANS_REL_TRAIN,
+        Metric.JUDGE_IMAGE_CONTXT_REL_TEST,
+        Metric.JUDGE_IMAGE_CONTXT_REL_TRAIN,
+        Metric.JUDGE_IMAGE_FAITH_TEST,
+        Metric.JUDGE_IMAGE_FAITH_TRAIN,
+    ]
+
+    METRICS_RECALL = [
+        Metric.RETRIEVAL_RECALL_BEFORE,
+        Metric.RETRIEVAL_RECALL_AFTER,
+    ]
+
+    ALL_METRICS_TARGETED = [
+        Metric.RETRIEVAL_ASR_TARGETED ,
+        # Metric.RETRIEVAL_FPR_TARGETED_TRAIN,
+        Metric.RETRIEVAL_FPR_TARGETED_TEST,
+        # Metric.GENERATION_ASR_EXACT_TARGETED_TRAIN,
+        # Metric.GENERATION_FPR_TARGETED_TRAIN,
+        Metric.GENERATION_ASR_EMBED_TARGETED_TRAIN,
+        # Metric.GENERATION_FPR_EMBED_TARGETED_TRAIN,
+        # Metric.GENERATION_FPR_TARGETED_TEST,
+        Metric.GENERATION_FPR_EMBED_TARGETED_TEST,
+    ]
+
+    METRICS_COLPALI = [
+        Metric.RETRIEVAL_ASR_TEST,
+    ]
+
+    METRICS_TEST_JUDGE = list( set(METRICS_JUDGE) & set(METRICS_TEST))
+
+    ALL_METRICS_UNTARGETED = METRICS_TEST + METRICS_RECALL
 
 
 def strip_hf_org(model_name):
