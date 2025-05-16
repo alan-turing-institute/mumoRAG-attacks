@@ -24,13 +24,13 @@ configstore = ConfigStore.instance()
 
 datasets=[
     DatasetName.VIDORE_SYN_AI,
-    DatasetName.VIDORE_V2_ESG
+    # DatasetName.VIDORE_V2_ESG
 ]
 embedders = [
-    # EmbedderName.CLIP_LARGE_PATCH14,
-    # EmbedderName.COLPALI,
-    # EmbedderName.QWEN2_GME_2B
-    EmbedderName.SIGLIP2_LARGE_PATCH16
+    EmbedderName.CLIP_LARGE_PATCH14,
+    EmbedderName.COLPALI,
+    EmbedderName.QWEN2_GME_2B,
+    # EmbedderName.SIGLIP2_LARGE_PATCH16
 ]
 vlms=[
     VLMName.SMOLVLM_1_2B,
@@ -290,8 +290,10 @@ configstore.store(
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
-            embedder_list=embedders,
-            vlm=VLMConfig(models=vlms),
+            embedder_list=[
+                EmbedderName.CLIP_LARGE_PATCH14,
+            ],
+            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B]),
         ),
         eval=ExperimentEvalConfig(
             do_judge=True,
@@ -311,8 +313,10 @@ configstore.store(
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
-            embedder_list=embedders,
-            vlm=VLMConfig(models=vlms),
+            embedder_list=[
+                EmbedderName.CLIP_LARGE_PATCH14,
+            ],
+            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B]),
             judge=JudgeConfig(
                 lambda_=1,
                 models=eval_vlms,
@@ -338,8 +342,10 @@ configstore.store(
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
-            embedder_list=embedders,
-            vlm=VLMConfig(models=vlms),
+            embedder_list=[
+                EmbedderName.CLIP_LARGE_PATCH14,
+            ],
+            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B]),
             is_targeted=True,
             target_query_idx=[0],
             n_knn_target_queries=1,
@@ -362,8 +368,10 @@ configstore.store(
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
-            embedder_list=embedders,
-            vlm=VLMConfig(models=vlms),
+            embedder_list=[
+                EmbedderName.CLIP_LARGE_PATCH14,
+            ],
+            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B]),
             is_targeted=True,
             target_query_idx=[0],
             n_knn_target_queries=1,
@@ -447,8 +455,10 @@ configstore.store(
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
-            embedder_list=embedders,
-            vlm=VLMConfig(models=vlms, gen_topk_list=[1,5])
+            embedder_list=[
+                EmbedderName.CLIP_LARGE_PATCH14,
+            ],
+            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B], gen_topk_list=[1,5])
         ),
         eval=ExperimentEvalConfig(
             gen_topk_list=[-1, 1, 5],
@@ -466,8 +476,10 @@ configstore.store(
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
-            embedder_list=embedders,
-            vlm=VLMConfig(models=vlms, gen_topk_list=[1,5]),
+            embedder_list=[
+                EmbedderName.CLIP_LARGE_PATCH14,
+            ],
+            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B], gen_topk_list=[1,5]),
             is_targeted=True,
             target_query_idx=[0],
             n_knn_target_queries=1,
