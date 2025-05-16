@@ -8,22 +8,22 @@
             "cos",
             "maxsim"
         ],
-        "loss_cos_topk_1": {
-            "recall_before": 0.21000000000000002,
-            "recall_after": 0.21000000000000002,
+        "loss_maxsim_topk_1": {
+            "recall_before": 0.6599999999999999,
+            "recall_after": 0.65,
             "asr_train": 0.025,
             "asr_test": 0.0,
             "asr_targeted": 0.4,
             "fpr_targeted_train": 0.0,
             "fpr_targeted_test": 0.0
         },
-        "loss_cos_topk_5": {
-            "recall_before": 0.44,
-            "recall_after": 0.44,
-            "asr_train": 0.0375,
+        "loss_maxsim_topk_5": {
+            "recall_before": 0.98,
+            "recall_after": 0.98,
+            "asr_train": 0.0625,
             "asr_test": 0.0,
-            "asr_targeted": 0.6,
-            "fpr_targeted_train": 0.0,
+            "asr_targeted": 0.4,
+            "fpr_targeted_train": 0.04,
             "fpr_targeted_test": 0.0
         }
     },
@@ -36,12 +36,12 @@
                     "fpr_targeted": 0.0
                 },
                 "embed-adversarial": {
-                    "asr_universal": 0.47040462493896484,
-                    "asr_targeted": -0.015941415354609488,
-                    "fpr_targeted": -0.018638750649988652
+                    "asr_universal": 0.48332738876342773,
+                    "asr_targeted": -0.022505103796720504,
+                    "fpr_targeted": -0.014444025522097946
                 },
                 "embed-ground-truth": {
-                    "accuracy": 0.5014398694038391
+                    "accuracy": 0.5218918919563293
                 }
             }
         },
@@ -52,11 +52,11 @@
                     "fpr_targeted": 0.0
                 },
                 "embed-adversarial": {
-                    "asr_universal": 0.5266584157943726,
-                    "fpr_targeted": 0.015506547363474964
+                    "asr_universal": 0.5109143257141113,
+                    "fpr_targeted": -0.01482924441806972
                 },
                 "embed-ground-truth": {
-                    "accuracy": 0.5266584157943726
+                    "accuracy": 0.5109143257141113
                 }
             }
         }
@@ -65,7 +65,7 @@
     "attack_config": {
         "ds_name": "vidore/syntheticDocQA_artificial_intelligence_test",
         "model_name_embs": [
-            "openai/clip-vit-large-patch14"
+            "vidore/colpali-v1.3"
         ],
         "vlm": {
             "lambda_": 1.0,
@@ -83,7 +83,7 @@
         "max_batch_size_per_iter": 2,
         "gradient_acc_steps": 4,
         "lambda_emb": 2.0,
-        "emb_train_loss_type": "cos",
+        "emb_train_loss_type": "maxsim",
         "is_adaptive": false,
         "lambda_constant": 0.2,
         "attack_mask": [
@@ -109,7 +109,7 @@
         },
         "colpali_only_images": false,
         "kb_compromised_fraction": 0.1,
-        "eval_emb_name": "openai/clip-vit-large-patch14",
+        "eval_emb_name": "vidore/colpali-v1.3",
         "eval_vlm_name": "HuggingFaceTB/SmolVLM-Instruct",
         "eval_jdg_name": null,
         "defence": ""
