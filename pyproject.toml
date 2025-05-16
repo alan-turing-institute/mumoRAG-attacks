@@ -20,6 +20,7 @@ dependencies = [
   "strenum",
   "hydra-core",
   "omegaconf",
+  "tabulate",
 ]
 
 [project.optional-dependencies]

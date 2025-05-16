@@ -23,29 +23,31 @@ DEFAULT_EXPERIMENT = "dev"
 configstore = ConfigStore.instance()
 
 datasets=[
-    DatasetName.VIDORE_SYN_AI
+    DatasetName.VIDORE_SYN_AI,
     # DatasetName.VIDORE_V2_ESG
 ]
 embedders = [
     EmbedderName.CLIP_LARGE_PATCH14,
     EmbedderName.COLPALI,
-    EmbedderName.QWEN2_GME_2B
+    EmbedderName.QWEN2_GME_2B,
+    # EmbedderName.SIGLIP2_LARGE_PATCH16
 ]
 vlms=[
     VLMName.SMOLVLM_1_2B,
     VLMName.QWEN_2p5_VL_3B,
-    # VLMName.INTERNVL_3_2B
 ]
 
 
 eval_vlms = [
     VLMName.SMOLVLM_1_2B,
     VLMName.QWEN_2p5_VL_3B,
-    # VLMName.INTERNVL_3_2B
 ]
+
 
 def load_config(name):
     with initialize(version_base=None, config_path="pkg://experiments"):
+        cfg = compose(config_name=name, return_hydra_config=True)
+        HydraConfig().set_config(cfg)
         cfg = compose(config_name=name)
     return OmegaConf.to_object(cfg)
 
@@ -56,6 +58,7 @@ def get_config_name() -> str:
     except ValueError:
         return "testing"
 
+
 """
 Development Configuration (default)
 """
@@ -63,16 +66,130 @@ configstore.store(
     name="dev",
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
-            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
-            vlm_list=[VLMName.SMOLVLM_1_2B],
-            gen_topk_list=[1],
-            is_targeted=True,
-            target_query_idx=[0],
-            target_answer_vlm=["Manually match each marker to a generic human template regardless of trial-specific subject calibration."],
+            embedder_list=[EmbedderName.QWEN2_GME_2B],
+            vlm=VLMConfig(models=[VLMName.QWEN_2p5_VL_3B], gen_topk_list=[1]),
+            print_every=2,
+            n_gradient_steps=4,
         ),
         eval=ExperimentEvalConfig(
             gen_topk_list=[-1],
+        ),
+    ),
+)
+
+
+configstore.store(
+    name="paper_GPT_non_targeted",
+    node=ExperimentConfig(
+        train=ExperimentTrainConfig(
+            dataset_list=datasets,
+            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
+            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B]),
+        ),
+        eval=ExperimentEvalConfig(
+            eval_emb_list=embedders,
+            eval_vlm_list=vlms,
             test_gpt_attack=True,
+        ),
+    ),
+)
+
+configstore.store(
+    name="paper_GPT_targeted_attacks_oneQ_oneA",
+    node=ExperimentConfig(
+        train=ExperimentTrainConfig(
+            dataset_list=datasets,
+            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
+            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B],
+                          target_answers=["Manually match each marker to a generic human template regardless of trial-specific subject calibration."]),
+            is_targeted=True,
+            target_query_idx=[0],
+            n_knn_target_queries=1,
+        ),
+        eval=ExperimentEvalConfig(
+            eval_emb_list=embedders,
+            eval_vlm_list=vlms,
+            test_gpt_attack=True,
+        ),
+    ),
+)
+
+configstore.store(
+    name="paper_GPT_targeted_attacks_multiQ_oneA",
+    node=ExperimentConfig(
+        train=ExperimentTrainConfig(
+            dataset_list=datasets,
+            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
+            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B]),
+            is_targeted=True,
+            target_query_idx=[0],
+            n_knn_target_queries=5,
+        ),
+        eval=ExperimentEvalConfig(
+            eval_emb_list=embedders,
+            eval_vlm_list=vlms,
+            test_gpt_attack=True,
+        ),
+    ),
+)
+
+configstore.store(
+    name="paper_GPT_targeted_attacks_multiQ_multiA",
+    node=ExperimentConfig(
+        train=ExperimentTrainConfig(
+            dataset_list=datasets,
+            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
+            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B],
+                        target_answers = ["Manually match each marker to a generic human template regardless of trial-specific subject calibration.",
+                                          "A micromort measures the number of accidents per million vehicles on the road and is used in transportation policy."]),
+            is_targeted=True,
+            target_query_idx=[0, 1],
+            n_knn_target_queries=1,
+        ),
+        eval=ExperimentEvalConfig(
+            eval_emb_list=embedders,
+            eval_vlm_list=vlms,
+            test_gpt_attack=True,
+        ),
+    ),
+)
+
+configstore.store(
+    name="paper_multi_transferability",
+    node=ExperimentConfig(
+        train=ExperimentTrainConfig(
+            dataset_list=datasets,
+            embedder_list=[[EmbedderName.CLIP_LARGE_PATCH14, EmbedderName.QWEN2_GME_2B]],
+            vlm=VLMConfig(models=[vlms]),
+        ),
+        eval=ExperimentEvalConfig(
+            eval_emb_list=[EmbedderName.CLIP_LARGE_PATCH14, EmbedderName.QWEN2_GME_2B],
+            eval_vlm_list=vlms,
+        ),
+    ),
+)
+
+
+"""
+Generic DOS attack.
+Produces:
+- Table of main results: dataset x embedders x vlm -> metrics.
+- Table of transferability of results: embedders x vlm x eval embedders x eval vlm -> subset of metrics.
+"""
+configstore.store(
+    name="paper_multi_transferability_targeted",
+    node=ExperimentConfig(
+        train=ExperimentTrainConfig(
+            dataset_list=datasets,
+            embedder_list=[embedders],
+            vlm=VLMConfig(models=[vlms]),
+            is_targeted=True,
+            target_query_idx=[0],
+            n_knn_target_queries=1,
+        ),
+        eval=ExperimentEvalConfig(
+            eval_emb_list=embedders,
+            eval_vlm_list=vlms,
         ),
     ),
 )
@@ -93,7 +210,10 @@ configstore.store(
 )
 
 """
-Targeted attacks against a subset of queries
+Targeted attacks against a specific query.
+Produces:
+- Table of main results: dataset x embedders x vlm -> metrics.
+- Table of transferability of results: embedders x vlm x eval embedders x eval vlm -> subset of metrics.
 """
 configstore.store(
     name="paper_targeted_attacks_oneQ_oneA",
@@ -103,19 +223,24 @@ configstore.store(
             embedder_list=embedders,
             vlm=VLMConfig(
                 models=vlms,
-                target_answers=["Manually match each marker to a generic human template regardless of trial-specific subject calibration."]
+                target_answers=["Manually match each marker to a generic human template regardless of trial-specific subject calibration."],
             ),
             is_targeted=True,
             target_query_idx=[0],
             n_knn_target_queries=1,
-            # optimize_nontargeted_queries_list=[True,False],
         ),
         eval=ExperimentEvalConfig(
             eval_emb_list=embedders,
             eval_vlm_list=vlms,
-        )
+        ),
     ),
 )
+
+"""
+Targeted attacks against a subset of neighbouring queries.
+Produces:
+- Table of main results: dataset x embedders x vlm -> metrics.
+"""
 configstore.store(
     name="paper_targeted_attacks_multiQ_oneA",
     node=ExperimentConfig(
@@ -123,15 +248,20 @@ configstore.store(
             dataset_list=datasets,
             embedder_list=embedders,
             vlm=VLMConfig(
-                models=[VLMName.SMOLVLM_1_2B]
+                models=vlms
             ),
             is_targeted=True,
             target_query_idx=[0],
             n_knn_target_queries=5,
-            # optimize_nontargeted_queries_list=[True,False],
         ),
     ),
 )
+
+"""
+Targeted attacks against a subset of queries with specific answers.
+Produces:
+- Table of main results: dataset x embedders x vlm -> metrics.
+"""
 configstore.store(
     name="paper_targeted_attacks_multiQ_multiA",
     node=ExperimentConfig(
@@ -139,103 +269,130 @@ configstore.store(
             dataset_list=datasets,
             embedder_list=embedders,
             vlm=VLMConfig(
-                models=[VLMName.SMOLVLM_1_2B],
+                models=vlms,
                 target_answers=["Manually match each marker to a generic human template regardless of trial-specific subject calibration.",
                                "A micromort measures the number of accidents per million vehicles on the road and is used in transportation policy."]
             ),
             is_targeted=True,
-            target_query_idx=[0,1],
+            target_query_idx=[0, 1],
             n_knn_target_queries=1,
-            # optimize_nontargeted_queries_list=[True,False],
         ),
     ),
 )
 
 """
-RAG evaluation and attack detection through VLM-as-a-judge
+RAG evaluation and attack detection through VLM-as-a-judge.
+Produces:
+- Table of judge VLMS -> judge metrics.
 """
 configstore.store(
     name="paper_judge_defence",
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
-            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
+            embedder_list=[
+                EmbedderName.CLIP_LARGE_PATCH14,
+            ],
             vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B]),
         ),
         eval=ExperimentEvalConfig(
             do_judge=True,
-            eval_jdg_list=vlms,
+            eval_jdg_list=eval_vlms,
             eval_jdg_metric_list=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY],
-        )
+        ),
     ),
 )
+
+"""
+RAG evaluation and attack detection through VLM-as-a-judge.
+Produces:
+- Table of judge VLMs (same for both train and eval)-> judge metrics.
+"""
 configstore.store(
     name="paper_judge_defence_adapt",
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
-            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
+            embedder_list=[
+                EmbedderName.CLIP_LARGE_PATCH14,
+            ],
             vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B]),
             judge=JudgeConfig(
                 lambda_=1,
-                models=vlms,
+                models=eval_vlms,
                 metrics=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS,
                          JudgeMetric.ANSWER_RELEVANCY]
             ),
         ),
         eval=ExperimentEvalConfig(
             do_judge=True,
-            eval_jdg_list=vlms,
+            eval_jdg_list=eval_vlms,
             eval_jdg_metric_list=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY],
-        )
+        ),
     ),
 )
+
+"""
+RAG evaluation and attack detection through VLM-as-a-judge with specific query.
+Produces:
+- Table of judge VLMs -> judge metrics.
+"""
 configstore.store(
     name="paper_judge_defence_targeted",
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
-            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
+            embedder_list=[
+                EmbedderName.CLIP_LARGE_PATCH14,
+            ],
             vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B]),
             is_targeted=True,
             target_query_idx=[0],
             n_knn_target_queries=1,
-            # optimize_nontargeted_queries_list=[True,False],
         ),
         eval=ExperimentEvalConfig(
             do_judge=True,
-            eval_jdg_list=vlms,
+            eval_jdg_list=eval_vlms,
             eval_jdg_metric_list=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY],
-        )
+        ),
     ),
 )
+
+"""
+RAG evaluation and attack detection through VLM-as-a-judge with specific query adaptive.
+Produces:
+- Table of judge VLMs (same for eval and train) -> judge metrics.
+"""
 configstore.store(
     name="paper_judge_defence_targeted_adapt",
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
-            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
+            embedder_list=[
+                EmbedderName.CLIP_LARGE_PATCH14,
+            ],
             vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B]),
             is_targeted=True,
             target_query_idx=[0],
             n_knn_target_queries=1,
-            # optimize_nontargeted_queries_list=[True,False],
             judge=JudgeConfig(
                 lambda_=1,
-                models=vlms,
+                models=eval_vlms,
                 metrics=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY]
             ),
         ),
         eval=ExperimentEvalConfig(
             do_judge=True,
-            eval_jdg_list=vlms,
+            eval_jdg_list=eval_vlms,
             eval_jdg_metric_list=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY],
-        )
+        ),
     ),
 )
 
 """
-generates data for perturbation plot (full x-axis)
+Varies max perturbation to measure effect on attack success.
+Produces:
+- Graphs for embedder x vlm with perturbation on x-axis
 """
 configstore.store(
     name="paper_perturbation_plot",
@@ -252,6 +409,8 @@ configstore.store(
 
 """
 ColPali ablations (w/ colpali_only_images False)
+Produces:
+- (combined (w/ colpali_only_images True)) table emb_loss_train x emb_loss_eval x only_images
 """
 configstore.store(
     name="paper_copali_ab",
@@ -264,7 +423,7 @@ configstore.store(
         ),
         eval=ExperimentEvalConfig(
             emb_test_loss_type_list=[EmbeddingLoss.MAXSIM, EmbeddingLoss.AVGSIM, EmbeddingLoss.SOFTMAXSIM, EmbeddingLoss.COS_AVGEMB],
-        )
+        ),
     ),
 )
 
@@ -279,11 +438,11 @@ configstore.store(
             embedder_list=[EmbedderName.COLPALI],
             vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B]),
             emb_train_loss_type_list=[EmbeddingLoss.MAXSIM, EmbeddingLoss.AVGSIM, EmbeddingLoss.SOFTMAXSIM, EmbeddingLoss.COS_AVGEMB],
-            colpali_only_images=True
+            colpali_only_images=True,
         ),
         eval=ExperimentEvalConfig(
             emb_test_loss_type_list=[EmbeddingLoss.MAXSIM, EmbeddingLoss.AVGSIM, EmbeddingLoss.SOFTMAXSIM, EmbeddingLoss.COS_AVGEMB],
-        )
+        ),
     ),
 )
 
@@ -296,10 +455,127 @@ configstore.store(
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
-            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
+            embedder_list=[
+                EmbedderName.CLIP_LARGE_PATCH14,
+            ],
             vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B], gen_topk_list=[1,5])
         ),
         eval=ExperimentEvalConfig(
+            gen_topk_list=[-1, 1, 5],
+            test_topk_order=False,
+        ),
+    ),
+)
+
+"""
+Attack optimized when the malicious image is retrieved within top-k (not top-1)
+Evaluation when image is retrieved within top-k (not top-1)
+"""
+configstore.store(
+    name="paper_topk_context_targeted",
+    node=ExperimentConfig(
+        train=ExperimentTrainConfig(
+            dataset_list=datasets,
+            embedder_list=[
+                EmbedderName.CLIP_LARGE_PATCH14,
+            ],
+            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B], gen_topk_list=[1,5]),
+            is_targeted=True,
+            target_query_idx=[0],
+            n_knn_target_queries=1,
+        ),
+        eval=ExperimentEvalConfig(
+            gen_topk_list=[-1, 1, 5],
+            test_topk_order=False,
+        )
+    ),
+)
+
+"""
+RAG evaluation and attack detection through VLM-as-a-judge
+"""
+configstore.store(
+    name="paper_combined_defence",
+    node=ExperimentConfig(
+        train=ExperimentTrainConfig(
+            dataset_list=datasets,
+            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
+            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B], gen_topk_list=[1,5]),
+        ),
+        eval=ExperimentEvalConfig(
+            do_judge=True,
+            eval_jdg_list=vlms,
+            eval_jdg_metric_list=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY],
+            gen_topk_list=[-1, 1, 5],
+            test_topk_order=False
+        )
+    ),
+)
+configstore.store(
+    name="paper_combined_defence_adapt",
+    node=ExperimentConfig(
+        train=ExperimentTrainConfig(
+            dataset_list=datasets,
+            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
+            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B], gen_topk_list=[1,5]),
+            judge=JudgeConfig(
+                lambda_=1,
+                models=vlms,
+                metrics=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS,
+                         JudgeMetric.ANSWER_RELEVANCY]
+            ),
+        ),
+        eval=ExperimentEvalConfig(
+            do_judge=True,
+            eval_jdg_list=vlms,
+            eval_jdg_metric_list=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY],
+            gen_topk_list=[-1, 1, 5],
+            test_topk_order=False,
+        )
+    ),
+)
+configstore.store(
+    name="paper_combined_defence_targeted",
+    node=ExperimentConfig(
+        train=ExperimentTrainConfig(
+            dataset_list=datasets,
+            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
+            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B], gen_topk_list=[1,5]),
+            is_targeted=True,
+            target_query_idx=[0],
+            n_knn_target_queries=1,
+            # optimize_nontargeted_queries_list=[True,False],
+        ),
+        eval=ExperimentEvalConfig(
+            do_judge=True,
+            eval_jdg_list=vlms,
+            eval_jdg_metric_list=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY],
+            gen_topk_list=[-1, 1, 5],
+            test_topk_order=False,
+        )
+    ),
+)
+configstore.store(
+    name="paper_combined_defence_targeted_adapt",
+    node=ExperimentConfig(
+        train=ExperimentTrainConfig(
+            dataset_list=datasets,
+            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
+            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B], gen_topk_list=[1,5]),
+            is_targeted=True,
+            target_query_idx=[0],
+            n_knn_target_queries=1,
+            # optimize_nontargeted_queries_list=[True,False],
+            judge=JudgeConfig(
+                lambda_=1,
+                models=vlms,
+                metrics=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY]
+            ),
+        ),
+        eval=ExperimentEvalConfig(
+            do_judge=True,
+            eval_jdg_list=vlms,
+            eval_jdg_metric_list=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY],
             gen_topk_list=[-1, 1, 5],
             test_topk_order=False,
         )
@@ -315,7 +591,24 @@ configstore.store(
             vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B]),
         ),
         eval=ExperimentEvalConfig(
-            defences_list=[DefenceName.NONE, DefenceName.PARAPHRASE, DefenceName.NOISE]
+            defences_list=[DefenceName.PARAPHRASE]
+        ),
+    ),
+)
+
+configstore.store(
+    name="paper_targeted_defences",
+    node=ExperimentConfig(
+        train=ExperimentTrainConfig(
+            dataset_list=datasets,
+            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
+            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B]),
+            is_targeted=True,
+            target_query_idx=[0],
+            n_knn_target_queries=1,
+        ),
+        eval=ExperimentEvalConfig(
+            defences_list=[DefenceName.PARAPHRASE]
         ),
     ),
 )
@@ -349,7 +642,7 @@ configstore.store(
             embedder_list=embedders,
             vlm=VLMConfig(models=vlms),
             attack_mask_list=[AttackMask.Figure, AttackMask.FirstQuadrant],
-            n_gradient_steps= 1000
+            n_gradient_steps=1000,
         ),
     ),
 )
@@ -360,6 +653,7 @@ Big Table: transferability between models (12 x 12 table, diagonals are white-bo
 - should produce 8 x 8 images
 - figure shows following metrics: recall_before, recall_after (avg train+test), retrieval_asr_train, retrieval_asr_test, generation_asr_train, generation_asr_test    
 """
+# todo dan: how to present this info
 configstore.store(
     name="transferability",
     node=ExperimentConfig(

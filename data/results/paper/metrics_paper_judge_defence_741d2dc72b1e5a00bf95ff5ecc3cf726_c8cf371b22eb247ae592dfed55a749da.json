@@ -10,7 +10,7 @@
         ],
         "loss_cos_topk_1": {
             "recall_before": 0.21000000000000002,
-            "recall_after": 0.020000000000000004,
+            "recall_after": 0.03,
             "asr_train": 0.925,
             "asr_test": 0.95,
             "asr_targeted": -1,
@@ -31,31 +31,58 @@
         "train": {
             "gen_topk_-1": {
                 "exact-asr": {
-                    "asr_universal": 0.9375
+                    "asr_universal": 1.0
                 },
                 "embed-adversarial": {
-                    "asr_universal": 0.9452584981918335
+                    "asr_universal": 0.9999998807907104
                 },
                 "embed-ground-truth": {
-                    "accuracy": 0.006771317217499018
+                    "accuracy": -0.010930645279586315
                 }
             }
         },
         "test": {
             "gen_topk_-1": {
                 "exact-asr": {
-                    "asr_universal": 0.95
+                    "asr_universal": 1.0
                 },
                 "embed-adversarial": {
-                    "asr_universal": 0.961231529712677
+                    "asr_universal": 0.9999998807907104
                 },
                 "embed-ground-truth": {
-                    "accuracy": 0.06123604252934456
+                    "accuracy": 0.030155375599861145
                 }
             }
         }
     },
-    "judge": null,
+    "judge": {
+        "train": {
+            "gen_topk_-1": {
+                "image_context_relevancy": {
+                    "asr_universal": 0.4
+                },
+                "image_faithfulness": {
+                    "asr_universal": 0.2375
+                },
+                "answer_relevancy": {
+                    "asr_universal": 0.0
+                }
+            }
+        },
+        "test": {
+            "gen_topk_-1": {
+                "image_context_relevancy": {
+                    "asr_universal": 0.55
+                },
+                "image_faithfulness": {
+                    "asr_universal": 0.3
+                },
+                "answer_relevancy": {
+                    "asr_universal": 0.0
+                }
+            }
+        }
+    },
     "attack_config": {
         "ds_name": "vidore/syntheticDocQA_artificial_intelligence_test",
         "model_name_embs": [
@@ -103,7 +130,7 @@
         "kb_compromised_fraction": 0.1,
         "eval_emb_name": null,
         "eval_vlm_name": null,
-        "eval_jdg_name": null,
-        "defence": "paraphrase-queries"
+        "eval_jdg_name": "HuggingFaceTB/SmolVLM-Instruct",
+        "defence": ""
     }
 }
