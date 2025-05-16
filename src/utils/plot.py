@@ -241,17 +241,21 @@ def plot_metrics_vs_perturbation(exp_config: ExperimentConfig, metrics_to_show: 
             plot_dict_y[i][label].append(metric)
     markers = ["o", "v", "s", "x", "+", "^"]
     n_plots = len(plot_dict_x[0].keys())
-    fig, ax = plt.subplots(1, n_plots, figsize=(15,3))
+    n_rows = 2
+    n_cols = n_plots//n_rows
+    fig, ax = plt.subplots(nrows=n_rows,ncols=n_cols, figsize=(10,5), sharex=True, sharey=True)
     for k, label in enumerate(plot_dict_x[0].keys()):
         for i in range(len(metrics_to_show)):
-            ax[k].plot(plot_dict_x[i][label], plot_dict_y[i][label], label=titles[i], marker=markers[i])
-            # axs[i].set_title(titles[i])
-            ax[k].set_xlabel("Maximum Allowed Perturbation (/255)")
-            ax[k].set_ylabel("Attack Success")
-            ax[k].set_xscale("log")
-        ax[k].legend(loc='lower right')
-        ax[k].grid(visible=True)
-        ax[k].set_xticks(plot_dict_x[0][label], labels=plot_dict_x[0][label])
-        ax[k].set_xlim([0.9,260])
-        ax[k].set_ylim([-0.05,1.05])
-        ax[k].set_title(label)
+            ax[k % n_rows][k//n_rows].plot(plot_dict_x[i][label], plot_dict_y[i][label], label=titles[i], marker=markers[i])
+            ax[k % n_rows][k//n_rows].set_xscale("log")
+        ax[k % n_rows][k//n_rows].grid(visible=True)
+        ax[k % n_rows][k//n_rows].set_xticks(plot_dict_x[0][label], labels=plot_dict_x[0][label])
+        ax[k % n_rows][k//n_rows].set_xlim([0.9,40])
+        ax[k % n_rows][k//n_rows].set_ylim([-0.05,1.05])
+        ax[k % n_rows][k//n_rows].set_title(label)
+    handles, labels = ax[0][0].get_legend_handles_labels()
+    fig.legend(handles, labels, bbox_to_anchor = (1.25, 0.6), loc='center right')
+    fig.supxlabel("Maximum Allowed Perturbation (/255)")
+    fig.supylabel("Attack Success")
+    fig.tight_layout()
+    return fig
