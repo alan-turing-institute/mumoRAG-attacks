@@ -1,51 +1,102 @@
 import json
 from collections import defaultdict
-from collections.abc import Iterable
-from dataclasses import replace
-from enum import IntEnum
-from itertools import product
-
+from strenum import StrEnum
 import matplotlib.pyplot as plt
-import numpy as np
-from torchvision import transforms as T
 
-from config.task import get_transferability_file_suffix, generate_task_configs, TaskConfig
+from config.task import generate_task_configs, TaskConfig
 from config.experiment import ExperimentConfig
-from .image_utils import load_adv_image
-from wrappers.embedding import EmbedderName
+from utils.image_utils import gpt_filename
+from wrappers.embedded_dataset import make_safe_filename
+from wrappers.embedding import EmbedderName, is_loss_compatible
 from wrappers.vlm import VLMName
-from .logger import logger
-from wrappers.cache import get_dataset
 
 
-class MetricIdx(IntEnum):
-    RETRIEVAL_RECALL1_BEFORE = 0
-    RETRIEVAL_RECALL1_AFTER = 1
-    RETRIEVAL_ASR1_TRAIN = 2
-    RETRIEVAL_ASR1_TEST = 3
-    RETRIEVAL_RECALL5_BEFORE = 4
-    RETRIEVAL_RECALL5_AFTER = 5
-    RETRIEVAL_ASR5_TRAIN = 6
-    RETRIEVAL_ASR5_TEST = 7
-    GENERATION_ASR_EXACT_TRAIN = 8
-    GENERATION_ASR_EMBED_TRAIN = 9
-    GENERATION_ASR_EXACT_TEST = 10
-    GENERATION_ASR_EMBED_TEST = 11
+class Metric(StrEnum):
+    RETRIEVAL_RECALL_BEFORE = "Recall-B"
+    RETRIEVAL_RECALL_AFTER = "Recall-A"
+    RETRIEVAL_ASR_TRAIN = "ASR-R (train)"
+    RETRIEVAL_ASR_TEST =  "ASR-R (test)"
+    RETRIEVAL_ASR_TARGETED =  "ASR-R targeted"
+    RETRIEVAL_FPR_TARGETED_TRAIN =  "FPR-R targeted (train)"
+    RETRIEVAL_FPR_TARGETED_TEST =  "FPR-R targeted (test)"
+    GENERATION_ASR_EXACT_TRAIN = "ASR-G-HARD (train)"
+    GENERATION_ASR_EMBED_TRAIN = "SIM-G-ADV (train)"
+    GENERATION_ASR_EXACT_TEST = "ASR-G-HARD (test)"
+    GENERATION_ASR_EMBED_TEST = "SIM-G-ADV (test)"
+    GENERATION_ACC_EMBED_GT_TRAIN = "SIM-G-GT (train)"
+    GENERATION_ACC_EMBED_GT_TEST = "SIM-G-GT (test)"
+    GENERATION_ASR_EXACT_TARGETED_TRAIN = "ASR-G-HARD targeted (train)"
+    GENERATION_FPR_TARGETED_TRAIN = "FPR-G-HARD targeted (train)"
+    GENERATION_ASR_EMBED_TARGETED_TRAIN = "SIM-G-ADV-POS targeted (train)"
+    GENERATION_FPR_EMBED_TARGETED_TRAIN = "SIM-G-ADV-NEG targeted (train)"
+    GENERATION_FPR_TARGETED_TEST = "FPR-G-HARD targeted (test)"
+    GENERATION_FPR_EMBED_TARGETED_TEST = "SIM-G-ADV-NEG targeted (test)"
+    JUDGE_IMAGE_CONTXT_REL_TRAIN = "Judge Image Content Relevancy (train)"
+    JUDGE_IMAGE_CONTXT_REL_TEST = "Judge Image Content Relevancy (test)"
+    JUDGE_IMAGE_FAITH_TRAIN = "Judge Image Faithfulness (train)"
+    JUDGE_IMAGE_FAITH_TEST = "Judge Image Faithfulness (test)"
+    JUDGE_ANS_REL_TRAIN = "Judge Answer Relevancy (train)"
+    JUDGE_ANS_REL_TEST = "Judge Answer Relevancy (test)"
+    
+    
+class PlotFilter:
+    # condition lambdas (useful for selecting task configs from the tabulate object)
+    CONDITION_SAME_MODELS = lambda row: row["eval vlm"] == row["vlm"] and row["eval emb"] == row["embedder"]
 
-METRIC_NAMES  = [
-    "Clean Retrieval Recall@1",
-    "Poisoned Retrieval Recall@1", 
-    "Retrieval ASR@1 (train)",
-    "Retrieval ASR@1 (test)",
-    "Clean Retrieval Recall@5",
-    "Poisoned Retrieval Recall@5", 
-    "Retrieval ASR@5 (train)",
-    "Retrieval ASR@5 (test)",
-    "Generation ASR - Exact (train)",
-    "Generation ASR - Embedding (train)", 
-    "Generation ASR - Exact (test)",
-    "Generation ASR - Embedding (test)",
-]
+    # metric_lists
+    METRICS_TEST = [
+        Metric.RETRIEVAL_ASR_TEST,
+        Metric.GENERATION_ASR_EXACT_TEST,
+        Metric.GENERATION_ASR_EMBED_TEST,
+        Metric.GENERATION_ACC_EMBED_GT_TEST,
+        Metric.JUDGE_ANS_REL_TEST,
+        Metric.JUDGE_IMAGE_FAITH_TEST,
+        Metric.JUDGE_IMAGE_CONTXT_REL_TEST,
+    ]
+    METRICS_JUDGE = [
+        Metric.JUDGE_ANS_REL_TEST,
+        Metric.JUDGE_ANS_REL_TRAIN,
+        Metric.JUDGE_IMAGE_CONTXT_REL_TEST,
+        Metric.JUDGE_IMAGE_CONTXT_REL_TRAIN,
+        Metric.JUDGE_IMAGE_FAITH_TEST,
+        Metric.JUDGE_IMAGE_FAITH_TRAIN,
+    ]
+
+    METRICS_RECALL = [
+        Metric.RETRIEVAL_RECALL_BEFORE,
+        Metric.RETRIEVAL_RECALL_AFTER,
+    ]
+
+    ALL_METRICS_TARGETED = [
+        Metric.RETRIEVAL_ASR_TARGETED ,
+        # Metric.RETRIEVAL_FPR_TARGETED_TRAIN,
+        Metric.RETRIEVAL_FPR_TARGETED_TEST,
+        # Metric.GENERATION_ASR_EXACT_TARGETED_TRAIN,
+        # Metric.GENERATION_FPR_TARGETED_TRAIN,
+        Metric.GENERATION_ASR_EMBED_TARGETED_TRAIN,
+        # Metric.GENERATION_FPR_EMBED_TARGETED_TRAIN,
+        # Metric.GENERATION_FPR_TARGETED_TEST,
+        Metric.GENERATION_FPR_EMBED_TARGETED_TEST,
+    ]
+
+    METRICS_COLPALI = [
+        Metric.RETRIEVAL_ASR_TEST,
+    ]
+
+    METRICS_TEST_JUDGE = list( set(METRICS_JUDGE) & set(METRICS_TEST))
+
+    ALL_METRICS_UNTARGETED = METRICS_TEST + METRICS_RECALL
+
+    METRICS_TOPK = [
+        Metric.GENERATION_ASR_EXACT_TEST,
+        Metric.GENERATION_ASR_EMBED_TEST,
+        Metric.GENERATION_ACC_EMBED_GT_TEST,
+    ]
+
+    METRICS_TOPK_TARGETED = [
+        Metric.GENERATION_ASR_EMBED_TARGETED_TRAIN,
+        Metric.GENERATION_FPR_EMBED_TARGETED_TEST,
+    ]
 
 
 def strip_hf_org(model_name):
@@ -55,95 +106,123 @@ def strip_hf_org(model_name):
             return [name.split("/")[-1] for name in model_name]
         if isinstance(model_name[0], tuple): 
             return [" , ".join([emb.split("/")[-1], vlm.split("/")[-1]]) for (emb, vlm) in model_name]
-        
+    raise NotImplementedError(model_name)
+
+
 MODEL_NICKNAME_DICT = {
     EmbedderName.CLIP_BASE_PATCH16: "CLIP-B",
     EmbedderName.CLIP_LARGE_PATCH14: "CLIP-L",
     EmbedderName.JINA_CLIP_2: "Jina-CLIP",
     EmbedderName.COLSMOL_256M: "ColSmol-256M",
     EmbedderName.COLSMOL_500M: "ColSmol-500M",
+    EmbedderName.COLPALI: "ColPali",
+    EmbedderName.SIGLIP2_LARGE_PATCH16: "SigLIP-L",
+    EmbedderName.SIGLIP2_BASE_PATCH16: "SigLIP-B",
+    EmbedderName.QWEN2_GME_2B: "GME-Qwen2-VL-2B",
 
     VLMName.SMOLVLM_1_256M: "SmolVLM-256M",
     VLMName.SMOLVLM_1_500M: "SmolVLM-500M",
     VLMName.SMOLVLM_1_2B: "SmolVLM",
-    VLMName.QWEN_2p5_VL_3B: "Qwen2.5-VL-3B"
+    VLMName.QWEN_2p5_VL_3B: "Qwen2.5-VL-3B",
+    VLMName.INTERNVL_3_2B: "InternVL3-2B",
 }
 
 def shorten_model_name(model_name):
     if isinstance(model_name, str): return shorten_model_name_str(model_name)
-    if isinstance(model_name, Iterable):
+    if isinstance(model_name, list):
+        if len(model_name) == 1:
+            return shorten_model_name_str(model_name[0])
         if isinstance(model_name[0], str):
             return [shorten_model_name_str(name) for name in model_name]
         if isinstance(model_name[0], tuple): 
             return [" , ".join([shorten_model_name_str(emb), shorten_model_name_str(vlm)]) for (emb, vlm) in model_name]
-    raise NotImplementedError
+    raise NotImplementedError(model_name)
 
 def shorten_model_name_str(model_name: str):
     return MODEL_NICKNAME_DICT.get(model_name, -1) if MODEL_NICKNAME_DICT.get(model_name, -1) != -1 else model_name
 
-# def create_heatmap_matrices(): 
+def get_metrics(exp_config: ExperimentConfig, task_config: TaskConfig, metrics_to_show: list[Metric], ret_topk_idx: int|None = None, gen_topk_idx: int|None = None, loss_idx: int|None = None):
+    if task_config.eval_emb_name:
+        model_name_emb = task_config.eval_emb_name
+    else:
+        model_name_emb = task_config.model_name_embs[0]
 
-def plot_heatmap(num_plots, metric_tables: np.array, xaxis, yaxis, xlabel: str, ylabel: str, titles):
-    fig, axs = plt.subplots(1, num_plots, figsize=(12,5))
-    for plt_idx in range(num_plots):
-        values = metric_tables[plt_idx].T
-        im = axs[plt_idx].imshow(values, cmap="autumn")
+    if exp_config.eval.test_gpt_attack:
+        if task_config.eval_vlm_name:
+            model_name_vlm = task_config.eval_vlm_name
+        else:
+            model_name_vlm = task_config.vlm.models[0]
 
-        # Show all ticks and label them with the respective list entries
-        axs[plt_idx].set_xticks(range(len(xaxis)), labels=shorten_model_name(xaxis),
-                                rotation=45, ha="right", rotation_mode="anchor")
-        axs[plt_idx].set_yticks(range(len(yaxis)), labels=shorten_model_name(yaxis),
-                                rotation=45, ha="right", rotation_mode="anchor")
-
-        # Loop over data dimensions and create text annotations.
-        for i in range(len(yaxis)):
-            for j in range(len(xaxis)):
-                text = axs[plt_idx].text(j, i, f"{values[i, j]:.3f}",
-                            ha="center", va="center", color="k")
-        axs[plt_idx].set_title(titles[plt_idx])
-        axs[plt_idx].set_ylabel(ylabel)
-        axs[plt_idx].set_xlabel(xlabel)
-        cbar = axs[plt_idx].figure.colorbar(im, ax=axs[plt_idx])
-        # cbar.ax.set_ylabel("", rotation=-90, va="bottom")
-    # fig.suptitle(f'DS: {ds_name}', fontsize=12)
-    fig.tight_layout()
-    plt.show()
-
-
-
-def get_metrics(exp_config: ExperimentConfig, task_config: TaskConfig, metrics_to_show):
-    filename = task_config.get_result_filename(exp_config.eval.results_folder)
+        filename = exp_config.eval.results_folder / f"metrics_{gpt_filename(task_config)}_{make_safe_filename(f'{model_name_emb}_{model_name_vlm}')}.json"
+    else:
+        filename = task_config.get_result_filename(exp_config.eval.results_folder)
     with open(filename, "r") as file:
         metric_dict = json.loads(file.read())
-    key1 = f"loss_{exp_config.eval.emb_test_loss_type_list[0]}_topk_{exp_config.eval.topk_list[0]}"
-    key2 = f"loss_{exp_config.eval.emb_test_loss_type_list[0]}_topk_{exp_config.eval.topk_list[1]}"
-    
-    metrics_to_output = [
-        metric_dict["retrieval"][key1]["recall_before"],
-        metric_dict["retrieval"][key1]["recall_after"],
-        metric_dict["retrieval"][key1]["asr_train"],
-        metric_dict["retrieval"][key1]["asr_test"],
-        metric_dict["retrieval"][key2]["recall_before"],
-        metric_dict["retrieval"][key2]["recall_after"],
-        metric_dict["retrieval"][key2]["asr_train"],
-        metric_dict["retrieval"][key2]["asr_test"],
-        metric_dict["generation"]["train"]["exact"],
-        metric_dict["generation"]["train"]["embed"],
-        metric_dict["generation"]["test"]["exact"],
-        metric_dict["generation"]["test"]["embed"],
-    ]
+    metrics_to_output = {}
 
-    return (
-        [m for i,m in enumerate(metrics_to_output) if i in metrics_to_show], 
-        [t for i,t in enumerate(METRIC_NAMES) if i in metrics_to_show]
-    )
+    emb_test_loss_type_list_compatible = [loss for loss in exp_config.eval.emb_test_loss_type_list if is_loss_compatible(model_name_emb, loss)]
+    if loss_idx is not None:
+        emb_test_loss_type_list_compatible = emb_test_loss_type_list_compatible[loss_idx:loss_idx+1]
 
-def plot_metrics_vs_perturbation(exp_config: ExperimentConfig, metrics_to_show):
+    if ret_topk_idx is not None:
+        ret_topks = exp_config.eval.topk_list[ret_topk_idx:ret_topk_idx+1]
+    else:
+        ret_topks = exp_config.eval.topk_list
+    for loss in emb_test_loss_type_list_compatible:
+        loss_tag = f"+{loss}" if len(emb_test_loss_type_list_compatible) > 1 else ""
+        for ret_topk in ret_topks:
+            key = f"loss_{loss}_topk_{ret_topk}"
+
+            metrics_to_output[f"{Metric.RETRIEVAL_RECALL_BEFORE.value}{loss_tag}@{ret_topk}"] = metric_dict["retrieval"][key]["recall_before"]
+            metrics_to_output[f"{Metric.RETRIEVAL_RECALL_AFTER.value}{loss_tag}@{ret_topk}"] = metric_dict["retrieval"][key]["recall_after"]
+            metrics_to_output[f"{Metric.RETRIEVAL_ASR_TRAIN.value}{loss_tag}@{ret_topk}"] = metric_dict["retrieval"][key]["asr_train"]
+            metrics_to_output[f"{Metric.RETRIEVAL_ASR_TEST.value}{loss_tag}@{ret_topk}"] = metric_dict["retrieval"][key]["asr_test"]
+            if task_config.is_targeted:
+                metrics_to_output[f"{Metric.RETRIEVAL_ASR_TARGETED.value}{loss_tag}@{ret_topk}"] = metric_dict["retrieval"][key]["asr_targeted"]
+                metrics_to_output[f"{Metric.RETRIEVAL_FPR_TARGETED_TRAIN.value}{loss_tag}@{ret_topk}"] = metric_dict["retrieval"][key]["fpr_targeted_train"]
+                metrics_to_output[f"{Metric.RETRIEVAL_FPR_TARGETED_TEST.value}{loss_tag}@{ret_topk}"] = metric_dict["retrieval"][key]["fpr_targeted_test"]
+
+    if gen_topk_idx is not None:
+        gen_topks = exp_config.eval.gen_topk_list[gen_topk_idx:gen_topk_idx+1]
+    else:
+        gen_topks = exp_config.eval.gen_topk_list
+    for gen_topk in gen_topks:
+        key = f"gen_topk_{gen_topk}"
+        if metric_dict["generation"]:
+            metrics_to_output[f"{Metric.GENERATION_ASR_EXACT_TRAIN.value}@{gen_topk}"] = metric_dict["generation"]["train"][key]["exact-asr"]["asr_universal"]
+            metrics_to_output[f"{Metric.GENERATION_ASR_EMBED_TRAIN.value}@{gen_topk}"] = metric_dict["generation"]["train"][key]["embed-adversarial"]["asr_universal"]
+            metrics_to_output[f"{Metric.GENERATION_ACC_EMBED_GT_TRAIN.value}@{gen_topk}"] = metric_dict["generation"]["train"][key]["embed-ground-truth"]["accuracy"]
+            metrics_to_output[f"{Metric.GENERATION_ASR_EXACT_TEST.value}@{gen_topk}"] = metric_dict["generation"]["test"][key]["exact-asr"]["asr_universal"]
+            metrics_to_output[f"{Metric.GENERATION_ASR_EMBED_TEST.value}@{gen_topk}"] = metric_dict["generation"]["test"][key]["embed-adversarial"]["asr_universal"]
+            metrics_to_output[f"{Metric.GENERATION_ACC_EMBED_GT_TEST.value}@{gen_topk}"] = metric_dict["generation"]["test"][key]["embed-ground-truth"]["accuracy"]
+            if task_config.is_targeted:
+                metrics_to_output[f"{Metric.GENERATION_ASR_EXACT_TARGETED_TRAIN.value}@{gen_topk}"] = metric_dict["generation"]["train"][key]["exact-asr"]["asr_targeted"]
+                metrics_to_output[f"{Metric.GENERATION_FPR_TARGETED_TRAIN.value}@{gen_topk}"] = metric_dict["generation"]["train"][key]["exact-asr"]["fpr_targeted"]
+                metrics_to_output[f"{Metric.GENERATION_ASR_EMBED_TARGETED_TRAIN.value}@{gen_topk}"] = metric_dict["generation"]["train"][key]["embed-adversarial"]["asr_targeted"]
+                metrics_to_output[f"{Metric.GENERATION_FPR_EMBED_TARGETED_TRAIN.value}@{gen_topk}"] = metric_dict["generation"]["train"][key]["embed-adversarial"]["fpr_targeted"]
+                metrics_to_output[f"{Metric.GENERATION_FPR_TARGETED_TEST.value}@{gen_topk}"] = metric_dict["generation"]["test"][key]["exact-asr"]["fpr_targeted"]
+                metrics_to_output[f"{Metric.GENERATION_FPR_EMBED_TARGETED_TEST.value}@{gen_topk}"] = metric_dict["generation"]["test"][key]["embed-adversarial"]["fpr_targeted"]
+
+        if metric_dict["judge"]:
+            metrics_to_output[f"{Metric.JUDGE_IMAGE_CONTXT_REL_TRAIN.value}@{gen_topk}"] = metric_dict["judge"]["train"][key]["image_context_relevancy"]["asr_universal"]
+            metrics_to_output[f"{Metric.JUDGE_IMAGE_CONTXT_REL_TEST.value}@{gen_topk}"] = metric_dict["judge"]["test"][key]["image_context_relevancy"]["asr_universal"]
+            metrics_to_output[f"{Metric.JUDGE_IMAGE_FAITH_TRAIN.value}@{gen_topk}"] = metric_dict["judge"]["train"][key]["image_faithfulness"]["asr_universal"]
+            metrics_to_output[f"{Metric.JUDGE_IMAGE_FAITH_TEST.value}@{gen_topk}"] = metric_dict["judge"]["test"][key]["image_faithfulness"]["asr_universal"]
+            metrics_to_output[f"{Metric.JUDGE_ANS_REL_TRAIN.value}@{gen_topk}"] = metric_dict["judge"]["train"][key]["answer_relevancy"]["asr_universal"]
+            metrics_to_output[f"{Metric.JUDGE_ANS_REL_TEST.value}@{gen_topk}"] = metric_dict["judge"]["test"][key]["answer_relevancy"]["asr_universal"]
+
+    metric_titles = [m.value for m in metrics_to_show]
+    metrics_filtered = {k: v for (k,v) in metrics_to_output.items() if k.split("@")[0].split("+")[0] in metric_titles}
+    return metrics_filtered, metric_titles
+
+
+def plot_metrics_vs_perturbation(exp_config: ExperimentConfig, metrics_to_show: list[Metric], ret_topk_idx, gen_topk_idx, loss_idx=0):
     """
     This function generates several plots, one plot per wrappers
     Each curve corresponds to one tuple (embedder, vlm)
     """
-    if metrics_to_show is None: metrics_to_show = [i for i in range(len(METRIC_NAMES))]
+    if metrics_to_show is None:
+        metrics_to_show = [m for m in Metric]
     task_configs = generate_task_configs(exp_config, include_eval=True)
     num_plots = len(metrics_to_show)
 
@@ -151,122 +230,32 @@ def plot_metrics_vs_perturbation(exp_config: ExperimentConfig, metrics_to_show):
     plot_dict_x = [defaultdict(list) for _ in range(num_plots)]
     plot_dict_y = [defaultdict(list) for _ in range(num_plots)]
     for task_config in task_configs:
-        metrics, titles = get_metrics(exp_config, task_config, metrics_to_show)
-
-        for i, (metric, title) in enumerate(zip(metrics, titles)):
-            label = f"{shorten_model_name(task_config.model_name_emb)} + {shorten_model_name(task_config.model_name_vlm)}"
+        metrics, titles = get_metrics(exp_config, task_config, metrics_to_show, ret_topk_idx, gen_topk_idx, loss_idx)
+        for i, metric_name in enumerate(metrics_to_show):
+            try:
+                metric = metrics[f"{metric_name.value}@-1"]
+            except KeyError:
+                metric = metrics[f"{metric_name.value}@1"]
+            label = f"{shorten_model_name(task_config.model_name_embs)} + {shorten_model_name(task_config.vlm.models) if task_config.vlm else ''}"
             plot_dict_x[i][label].append(task_config.max_perturbation*255)
             plot_dict_y[i][label].append(metric)
-
-    markers = ["o", "v", "s", "x", "+"]
-    fig, ax = plt.subplots(1,1, figsize=(6,3))
-    for label in plot_dict_x[i].keys():
+    markers = ["o", "v", "s", "x", "+", "^"]
+    n_plots = len(plot_dict_x[0].keys())
+    n_rows = 2
+    n_cols = n_plots//n_rows
+    fig, ax = plt.subplots(nrows=n_rows,ncols=n_cols, figsize=(10,5), sharex=True, sharey=True)
+    for k, label in enumerate(plot_dict_x[0].keys()):
         for i in range(len(metrics_to_show)):
-            ax.plot(plot_dict_x[i][label], plot_dict_y[i][label], label=titles[i], marker=markers[i])
-            # axs[i].set_title(titles[i])
-            ax.set_xlabel("Maximum Allowed Perturbation (/255)")
-            ax.set_ylabel("Attack Success")
-            ax.set_xscale("log")
-    ax.legend(loc='lower right')
-    ax.grid(visible=True)
-    ax.set_xticks(plot_dict_x[0][label], labels=plot_dict_x[0][label])
-    ax.set_xlim([0.9,260])
-    ax.set_ylim([-0.05,1.05])
-
-
-def plot_model_heatmap(exp_config, ds_idx, metrics_to_show = None):
-    """
-    This function generates one heatmap per wrappers
-    x-axis -> embedder models
-    """
-    if metrics_to_show is None: metrics_to_show = [i for i in range(len(METRIC_NAMES))]
-    num_plots = len(metrics_to_show)
-    task_configs = generate_task_configs(exp_config, include_eval=True)
-    task_config = task_configs[0]
-    embs = exp_config.train.embedder_list
-    vlms = exp_config.train.vlm_list
-    ds_name = exp_config.train.dataset_list[ds_idx]
-    task_config = replace(task_config, ds_name=ds_name)
-
-    # populate matrices to be used as heatmap
-    metric_tables = [np.zeros((len(embs), len(vlms))) for _ in range(num_plots)]
-    for emb_idx, model_name_emb in enumerate(embs):
-        for vlm_idx, model_name_vlm in enumerate(vlms):
-            task_config = replace(task_config,
-                model_name_emb=model_name_emb,
-                model_name_vlm=model_name_vlm,
-            )
-            metrics, titles = get_metrics(exp_config, task_config, metrics_to_show)
-
-            for m_idx, metric in enumerate(metrics):
-                metric_tables[m_idx][emb_idx][vlm_idx] = metric
-
-    # show heatmaps
-    plot_heatmap(num_plots=num_plots, metric_tables=metric_tables, xaxis=embs, yaxis=vlms, xlabel="Embedding Model (Retriever)", ylabel="VLM (Generator)", titles=titles)
-
-
-
-def plot_transferability(exp_config, metrics_to_show = None):
-    if metrics_to_show is None: metrics_to_show = [i for i in range(len(METRIC_NAMES))]
-    num_plots = len(metrics_to_show)
-    task_configs = generate_task_configs(exp_config, include_eval=True)
-    task_config = task_configs[0]
-
-    embs_train = exp_config.train.embedder_list
-    vlms_train = exp_config.train.vlm_list
-    embs_test = exp_config.eval.eval_emb_list
-    vlms_test = exp_config.eval.eval_vlm_list
-
-    train_axis_list = [x for x in product(embs_train, vlms_train)]
-    test_axis_list = [x for x in product(embs_test, vlms_test)]
-
-    metric_tables = [np.zeros((len(train_axis_list), len(test_axis_list))) for _ in range(num_plots)]
-    for train_idx, (emb_train, vlm_train) in enumerate(train_axis_list):
-        for test_idx, (emb_test, vlm_test) in enumerate(test_axis_list):
-            task_config = replace(task_config,
-                model_name_emb=emb_train,
-                model_name_vlm=vlm_train,
-                eval_emb_name=emb_test,
-                eval_vlm_name=vlm_test,
-            )
-            metrics, titles = get_metrics(exp_config, task_config, metrics_to_show)
-
-            for m_idx, metric in enumerate(metrics):
-                metric_tables[m_idx][train_idx][test_idx] = metric
-    
-    plot_heatmap(num_plots=num_plots, metric_tables=metric_tables, xaxis=train_axis_list, yaxis=test_axis_list, xlabel="Training Models", ylabel="Testing Models", titles=titles)
-
-
-def plot_images_side_by_side(exp_config, metrics_to_show):
-    if metrics_to_show is None: metrics_to_show = [i for i in range(len(METRIC_NAMES))]
-    task_configs = generate_task_configs(exp_config, include_eval=True)
-    task_config = task_configs[0]
-
-    chosen_indices = exp_config.train.chosen_index_list
-    ds_names = exp_config.train.dataset_list
-
-    for ds_idx, ds_name in enumerate(ds_names):
-        ds = get_dataset(ds_name)
-        for img_idx, chosen_index in enumerate(chosen_indices):
-            task_config = replace(task_config,
-                ds_name=ds_name,
-                chosen_index=chosen_index,
-            )
-            metrics, titles = get_metrics(exp_config, task_config, metrics_to_show)
-
-            image_clean = T.Resize((512,512))(ds.images[chosen_index])
-
-            image_adv = T.ToPILImage()(load_adv_image(task_config, exp_config.train))
-
-            images = [image_clean, image_adv]
-            fig, axes = plt.subplots(1, len(images), figsize=(12, 6))
-
-            for i, ax in enumerate(axes.flat):
-                img = images[i]
-                ax.imshow(img)
-                ax.set_xticks([])
-                ax.set_yticks([])
-            plt.tight_layout()
-            
-            metrics_str  = " , ".join([f"{t}: {m}" for m, t in zip(metrics, titles)])
-            logger.info(f"DS: {ds_name}, image: {chosen_index}\nEmbedder: {task_config.model_name_emb}\nVLM: {task_config.model_name_vlm}\n{metrics_str}")
+            ax[k % n_rows][k//n_rows].plot(plot_dict_x[i][label], plot_dict_y[i][label], label=titles[i], marker=markers[i])
+            ax[k % n_rows][k//n_rows].set_xscale("log")
+        ax[k % n_rows][k//n_rows].grid(visible=True)
+        ax[k % n_rows][k//n_rows].set_xticks(plot_dict_x[0][label], labels=plot_dict_x[0][label])
+        ax[k % n_rows][k//n_rows].set_xlim([0.9,40])
+        ax[k % n_rows][k//n_rows].set_ylim([-0.05,1.05])
+        ax[k % n_rows][k//n_rows].set_title(label)
+    handles, labels = ax[0][0].get_legend_handles_labels()
+    fig.legend(handles, labels, bbox_to_anchor = (1.25, 0.6), loc='center right')
+    fig.supxlabel("Maximum Allowed Perturbation (/255)")
+    fig.supylabel("Attack Success")
+    fig.tight_layout()
+    return fig
