@@ -2,6 +2,8 @@
 
 # Define your experiments
 exps=(
+"paper_multi_transferability"
+  "paper_multi_transferability_targeted"
   "paper_non_targeted"
   "paper_targeted_attacks_oneQ_oneA"
    "paper_targeted_attacks_multiQ_oneA"
@@ -10,11 +12,21 @@ exps=(
   "paper_judge_defence_adapt"
   "paper_judge_defence_targeted"
   "paper_judge_defence_targeted_adapt"
+  "paper_combined_defence"
+  "paper_combined_defence_adapt"
+  "paper_combined_defence_targeted"
+  "paper_combined_defence_targeted_adapt"
+"paper_topk_context_targeted"
    "paper_defences"
+   "paper_targeted_defences"
   "paper_perturbation_plot"
    "paper_copali_ab"
    "paper_copali_ab_cpoiT"
    "paper_topk_context"
+    "paper_GPT_non_targeted"
+    "paper_GPT_targeted_attacks_oneQ_oneA"
+    "paper_GPT_targeted_attacks_multiQ_oneA"
+    "paper_GPT_targeted_attacks_multiQ_multiA"
 )
 
 # Define a function to run one experiment
