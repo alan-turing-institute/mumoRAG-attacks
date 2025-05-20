@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 
 import torch
-from transformers import AutoProcessor, LlavaNextProcessor
+from transformers import AutoProcessor
 import torchvision.transforms.v2 as T
 from PIL import Image
 
@@ -106,19 +106,6 @@ def center_crop(image: torch.tensor, size):
     # Otherwise, we may need to pad if the image is too small. Oh joy...
     # TODO: adjust original code from https://github.com/huggingface/transformers/blob/main/src/transformers/image_transforms.py
 
-
-def is_image_processing_close(image: torch.tensor, processor):
-    if isinstance(processor, LlavaNextProcessor):
-        llama3_template = '<|start_header_id|>user<|end_header_id|>\n\n{}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n \n'
-        img_prompt = llama3_template.format('<image>\nSummary above image in one word: ')
-        image_p_hf = processor(text=img_prompt, images=image, return_tensors="pt", padding=True)['pixel_values'][:,0]
-    else:
-        image_p_hf = processor(images=[image], return_tensors="pt")['pixel_values']
-    image_p_me = process_image(image, processor)
-    logger.info(f"MSE: {torch.nn.functional.mse_loss(image_p_me, image_p_hf)}")
-    logger.info(f"Linf: {(image_p_hf - image_p_me).norm(p=float('inf'))}")
-    logger.info(f"L1: {(image_p_hf - image_p_me).norm(p=1)}")
-    logger.info(f"L1: {torch.nn.functional.l1_loss(image_p_hf, image_p_me)}")
 
 
 if __name__ == "__main__":

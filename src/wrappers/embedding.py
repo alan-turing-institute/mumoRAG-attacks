@@ -7,7 +7,6 @@ from strenum import StrEnum
 from transformers import AutoModel, AutoModelForImageTextToText, AutoTokenizer, AutoProcessor, BitsAndBytesConfig
 
 from utils.image_utils import process_image
-from utils.utils import plot_images
 
 
 class EmbedderName(StrEnum):
@@ -214,11 +213,6 @@ class EmbeddingModel:
             return embeddings
 
 
-        # if self.name in QWEN2_MODELS:
-        #     batch_queries = self.processor(text=user_query).to(self.device)
-        #     user_query_embedding = self.model(**batch_queries)
-        #     return user_query_embedding
-
         raise ValueError(f"Not supported model {self.name}!")
 
     def compute_img_embedding(self, image, mock_image, overwrite=False):
@@ -280,14 +274,6 @@ class EmbeddingModel:
             if self.colpali_only_images:
                 # remove non-image tokens
                 # hard-coding indices works for now, but may not for future versions of colpali
-                # image_input_emb.input_ids = image_input_emb.input_ids[:, 9:-2]
-                # image_input_emb.attention_mask = image_input_emb.attention_mask[:, 9:-2]
-                # image_embedding = self.model(input_ids=image_input_emb.input_ids,
-                #                              attention_mask=image_input_emb.attention_mask,
-                #                              pixel_values=image_input_emb.pixel_values,
-                #                              pixel_attention_mask=image_input_emb.pixel_attention_mask)
-
-                # raise ValueError
                 if self.name == EmbedderName.COLPALI:
                     image_input_emb.input_ids = image_input_emb.input_ids[:, :-7]
                     image_input_emb.attention_mask = image_input_emb.attention_mask[:, :-7]
@@ -416,7 +402,6 @@ def score_multi_vector_modified(
                     scores_batch.append((all_scores * all_scores.softmax(dim=3)).sum(dim=3).sum(dim=2))
                 case EmbeddingLoss.COS_AVGEMB:
                     # take the average of embeddings over tokens then compute cosine similarity
-                    # print(qs_batch.shape, ps_batch.shape)
                     scores_batch.append(torch.nn.CosineSimilarity()(qs_batch.mean(dim=1), ps_batch.mean(dim=1)))
         scores_batch = torch.cat(scores_batch, dim=1).cpu()
         scores_list.append(scores_batch)
@@ -427,31 +412,3 @@ def score_multi_vector_modified(
     scores = scores.to(torch.float32)
     return scores
 
-
-# add an extra column to the dataset containing the embeddings of images
-def add_img_embedding_column(ds, embedder: EmbeddingModel, existing_col_name="image", new_col_name="image_embeddings",
-                             device="cpu"):
-    func = lambda example: {
-        new_col_name:
-            embedder.compute_img_embedding(image=[example[existing_col_name]], mock_image=None, overwrite=False)[
-                0].cpu().detach().numpy()
-    }
-    return ds.map(func)
-
-
-# add an extra column to the dataset containing the embeddings of texts (not used yet)
-def add_txt_embedding_column(ds, embedder: EmbeddingModel, existing_col_name="text", new_col_name="text_embeddings"):
-    func = lambda example: {
-        new_col_name: embedder.compute_txt_embedding(user_query=example[existing_col_name])[
-            0].float().cpu().detach().numpy()
-    }
-    return ds.map(func)
-
-
-# find images close to the provided prompt in embedding space
-def retrieve_images_by_prompt(prompt, ds_with_faiss, embedder: EmbeddingModel, topk, device="cpu", plot=True):
-    prompt_embedding = embedder.compute_txt_embedding(prompt).float().cpu().detach().numpy()
-
-    scores, retrieved_examples = ds_with_faiss.get_nearest_examples("image_embeddings", prompt_embedding, k=topk)
-    if plot: plot_images(retrieved_examples["image"], topk)
-    return scores, retrieved_examples
