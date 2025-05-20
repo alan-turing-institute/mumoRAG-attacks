@@ -3,7 +3,9 @@ Adversarial and poisoning attacks against multimodal retrieval-augmented generat
 
 ## Instructions
 - Install poppler utils `brew install poppler`
-- Install the project as editable `pip install -e .`
+- Install `uv`: `pip install uv` 
+- Install the project as editable: `uv pip install -e .`
+  - To install optional dependencies: `uv pip install -e ".[nb,opt,test,dev]"`
 
 ## Running
 
