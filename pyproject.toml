@@ -5,9 +5,7 @@ requires-python = " >=3.10, <3.13"
 dependencies = [
   "transformers@git+https://github.com/huggingface/transformers",
   "datasets",
-  "faiss-cpu",
   "requests",
-  "pdf2image",
   "matplotlib",
   "torch==2.6",
   "torchvision",
