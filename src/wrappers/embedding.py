@@ -7,7 +7,6 @@ from strenum import StrEnum
 from transformers import AutoModel, AutoModelForImageTextToText, AutoTokenizer, AutoProcessor, BitsAndBytesConfig
 
 from utils.image_utils import process_image
-from utils.utils import plot_images
 
 
 class EmbedderName(StrEnum):

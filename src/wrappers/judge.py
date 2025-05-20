@@ -5,26 +5,6 @@ from strenum import StrEnum
 
 
 class JudgePrompt:
-    # The following two prompts are adapted from llama_index
-    # https://github.com/run-llama/llama_index/blob/main/llama-index-core/llama_index/core/evaluation/multi_modal/relevancy.py
-    # https://github.com/run-llama/llama_index/blob/main/llama-index-core/llama_index/core/evaluation/multi_modal/faithfulness.py
-
-#     JUDGE_RELEVANCY_PROMPT = """Your task is to evaluate if the response for the query is in line with the image context information provided
-# You have two options to answer. Either YES/ NO
-# Answer - YES, if the response for the query is in line with context information otherwise NO.
-# Query: {query_str}
-# Response: {response_str}
-# Context:
-# {context_str}
-# Answer: """
-
-#     JUDGE_FAITHFULNESS_PROMPT = """Please tell if a given piece of information is supported by the visual context information.
-# You need to answer with either YES or NO.
-# Answer YES if any of the image(s) context supports the information, even if most of the context is unrelated. 
-
-# Information: {query_str}
-# Context: {context_str}
-# Answer: """
 
     # The following prompts are taken form this paper
     # https://arxiv.org/pdf/2410.21943
