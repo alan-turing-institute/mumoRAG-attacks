@@ -66,8 +66,8 @@ configstore.store(
     name="dev",
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
-            embedder_list=[EmbedderName.QWEN2_GME_2B],
-            vlm=VLMConfig(models=[VLMName.QWEN_2p5_VL_3B], gen_topk_list=[1]),
+            embedder_list=[EmbedderName.CLIP_BASE_PATCH16],
+            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_256M], gen_topk_list=[1]),
             print_every=2,
             n_gradient_steps=4,
         ),
@@ -780,7 +780,6 @@ Big Table: transferability between models (12 x 12 table, diagonals are white-bo
 - should produce 8 x 8 images
 - figure shows following metrics: recall_before, recall_after (avg train+test), retrieval_asr_train, retrieval_asr_test, generation_asr_train, generation_asr_test    
 """
-# todo dan: how to present this info
 configstore.store(
     name="transferability",
     node=ExperimentConfig(

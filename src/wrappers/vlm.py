@@ -58,30 +58,6 @@ VLMS_WITH_FAST_PROCESSOR = [
 VLMS_WITH_FAST_PROCESSOR.extend(QWEN_VLMS)
 VLMS_WITH_FAST_PROCESSOR.extend(INTERN_VLMS)
 
-MODEL_NAMES = [
-    "HuggingFaceTB/SmolVLM-256M-Instruct",
-    "microsoft/Florence-2-base",
-    "google/paligemma2-3b-mix-224", # seems to need specific prompts to work
-    "Qwen/Qwen2.5-VL-3B-Instruct",
-    "llava-hf/llava-onevision-qwen2-0.5b-ov-hf",
-    # larger models: to test later:
-    "HuggingFaceTB/SmolVLM2-2.2B-Instruct",
-    "Qwen/Qwen2.5-VL-7B-Instruct",
-    "llava-hf/llava-onevision-qwen2-7b-ov-hf"
-    "deepseek-ai/deepseek-vl2-tiny", # 3.75b
-    "meta-llama/Llama-3.2-11B-Vision-Instruct",
-    "microsoft/Phi-3.5-vision-instruct",
-    "google/gemma-3-4b-it",
-    "google/gemma-3-12b-it",
-    "OpenGVLab/InternVL3-1B-hf",
-    "OpenGVLab/InternVL3-2B-hf",
-    "OpenGVLab/InternVL3-8B-hf",
-    "AIDC-AI/Ovis2-1B",
-    "AIDC-AI/Ovis2-2B",
-    "AIDC-AI/Ovis2-4B",
-    "AIDC-AI/Ovis2-8B",
-]
-
 
 
 class VLM:
@@ -218,8 +194,6 @@ class VLM:
         if positive_idx is None: positive_idx = [i for i in range(len(target_tokens))]
         loss = torch.zeros((len(target_tokens),))
         for i, tt in enumerate(target_tokens):
-            # NOTE: uncomment next line to skip computing generation loss for non-targeted queries (will increase FPR)
-            # if i not in positive_idx: continue
             logits_to_optimize = vlm_output.logits[i,-len(tt)-1:-1,:].unsqueeze(0).transpose(1,2)
             tt = tt.unsqueeze(0).repeat(logits_to_optimize.shape[0], 1)
             loss[i] = torch.nn.CrossEntropyLoss()(logits_to_optimize, tt)
