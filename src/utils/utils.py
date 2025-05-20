@@ -1,6 +1,4 @@
-import os
 import torch
-from pdf2image import convert_from_path
 import matplotlib.pyplot as plt
 
 from .logger import logger

@@ -62,8 +62,8 @@ class EmbeddedDataset:
             logger.info(f"Computed {len(self.dataset.images)} image embeddings in {time.time() - t:.2f}s")
         if for_queries:
             t = time.time()
-            self.query_embeddings = self.embedder.compute_txt_embedding(self.dataset.queries)
-            logger.info(f"Computed {len(self.dataset.queries)} query embeddings in {time.time() - t:.2f}s")
+            self.query_embeddings = self.embedder.compute_txt_embedding(self.dataset.queries_orig)
+            logger.info(f"Computed {len(self.dataset.queries_orig)} query embeddings in {time.time() - t:.2f}s")
 
         # save to file
         dict_to_save = {
@@ -136,13 +136,13 @@ class EmbeddedDataset:
             topk = torch.topk(losses, k=k, dim=-1, largest=False, sorted=True)
 
             correct_retrievals = [any(x in topk.indices[i] for x in self.dataset.ground_truth_retrievals[i]) for i in
-                                  range(len(self.dataset.queries))]
+                                  range(len(self.dataset.queries_orig))]
             accuracy_train = sum(correct_retrievals[:self.dataset.num_train]) / self.dataset.num_train
             accuracy_test = sum(correct_retrievals[self.dataset.num_train:]) / self.dataset.num_test
             accuracy = accuracy_train * self.dataset.train_ratio + accuracy_test * (1 - self.dataset.train_ratio)
 
             # if include_adv=False, then will always be zero
-            adversarial_retrievals = [self.dataset.num_images_orig in topk.indices[i] for i in range(len(self.dataset.queries))]
+            adversarial_retrievals = [self.dataset.num_images_orig in topk.indices[i] for i in range(len(self.dataset.queries_orig))]
             asr_train = sum(adversarial_retrievals[:self.dataset.num_train]) / self.dataset.num_train
             asr_test = sum(adversarial_retrievals[self.dataset.num_train:]) / self.dataset.num_test
 
