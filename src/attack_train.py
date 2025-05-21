@@ -3,7 +3,6 @@ from pprint import pformat
 import hydra
 import torch
 import torchvision.transforms.v2 as T
-
 from omegaconf import OmegaConf
 
 from config.experiment import ExperimentConfig
@@ -12,7 +11,7 @@ from experiments import DEFAULT_EXPERIMENT
 from utils.attack import rag_attack
 from utils.logger import logger
 from utils.utils import get_device
-from wrappers.cache import get_vlm, get_dataset, get_embedder, get_judge
+from wrappers.cache import get_dataset, get_embedder, get_judge, get_vlm
 
 
 def run(exp_config: ExperimentConfig):
@@ -26,17 +25,27 @@ def run(exp_config: ExperimentConfig):
         ds = get_dataset(task_config.ds_name)
         ds.use_original_or_paraphrased_queries(task_config.defence)
 
-        vlms = [get_vlm(
-            model_name,
-            device,
-        ) for model_name in task_config.vlm.models] if task_config.vlm else None
+        vlms = (
+            [
+                get_vlm(
+                    model_name,
+                    device,
+                )
+                for model_name in task_config.vlm.models
+            ]
+            if task_config.vlm
+            else None
+        )
 
-        embedders = [get_embedder(
-            model_name,
-            quantize=False,
-            colpali_only_images=exp_config.train.colpali_only_images,
-            device=device,
-        ) for model_name in task_config.model_name_embs]
+        embedders = [
+            get_embedder(
+                model_name,
+                quantize=False,
+                colpali_only_images=exp_config.train.colpali_only_images,
+                device=device,
+            )
+            for model_name in task_config.model_name_embs
+        ]
         jdg = get_judge(task_config.judge.model_name, device) if task_config.judge else None
 
         attack_images = ds.sample_images_from_ds(fraction=task_config.kb_compromised_fraction)  # images included by the attacker in the VLM context (n-1 because the malicious image must be included)
@@ -44,7 +53,7 @@ def run(exp_config: ExperimentConfig):
         # choose attacked image
         chosen_image = ds.images[task_config.chosen_index]
         image_format = chosen_image.format
-        chosen_image = chosen_image.resize((task_config.image_size[0],task_config.image_size[1]))  # this can save memory (also setting this to VLM image size with resample=0 -> reduce errors)
+        chosen_image = chosen_image.resize((task_config.image_size[0], task_config.image_size[1]))  # this can save memory (also setting this to VLM image size with resample=0 -> reduce errors)
         chosen_image = T.PILToTensor()(chosen_image)
         chosen_image = chosen_image.float()
         initial_chosen_image = chosen_image.clone()

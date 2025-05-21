@@ -12,17 +12,16 @@ from config.experiment import ExperimentConfig
 from config.train import ExperimentTrainConfig, JudgeConfig, VLMConfig
 from utils.defence import DefenceName
 from wrappers.attack_mask import AttackMask
+from wrappers.dataset import DatasetName
 from wrappers.embedding import EmbedderName, EmbeddingLoss
 from wrappers.judge import JudgeMetric
 from wrappers.vlm import VLMName
-from wrappers.dataset import DatasetName
-
 
 DEFAULT_EXPERIMENT = "dev"
 
 configstore = ConfigStore.instance()
 
-datasets=[
+datasets = [
     DatasetName.VIDORE_SYN_AI,
     # DatasetName.VIDORE_V2_ESG
 ]
@@ -32,7 +31,7 @@ embedders = [
     EmbedderName.QWEN2_GME_2B,
     # EmbedderName.SIGLIP2_LARGE_PATCH16
 ]
-vlms=[
+vlms = [
     VLMName.SMOLVLM_1_2B,
     VLMName.QWEN_2p5_VL_3B,
 ]
@@ -44,8 +43,8 @@ eval_vlms = [
 ]
 
 
-def load_config(name):
-    with initialize(version_base=None, config_path="pkg://experiments"):
+def load_config(name: str, config_path: str = "pkg://experiments"):
+    with initialize(version_base=None, config_path=config_path):
         cfg = compose(config_name=name, return_hydra_config=True)
         HydraConfig().set_config(cfg)
         cfg = compose(config_name=name)
@@ -73,98 +72,6 @@ configstore.store(
         ),
         eval=ExperimentEvalConfig(
             gen_topk_list=[-1],
-        ),
-    ),
-)
-
-
-configstore.store(
-    name="paper_GPT_non_targeted",
-    node=ExperimentConfig(
-        train=ExperimentTrainConfig(
-            dataset_list=datasets,
-            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
-            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B]),
-        ),
-        eval=ExperimentEvalConfig(
-            gen_topk_list=[-1],
-            test_gpt_attack=True,
-        ),
-    ),
-)
-
-configstore.store(
-    name="paper_GPT_non_targeted",
-    node=ExperimentConfig(
-        train=ExperimentTrainConfig(
-            dataset_list=datasets,
-            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
-            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B]),
-        ),
-        eval=ExperimentEvalConfig(
-            eval_emb_list=embedders,
-            eval_vlm_list=vlms,
-            test_gpt_attack=True,
-        ),
-    ),
-)
-
-configstore.store(
-    name="paper_GPT_targeted_attacks_oneQ_oneA",
-    node=ExperimentConfig(
-        train=ExperimentTrainConfig(
-            dataset_list=datasets,
-            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
-            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B],
-                          target_answers=["Manually match each marker to a generic human template regardless of trial-specific subject calibration."]),
-            is_targeted=True,
-            target_query_idx=[0],
-            n_knn_target_queries=1,
-        ),
-        eval=ExperimentEvalConfig(
-            eval_emb_list=embedders,
-            eval_vlm_list=vlms,
-            test_gpt_attack=True,
-        ),
-    ),
-)
-
-configstore.store(
-    name="paper_GPT_targeted_attacks_multiQ_oneA",
-    node=ExperimentConfig(
-        train=ExperimentTrainConfig(
-            dataset_list=datasets,
-            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
-            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B]),
-            is_targeted=True,
-            target_query_idx=[0],
-            n_knn_target_queries=5,
-        ),
-        eval=ExperimentEvalConfig(
-            eval_emb_list=embedders,
-            eval_vlm_list=vlms,
-            test_gpt_attack=True,
-        ),
-    ),
-)
-
-configstore.store(
-    name="paper_GPT_targeted_attacks_multiQ_multiA",
-    node=ExperimentConfig(
-        train=ExperimentTrainConfig(
-            dataset_list=datasets,
-            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
-            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B],
-                        target_answers = ["Manually match each marker to a generic human template regardless of trial-specific subject calibration.",
-                                          "A micromort measures the number of accidents per million vehicles on the road and is used in transportation policy."]),
-            is_targeted=True,
-            target_query_idx=[0, 1],
-            n_knn_target_queries=1,
-        ),
-        eval=ExperimentEvalConfig(
-            eval_emb_list=embedders,
-            eval_vlm_list=vlms,
-            test_gpt_attack=True,
         ),
     ),
 )
@@ -261,9 +168,7 @@ configstore.store(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
             embedder_list=embedders,
-            vlm=VLMConfig(
-                models=vlms
-            ),
+            vlm=VLMConfig(models=vlms),
             is_targeted=True,
             target_query_idx=[0],
             n_knn_target_queries=5,
@@ -284,8 +189,10 @@ configstore.store(
             embedder_list=embedders,
             vlm=VLMConfig(
                 models=vlms,
-                target_answers=["Manually match each marker to a generic human template regardless of trial-specific subject calibration.",
-                               "A micromort measures the number of accidents per million vehicles on the road and is used in transportation policy."]
+                target_answers=[
+                    "Manually match each marker to a generic human template regardless of trial-specific subject calibration.",
+                    "A micromort measures the number of accidents per million vehicles on the road and is used in transportation policy.",
+                ],
             ),
             is_targeted=True,
             target_query_idx=[0, 1],
@@ -312,13 +219,17 @@ configstore.store(
         eval=ExperimentEvalConfig(
             do_judge=True,
             eval_jdg_list=eval_vlms,
-            eval_jdg_metric_list=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY],
+            eval_jdg_metric_list=[
+                JudgeMetric.IMAGE_CONTEXT_RELEVANCY,
+                JudgeMetric.IMAGE_FAITHFULNESS,
+                JudgeMetric.ANSWER_RELEVANCY,
+            ],
         ),
     ),
 )
 
 """
-RAG evaluation and attack detection through VLM-as-a-judge.
+Adaptive attack with VLM-as-a-judge in objectives.
 Produces:
 - Table of judge VLMs (same for both train and eval)-> judge metrics.
 """
@@ -334,14 +245,21 @@ configstore.store(
             judge=JudgeConfig(
                 lambda_=1,
                 models=eval_vlms,
-                metrics=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS,
-                         JudgeMetric.ANSWER_RELEVANCY]
+                metrics=[
+                    JudgeMetric.IMAGE_CONTEXT_RELEVANCY,
+                    JudgeMetric.IMAGE_FAITHFULNESS,
+                    JudgeMetric.ANSWER_RELEVANCY,
+                ],
             ),
         ),
         eval=ExperimentEvalConfig(
             do_judge=True,
             eval_jdg_list=eval_vlms,
-            eval_jdg_metric_list=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY],
+            eval_jdg_metric_list=[
+                JudgeMetric.IMAGE_CONTEXT_RELEVANCY,
+                JudgeMetric.IMAGE_FAITHFULNESS,
+                JudgeMetric.ANSWER_RELEVANCY,
+            ],
         ),
     ),
 )
@@ -367,7 +285,11 @@ configstore.store(
         eval=ExperimentEvalConfig(
             do_judge=True,
             eval_jdg_list=eval_vlms,
-            eval_jdg_metric_list=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY],
+            eval_jdg_metric_list=[
+                JudgeMetric.IMAGE_CONTEXT_RELEVANCY,
+                JudgeMetric.IMAGE_FAITHFULNESS,
+                JudgeMetric.ANSWER_RELEVANCY,
+            ],
         ),
     ),
 )
@@ -392,13 +314,21 @@ configstore.store(
             judge=JudgeConfig(
                 lambda_=1,
                 models=eval_vlms,
-                metrics=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY]
+                metrics=[
+                    JudgeMetric.IMAGE_CONTEXT_RELEVANCY,
+                    JudgeMetric.IMAGE_FAITHFULNESS,
+                    JudgeMetric.ANSWER_RELEVANCY,
+                ],
             ),
         ),
         eval=ExperimentEvalConfig(
             do_judge=True,
             eval_jdg_list=eval_vlms,
-            eval_jdg_metric_list=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY],
+            eval_jdg_metric_list=[
+                JudgeMetric.IMAGE_CONTEXT_RELEVANCY,
+                JudgeMetric.IMAGE_FAITHFULNESS,
+                JudgeMetric.ANSWER_RELEVANCY,
+            ],
         ),
     ),
 )
@@ -433,10 +363,20 @@ configstore.store(
             dataset_list=datasets,
             embedder_list=[EmbedderName.COLPALI],
             vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B]),
-            emb_train_loss_type_list=[EmbeddingLoss.MAXSIM, EmbeddingLoss.AVGSIM, EmbeddingLoss.SOFTMAXSIM, EmbeddingLoss.COS_AVGEMB],
+            emb_train_loss_type_list=[
+                EmbeddingLoss.MAXSIM,
+                EmbeddingLoss.AVGSIM,
+                EmbeddingLoss.SOFTMAXSIM,
+                EmbeddingLoss.COS_AVGEMB,
+            ],
         ),
         eval=ExperimentEvalConfig(
-            emb_test_loss_type_list=[EmbeddingLoss.MAXSIM, EmbeddingLoss.AVGSIM, EmbeddingLoss.SOFTMAXSIM, EmbeddingLoss.COS_AVGEMB],
+            emb_test_loss_type_list=[
+                EmbeddingLoss.MAXSIM,
+                EmbeddingLoss.AVGSIM,
+                EmbeddingLoss.SOFTMAXSIM,
+                EmbeddingLoss.COS_AVGEMB,
+            ],
         ),
     ),
 )
@@ -451,11 +391,21 @@ configstore.store(
             dataset_list=datasets,
             embedder_list=[EmbedderName.COLPALI],
             vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B]),
-            emb_train_loss_type_list=[EmbeddingLoss.MAXSIM, EmbeddingLoss.AVGSIM, EmbeddingLoss.SOFTMAXSIM, EmbeddingLoss.COS_AVGEMB],
+            emb_train_loss_type_list=[
+                EmbeddingLoss.MAXSIM,
+                EmbeddingLoss.AVGSIM,
+                EmbeddingLoss.SOFTMAXSIM,
+                EmbeddingLoss.COS_AVGEMB,
+            ],
             colpali_only_images=True,
         ),
         eval=ExperimentEvalConfig(
-            emb_test_loss_type_list=[EmbeddingLoss.MAXSIM, EmbeddingLoss.AVGSIM, EmbeddingLoss.SOFTMAXSIM, EmbeddingLoss.COS_AVGEMB],
+            emb_test_loss_type_list=[
+                EmbeddingLoss.MAXSIM,
+                EmbeddingLoss.AVGSIM,
+                EmbeddingLoss.SOFTMAXSIM,
+                EmbeddingLoss.COS_AVGEMB,
+            ],
         ),
     ),
 )
@@ -472,12 +422,12 @@ configstore.store(
             embedder_list=[
                 EmbedderName.CLIP_LARGE_PATCH14,
             ],
-            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B], gen_topk_list=[1,5])
+            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B], gen_topk_list=[1, 5]),
         ),
         eval=ExperimentEvalConfig(
             gen_topk_list=[-1, 1, 5],
             test_topk_order=False,
-        )
+        ),
     ),
 )
 
@@ -491,7 +441,7 @@ configstore.store(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
             embedder_list=embedders,
-            vlm=VLMConfig(models=vlms, gen_topk_list=[1,5]),
+            vlm=VLMConfig(models=vlms, gen_topk_list=[1, 5]),
             is_targeted=True,
             target_query_idx=[0],
             n_knn_target_queries=1,
@@ -499,7 +449,7 @@ configstore.store(
         eval=ExperimentEvalConfig(
             gen_topk_list=[-1, 1, 5],
             test_topk_order=False,
-        )
+        ),
     ),
 )
 
@@ -512,15 +462,19 @@ configstore.store(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
             embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
-            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B], gen_topk_list=[1,5]),
+            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B], gen_topk_list=[1, 5]),
         ),
         eval=ExperimentEvalConfig(
             do_judge=True,
             eval_jdg_list=vlms,
-            eval_jdg_metric_list=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY],
+            eval_jdg_metric_list=[
+                JudgeMetric.IMAGE_CONTEXT_RELEVANCY,
+                JudgeMetric.IMAGE_FAITHFULNESS,
+                JudgeMetric.ANSWER_RELEVANCY,
+            ],
             gen_topk_list=[-1, 1, 5],
-            test_topk_order=False
-        )
+            test_topk_order=False,
+        ),
     ),
 )
 configstore.store(
@@ -529,21 +483,28 @@ configstore.store(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
             embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
-            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B], gen_topk_list=[1,5]),
+            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B], gen_topk_list=[1, 5]),
             judge=JudgeConfig(
                 lambda_=1,
                 models=vlms,
-                metrics=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS,
-                         JudgeMetric.ANSWER_RELEVANCY]
+                metrics=[
+                    JudgeMetric.IMAGE_CONTEXT_RELEVANCY,
+                    JudgeMetric.IMAGE_FAITHFULNESS,
+                    JudgeMetric.ANSWER_RELEVANCY,
+                ],
             ),
         ),
         eval=ExperimentEvalConfig(
             do_judge=True,
             eval_jdg_list=vlms,
-            eval_jdg_metric_list=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY],
+            eval_jdg_metric_list=[
+                JudgeMetric.IMAGE_CONTEXT_RELEVANCY,
+                JudgeMetric.IMAGE_FAITHFULNESS,
+                JudgeMetric.ANSWER_RELEVANCY,
+            ],
             gen_topk_list=[-1, 1, 5],
             test_topk_order=False,
-        )
+        ),
     ),
 )
 configstore.store(
@@ -552,7 +513,7 @@ configstore.store(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
             embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
-            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B], gen_topk_list=[1,5]),
+            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B], gen_topk_list=[1, 5]),
             is_targeted=True,
             target_query_idx=[0],
             n_knn_target_queries=1,
@@ -561,10 +522,14 @@ configstore.store(
         eval=ExperimentEvalConfig(
             do_judge=True,
             eval_jdg_list=vlms,
-            eval_jdg_metric_list=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY],
+            eval_jdg_metric_list=[
+                JudgeMetric.IMAGE_CONTEXT_RELEVANCY,
+                JudgeMetric.IMAGE_FAITHFULNESS,
+                JudgeMetric.ANSWER_RELEVANCY,
+            ],
             gen_topk_list=[-1, 1, 5],
             test_topk_order=False,
-        )
+        ),
     ),
 )
 configstore.store(
@@ -573,7 +538,7 @@ configstore.store(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
             embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
-            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B], gen_topk_list=[1,5]),
+            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B], gen_topk_list=[1, 5]),
             is_targeted=True,
             target_query_idx=[0],
             n_knn_target_queries=1,
@@ -581,13 +546,21 @@ configstore.store(
             judge=JudgeConfig(
                 lambda_=1,
                 models=vlms,
-                metrics=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY]
+                metrics=[
+                    JudgeMetric.IMAGE_CONTEXT_RELEVANCY,
+                    JudgeMetric.IMAGE_FAITHFULNESS,
+                    JudgeMetric.ANSWER_RELEVANCY,
+                ],
             ),
         ),
         eval=ExperimentEvalConfig(
             do_judge=True,
             eval_jdg_list=vlms,
-            eval_jdg_metric_list=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY],
+            eval_jdg_metric_list=[
+                JudgeMetric.IMAGE_CONTEXT_RELEVANCY,
+                JudgeMetric.IMAGE_FAITHFULNESS,
+                JudgeMetric.ANSWER_RELEVANCY,
+            ],
             gen_topk_list=[-1, 1, 5],
             test_topk_order=False,
         ),
@@ -606,7 +579,7 @@ configstore.store(
             embedder_list=[
                 EmbedderName.CLIP_LARGE_PATCH14,
             ],
-            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B], gen_topk_list=[1,5]),
+            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B], gen_topk_list=[1, 5]),
             is_targeted=True,
             target_query_idx=[0],
             n_knn_target_queries=1,
@@ -614,7 +587,7 @@ configstore.store(
         eval=ExperimentEvalConfig(
             gen_topk_list=[-1, 1, 5],
             test_topk_order=False,
-        )
+        ),
     ),
 )
 
@@ -627,15 +600,19 @@ configstore.store(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
             embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
-            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B], gen_topk_list=[1,5]),
+            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B], gen_topk_list=[1, 5]),
         ),
         eval=ExperimentEvalConfig(
             do_judge=True,
             eval_jdg_list=vlms,
-            eval_jdg_metric_list=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY],
+            eval_jdg_metric_list=[
+                JudgeMetric.IMAGE_CONTEXT_RELEVANCY,
+                JudgeMetric.IMAGE_FAITHFULNESS,
+                JudgeMetric.ANSWER_RELEVANCY,
+            ],
             gen_topk_list=[-1, 1, 5],
-            test_topk_order=False
-        )
+            test_topk_order=False,
+        ),
     ),
 )
 configstore.store(
@@ -644,21 +621,28 @@ configstore.store(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
             embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
-            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B], gen_topk_list=[1,5]),
+            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B], gen_topk_list=[1, 5]),
             judge=JudgeConfig(
                 lambda_=1,
                 models=vlms,
-                metrics=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS,
-                         JudgeMetric.ANSWER_RELEVANCY]
+                metrics=[
+                    JudgeMetric.IMAGE_CONTEXT_RELEVANCY,
+                    JudgeMetric.IMAGE_FAITHFULNESS,
+                    JudgeMetric.ANSWER_RELEVANCY,
+                ],
             ),
         ),
         eval=ExperimentEvalConfig(
             do_judge=True,
             eval_jdg_list=vlms,
-            eval_jdg_metric_list=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY],
+            eval_jdg_metric_list=[
+                JudgeMetric.IMAGE_CONTEXT_RELEVANCY,
+                JudgeMetric.IMAGE_FAITHFULNESS,
+                JudgeMetric.ANSWER_RELEVANCY,
+            ],
             gen_topk_list=[-1, 1, 5],
             test_topk_order=False,
-        )
+        ),
     ),
 )
 configstore.store(
@@ -667,7 +651,7 @@ configstore.store(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
             embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
-            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B], gen_topk_list=[1,5]),
+            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B], gen_topk_list=[1, 5]),
             is_targeted=True,
             target_query_idx=[0],
             n_knn_target_queries=1,
@@ -676,10 +660,14 @@ configstore.store(
         eval=ExperimentEvalConfig(
             do_judge=True,
             eval_jdg_list=vlms,
-            eval_jdg_metric_list=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY],
+            eval_jdg_metric_list=[
+                JudgeMetric.IMAGE_CONTEXT_RELEVANCY,
+                JudgeMetric.IMAGE_FAITHFULNESS,
+                JudgeMetric.ANSWER_RELEVANCY,
+            ],
             gen_topk_list=[-1, 1, 5],
             test_topk_order=False,
-        )
+        ),
     ),
 )
 configstore.store(
@@ -688,7 +676,7 @@ configstore.store(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
             embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
-            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B], gen_topk_list=[1,5]),
+            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B], gen_topk_list=[1, 5]),
             is_targeted=True,
             target_query_idx=[0],
             n_knn_target_queries=1,
@@ -696,16 +684,24 @@ configstore.store(
             judge=JudgeConfig(
                 lambda_=1,
                 models=vlms,
-                metrics=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY]
+                metrics=[
+                    JudgeMetric.IMAGE_CONTEXT_RELEVANCY,
+                    JudgeMetric.IMAGE_FAITHFULNESS,
+                    JudgeMetric.ANSWER_RELEVANCY,
+                ],
             ),
         ),
         eval=ExperimentEvalConfig(
             do_judge=True,
             eval_jdg_list=vlms,
-            eval_jdg_metric_list=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY],
+            eval_jdg_metric_list=[
+                JudgeMetric.IMAGE_CONTEXT_RELEVANCY,
+                JudgeMetric.IMAGE_FAITHFULNESS,
+                JudgeMetric.ANSWER_RELEVANCY,
+            ],
             gen_topk_list=[-1, 1, 5],
             test_topk_order=False,
-        )
+        ),
     ),
 )
 
@@ -717,9 +713,7 @@ configstore.store(
             embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
             vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B]),
         ),
-        eval=ExperimentEvalConfig(
-            defences_list=[DefenceName.PARAPHRASE]
-        ),
+        eval=ExperimentEvalConfig(defences_list=[DefenceName.PARAPHRASE]),
     ),
 )
 
@@ -734,9 +728,7 @@ configstore.store(
             target_query_idx=[0],
             n_knn_target_queries=1,
         ),
-        eval=ExperimentEvalConfig(
-            defences_list=[DefenceName.PARAPHRASE]
-        ),
+        eval=ExperimentEvalConfig(defences_list=[DefenceName.PARAPHRASE]),
     ),
 )
 
@@ -791,6 +783,106 @@ configstore.store(
         eval=ExperimentEvalConfig(
             eval_emb_list=embedders + [EmbedderName.COLPALI],
             eval_vlm_list=eval_vlms,
+        ),
+    ),
+)
+
+"""
+ChatGPT baselines for comparison
+"""
+configstore.store(
+    name="paper_GPT_non_targeted",
+    node=ExperimentConfig(
+        train=ExperimentTrainConfig(
+            dataset_list=datasets,
+            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
+            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B]),
+        ),
+        eval=ExperimentEvalConfig(
+            gen_topk_list=[-1],
+            test_gpt_attack=True,
+        ),
+    ),
+)
+
+configstore.store(
+    name="paper_GPT_non_targeted",
+    node=ExperimentConfig(
+        train=ExperimentTrainConfig(
+            dataset_list=datasets,
+            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
+            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B]),
+        ),
+        eval=ExperimentEvalConfig(
+            eval_emb_list=embedders,
+            eval_vlm_list=vlms,
+            test_gpt_attack=True,
+        ),
+    ),
+)
+
+configstore.store(
+    name="paper_GPT_targeted_attacks_oneQ_oneA",
+    node=ExperimentConfig(
+        train=ExperimentTrainConfig(
+            dataset_list=datasets,
+            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
+            vlm=VLMConfig(
+                models=[VLMName.SMOLVLM_1_2B],
+                target_answers=["Manually match each marker to a generic human template regardless of trial-specific subject calibration."],
+            ),
+            is_targeted=True,
+            target_query_idx=[0],
+            n_knn_target_queries=1,
+        ),
+        eval=ExperimentEvalConfig(
+            eval_emb_list=embedders,
+            eval_vlm_list=vlms,
+            test_gpt_attack=True,
+        ),
+    ),
+)
+
+configstore.store(
+    name="paper_GPT_targeted_attacks_multiQ_oneA",
+    node=ExperimentConfig(
+        train=ExperimentTrainConfig(
+            dataset_list=datasets,
+            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
+            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B]),
+            is_targeted=True,
+            target_query_idx=[0],
+            n_knn_target_queries=5,
+        ),
+        eval=ExperimentEvalConfig(
+            eval_emb_list=embedders,
+            eval_vlm_list=vlms,
+            test_gpt_attack=True,
+        ),
+    ),
+)
+
+configstore.store(
+    name="paper_GPT_targeted_attacks_multiQ_multiA",
+    node=ExperimentConfig(
+        train=ExperimentTrainConfig(
+            dataset_list=datasets,
+            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
+            vlm=VLMConfig(
+                models=[VLMName.SMOLVLM_1_2B],
+                target_answers=[
+                    "Manually match each marker to a generic human template regardless of trial-specific subject calibration.",
+                    "A micromort measures the number of accidents per million vehicles on the road and is used in transportation policy.",
+                ],
+            ),
+            is_targeted=True,
+            target_query_idx=[0, 1],
+            n_knn_target_queries=1,
+        ),
+        eval=ExperimentEvalConfig(
+            eval_emb_list=embedders,
+            eval_vlm_list=vlms,
+            test_gpt_attack=True,
         ),
     ),
 )

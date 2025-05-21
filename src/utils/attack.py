@@ -5,11 +5,12 @@ import torchvision.transforms.v2 as T
 
 from config.task import TaskConfig
 from wrappers.attack_mask import get_attack_mask
-from wrappers.cache import get_text_embedder, get_embedder
-from wrappers.embedding import EmbeddingModel, EmbedderName, COLPALI_LOSSES, get_loss_with_default
+from wrappers.cache import get_embedder, get_text_embedder
+from wrappers.embedding import COLPALI_LOSSES, EmbedderName, EmbeddingModel, get_loss_with_default
 from wrappers.judge import JudgeVLM
 from wrappers.text_embedding import TextEmbedderName
 from wrappers.vlm import VLM
+
 from .logger import logger
 from .scheduler import LearningRateScheduler
 from .utils import get_memory_consumption
@@ -56,7 +57,7 @@ def rag_attack(
 
     initial_image = raw_image.clone().float() if device == "cuda" else raw_image.clone()
     attack_mask = get_attack_mask(config.attack_mask, initial_image, config.image_size)
-    max_perturbation_pixels = max_perturbation*255
+    max_perturbation_pixels = max_perturbation * 255
     batch_size_per_iter = min(len(train_user_queries), max_batch_size_per_iter)
     n_iter = n_gradient_steps * gradient_acc_steps
 
@@ -103,7 +104,7 @@ def rag_attack(
     for i in range(n_iter):
         raw_image.requires_grad = True
 
-        loss_emb, loss_vlm, loss_jdg = torch.tensor([0.]).to(device), torch.tensor([0.]).to(device), torch.tensor([0.]).to(device)
+        loss_emb, loss_vlm, loss_jdg = torch.tensor([0.0]).to(device), torch.tensor([0.0]).to(device), torch.tensor([0.0]).to(device)
 
         samples_idx = sample_minibatch(
             n_population=len(train_user_queries),
@@ -135,7 +136,7 @@ def rag_attack(
                 out = vlm.forward(raw_image, full_text_vlm_prompt_batch, context_images, adv_indices, overwrite=True)
                 loss_vlm += vlm.compute_gen_loss(out, target_tokens_vlm_batch, positive_idx)
             if config.judge:
-                samples_jdg_idx = torch.randint(0, len(train_user_queries)*len(config.judge.metrics), (batch_size_per_iter,))
+                samples_jdg_idx = torch.randint(0, len(train_user_queries) * len(config.judge.metrics), (batch_size_per_iter,))
                 full_text_jdg_prompt_batch = [full_text_jdg_prompts[i] for i in samples_jdg_idx]
                 target_tokens_jdg_batch = [target_tokens_jdg[i] for i in samples_jdg_idx]
                 # judge loss function
@@ -143,7 +144,7 @@ def rag_attack(
                 loss_jdg = jdg.compute_gen_loss(out, target_tokens_jdg_batch)
 
         # update loss coefficients if we use the adaptive attack
-        if i==0 and is_adaptive and lambda_emb>0 and config.vlm:
+        if i == 0 and is_adaptive and lambda_emb > 0 and config.vlm:
             lambda_emb, lambda_vlm = adaptive_attack_coefficients(loss_emb, loss_vlm, lambda_constant)
 
         # total loss function
@@ -152,20 +153,22 @@ def rag_attack(
             total_loss += config.vlm.lambda_ * loss_vlm
         if config.judge:
             total_loss += config.judge.lambda_ * loss_jdg
-        if i==0 or ((i+1)/gradient_acc_steps)%print_every==0:
-            logger.info(f"Iter {(i//gradient_acc_steps)+1:4d}/{n_gradient_steps}, RAM usage -> {get_memory_consumption(device):.2f} GB, Losses -> Embedding: {loss_emb.item():.8f}, VLM: {loss_vlm.item():.8f}, Judge: {loss_jdg.item():.8f}, Total: {total_loss.item():.8f}")
+        if i == 0 or ((i + 1) / gradient_acc_steps) % print_every == 0:
+            logger.info(
+                f"Iter {(i // gradient_acc_steps) + 1:4d}/{n_gradient_steps}, RAM usage -> {get_memory_consumption(device):.2f} GB, Losses -> Embedding: {loss_emb.item():.8f}, VLM: {loss_vlm.item():.8f}, Judge: {loss_jdg.item():.8f}, Total: {total_loss.item():.8f}"
+            )
 
         # backpropagation
         grads += torch.autograd.grad(total_loss, raw_image)[0]
         # Applies perturbation mask
         grads *= attack_mask
 
-        if (i+1)%gradient_acc_steps == 0:
+        if (i + 1) % gradient_acc_steps == 0:
             # compute average gradient
             grads /= gradient_acc_steps
 
             # get learning rate from scheduler
-            lr = lr_scheduler.get_lr(i//gradient_acc_steps)
+            lr = lr_scheduler.get_lr(i // gradient_acc_steps)
 
             # optimization step
             with torch.no_grad():
@@ -185,16 +188,17 @@ def attack_step_pgd(
     initial_image: torch.Tensor,
 ):
     """
-    Implement the projected gradient descent (PGD) attack proposed by Madry et al. (2018) 
+    Implement the projected gradient descent (PGD) attack proposed by Madry et al. (2018)
     """
     # take step
     raw_image -= lr * torch.sign(grads)
     # clip according to attack budget
-    torch.clip(raw_image, min=initial_image-max_perturbation_pixels, max=initial_image+max_perturbation_pixels, out=raw_image)
+    torch.clip(raw_image, min=initial_image - max_perturbation_pixels, max=initial_image + max_perturbation_pixels, out=raw_image)
     # clip to make sure we stay within allowed RGB values
     torch.clip(raw_image, min=0, max=255, out=raw_image)
 
     return raw_image
+
 
 @torch.no_grad()
 def adaptive_attack_coefficients(loss_emb, loss_vlm, lambda_constant):
@@ -202,6 +206,7 @@ def adaptive_attack_coefficients(loss_emb, loss_vlm, lambda_constant):
     lambda_emb = lambda_constant * abs(loss_vlm) / abs(loss_emb)
 
     return lambda_emb, lambda_vlm
+
 
 def prepare_context_images(attack_images, mock_image_pil, batch_size_per_iter, gen_topk):
     """
@@ -211,17 +216,18 @@ def prepare_context_images(attack_images, mock_image_pil, batch_size_per_iter, g
         adv_indices: list[int] -> [batch_size]
     """
     context_images, adv_indices = [], []
-    
-    for  i in range(batch_size_per_iter):
-        n_samples = gen_topk-1
+
+    for i in range(batch_size_per_iter):
+        n_samples = gen_topk - 1
         adv_idx = random.randint(0, n_samples)
         sampled_images = random.sample(attack_images, k=n_samples)
         sampled_images.insert(adv_idx, mock_image_pil)
-        
+
         context_images.append(sampled_images)
         adv_indices.append(adv_idx)
 
     return context_images, adv_indices
+
 
 def sample_minibatch(n_population, batch_size, is_targeted: bool, target_idx: list[int], optimize_nontargeted_queries: bool):
     if not is_targeted:
@@ -232,17 +238,18 @@ def sample_minibatch(n_population, batch_size, is_targeted: bool, target_idx: li
         samples_neg = random.sample([i for i in range(n_population) if i not in target_idx], batch_size) if optimize_nontargeted_queries else []
         return random.sample(samples_pos + samples_neg, batch_size)
 
+
 def get_all_target_queries_and_answers(
-        is_targeted: bool,
-        target_query_idx: list[int],
-        target_answer_vlm: list[str] | None,
-        train_user_queries: list[str],
-        n_knn_target_queries: int,
-        ground_truth_answers: list[str],
-        attack_embedder_name: EmbedderName | TextEmbedderName,
-        emb_loss_type,
-        device,
-    ):
+    is_targeted: bool,
+    target_query_idx: list[int],
+    target_answer_vlm: list[str] | None,
+    train_user_queries: list[str],
+    n_knn_target_queries: int,
+    ground_truth_answers: list[str],
+    attack_embedder_name: EmbedderName | TextEmbedderName,
+    emb_loss_type,
+    device,
+):
     # if universal attack, all queries are targeted
     if not is_targeted:
         target_query_idx = [i for i in range(len(ground_truth_answers))]
@@ -255,13 +262,13 @@ def get_all_target_queries_and_answers(
 
     # extend target query indices and target answers to include nearest neighbours
     if (not is_targeted) or n_knn_target_queries == 1:
-       # only include one nearest neighbors (a.k.a. self)
-       extended_target_idx, extended_target_answers = target_query_idx, target_answer_vlm
+        # only include one nearest neighbors (a.k.a. self)
+        extended_target_idx, extended_target_answers = target_query_idx, target_answer_vlm
     else:
         similarity = get_embedding_similarity(train_user_queries, attack_embedder_name, emb_loss_type, device)
         extended_target_idx, extended_target_answers = [], []
         for i, q_idx in enumerate(target_query_idx):
-            topk_similar = similarity[q_idx,:].topk(n_knn_target_queries, sorted=True).indices
+            topk_similar = similarity[q_idx, :].topk(n_knn_target_queries, sorted=True).indices
             # remove duplicates
             topk_similar = [x for x in topk_similar if x not in extended_target_idx]
             extended_target_idx.extend(topk_similar)
@@ -273,6 +280,7 @@ def get_all_target_queries_and_answers(
         all_answers[idx] = answer
 
     return extended_target_idx, extended_target_answers, all_answers
+
 
 def get_embedding_similarity(train_user_queries: list[str], attack_embedder_name: EmbedderName | TextEmbedderName, emb_loss_type, device):
     if isinstance(attack_embedder_name, TextEmbedderName):

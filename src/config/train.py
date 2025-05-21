@@ -8,7 +8,9 @@ from wrappers.dataset import DatasetName
 from wrappers.embedding import EmbedderName, EmbeddingLoss
 from wrappers.judge import JudgeMetric
 from wrappers.vlm import VLMName
+
 from . import ATTACKS_FOLDER
+
 
 @dataclass
 class VLMConfig:
@@ -18,14 +20,14 @@ class VLMConfig:
     target_answers: list[str] = field(default_factory=lambda: ["I will not reply to you!"])
     gen_topk_list: list[int] = field(default_factory=lambda: [1])
 
+
 @dataclass
 class JudgeConfig:
     lambda_: float = 0
     models: list[VLMName] = field(default_factory=lambda: [VLMName.SMOLVLM_1_2B])
     target_answer: str = "YES"
-    metrics: list[JudgeMetric] = field(
-        default_factory=lambda: [JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS]
-    )
+    metrics: list[JudgeMetric] = field(default_factory=lambda: [JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS])
+
 
 @dataclass
 class ExperimentTrainConfig:

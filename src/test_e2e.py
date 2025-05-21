@@ -1,11 +1,10 @@
 import tempfile
-
 from dataclasses import replace
 from pathlib import Path
 
-from config.experiment import ExperimentConfig
-from attack_train import run as train_run
 from attack_eval import run as eval_run
+from attack_train import run as train_run
+from config.experiment import ExperimentConfig
 from experiments import load_config
 
 

@@ -11,14 +11,14 @@ from config.task import generate_task_configs
 from experiments import DEFAULT_EXPERIMENT
 from utils.attack import get_all_target_queries_and_answers
 from utils.defence import DefenceName, add_noise
-from utils.image_utils import load_adv_image, load_gpt_image, gpt_filename
+from utils.image_utils import gpt_filename, load_adv_image, load_gpt_image
 from utils.logger import logger
 from utils.utils import get_device
-from wrappers.cache import get_vlm, get_text_embedder, get_dataset, get_embedded_dataset, get_judge
+from wrappers.cache import get_dataset, get_embedded_dataset, get_judge, get_text_embedder, get_vlm
+from wrappers.embedded_dataset import make_safe_filename
 from wrappers.embedding import is_loss_compatible
 from wrappers.json_encoder import EnumEncoder
 from wrappers.vlm import VLMEvaluationMetric
-from wrappers.embedded_dataset import make_safe_filename
 
 
 def get_retrieval_saved_info(exp_config_eval: ExperimentEvalConfig, metric_dict_before, metric_dict_after):
@@ -48,8 +48,10 @@ def run(exp_config: ExperimentConfig):
     # first we just make sure that all required files are on disk, so that we don't waste time
     # this will raise an error if there are missing file(s)
     for task_config in task_configs:
-        if exp_config.eval.test_gpt_attack: _ = load_gpt_image(task_config)
-        else: _ = load_adv_image(task_config, exp_config.train)
+        if exp_config.eval.test_gpt_attack:
+            _ = load_gpt_image(task_config)
+        else:
+            _ = load_adv_image(task_config, exp_config.train)
 
     # load text embedding model in case we need it for evaluation
     if VLMEvaluationMetric.EMBED_ADV in exp_config.eval.gen_metric_list or VLMEvaluationMetric.EMBED_GT in exp_config.eval.gen_text_embedder:
@@ -60,10 +62,13 @@ def run(exp_config: ExperimentConfig):
 
     for i, task_config in enumerate(task_configs):
         logger.info(f"Eval {(i + 1):4d}/{n_evals}, task_config -> {pformat(task_config.to_dict(), indent=4)}\n{'=' * 20}")
-        
-        if exp_config.eval.test_gpt_attack: image_adv = load_gpt_image(task_config)
-        else: image_adv = load_adv_image(task_config, exp_config.train)
-        if task_config.defence == DefenceName.NOISE: image_adv = add_noise(image_adv, exp_config.eval.noise_defence_level)
+
+        if exp_config.eval.test_gpt_attack:
+            image_adv = load_gpt_image(task_config)
+        else:
+            image_adv = load_adv_image(task_config, exp_config.train)
+        if task_config.defence == DefenceName.NOISE:
+            image_adv = add_noise(image_adv, exp_config.eval.noise_defence_level)
 
         # update model names in case we test transferability
         if task_config.eval_emb_name:

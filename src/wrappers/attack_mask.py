@@ -5,14 +5,15 @@ import torch
 
 class AttackMask(Enum):
     # Mask = [% of X, % of Y, Starting X%, Starting Y%]
-    Full = [1,1,0,0]
-    FirstQuadrant = [0.5,0.5,0,0]
+    Full = [1, 1, 0, 0]
+    FirstQuadrant = [0.5, 0.5, 0, 0]
     SecondQuadrant = [0.5, 0.5, 0.5, 0]
     ThirdQuadrant = [0.5, 0.5, 0, 0.5]
     FourthQuadrant = [0.5, 0.5, 0.5, 0.5]
     Figure = [0.15, 0.40, 0.5273, 0.3125]
 
-def get_attack_mask(attack_mask:AttackMask, raw_image:torch.Tensor, image_size:list[int]):
+
+def get_attack_mask(attack_mask: AttackMask, raw_image: torch.Tensor, image_size: list[int]):
     if attack_mask is None:
         # If no mask is provided then perturb all pixels
         mask_tensor = torch.ones_like(raw_image)

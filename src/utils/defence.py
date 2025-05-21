@@ -1,5 +1,6 @@
-from strenum import StrEnum
 import torch
+from strenum import StrEnum
+
 
 class DefenceName(StrEnum):
     NONE = ""

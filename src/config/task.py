@@ -1,19 +1,21 @@
 import hashlib
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
+from itertools import product
 from pathlib import Path
 from typing import Iterator
-from itertools import product
 
 from experiments.configstore import get_config_name
-from utils.logger import logger
 from utils.defence import DefenceName
+from utils.logger import logger
 from utils.scheduler import LearningRateConfig
 from wrappers.attack_mask import AttackMask
 from wrappers.dataset import DatasetName
-from wrappers.embedding import EmbedderName, EmbeddingLoss, COLPALI_MODELS, is_loss_compatible, get_loss_with_default
+from wrappers.embedding import COLPALI_MODELS, EmbedderName, EmbeddingLoss, get_loss_with_default, is_loss_compatible
 from wrappers.judge import JudgeMetric
 from wrappers.vlm import VLMName
+
 from .experiment import ExperimentConfig
+
 
 @dataclass
 class TaskVLMConfig:
@@ -139,6 +141,7 @@ def get_defence_file_suffix(defence: DefenceName) -> str:
         return ""
     return f"_{defence.value}"
 
+
 def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = False) -> list[TaskConfig]:
     if exp_config.train.is_targeted and exp_config.train.vlm is None:
         raise ValueError("Cannot run targeted experiment without specifying VLMs.")
@@ -164,7 +167,7 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
             VLMName | None,
             DefenceName,
         ]
-    ] = product(# type: ignore
+    ] = product(  # type: ignore
         exp_config.train.dataset_list,
         exp_config.train.embedder_list,
         exp_config.train.vlm.models if exp_config.train.vlm else [None],
@@ -201,13 +204,14 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
             defence,
         ) = params
 
-
         if exp_config.train.vlm and len(exp_config.train.vlm.target_answers) > 1 and not exp_config.train.is_targeted:
             raise ValueError("Multiple target answers supported only for targeted attacks.")
 
         if isinstance(model_name_embs, list):
             if include_eval and not eval_emb_name:
-                raise ValueError("If trained with multiple embedders, evaluation config must specify a single embedder to test transferability")
+                raise ValueError(
+                    "If trained with multiple embedders, evaluation config must specify a single embedder to test transferability"
+                )
             if exp_config.train.is_targeted and exp_config.train.n_knn_target_queries > 1:
                 raise ValueError("Multi-embedder tasks do not k-nearest neighbour targeted attacks.")
             if emb_train_loss_type != EmbeddingLoss.DEFAULT:
@@ -229,17 +233,29 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
             raise ValueError(
                 f"VLM target answers array has incompatible length ({len(exp_config.train.vlm.target_answers)}) with target queries ({len(exp_config.train.target_query_idx)})"
             )
+        vlm_config = None
+        if exp_config.train.vlm:
+            vlm_config = TaskVLMConfig(
+                models=model_name_vlms,
+                target_answers=exp_config.train.vlm.target_answers,
+                lambda_=exp_config.train.vlm.lambda_,
+                gen_topk=gen_topk,
+            )
+
+        judge_config = None
+        if exp_config.train.judge:
+            judge_config = TaskJudgeConfig(
+                model_name=model_name_jdg,
+                lambda_=exp_config.train.judge.lambda_,
+                target_answer=exp_config.train.judge.target_answer,
+                metrics=exp_config.train.judge.metrics,
+            )
 
         attack_configs.append(
             TaskConfig(
                 ds_name=ds_name,
                 model_name_embs=model_name_embs,
-                vlm=TaskVLMConfig(
-                    models=model_name_vlms,
-                    target_answers=exp_config.train.vlm.target_answers,
-                    lambda_=exp_config.train.vlm.lambda_,
-                    gen_topk=gen_topk,
-                ) if exp_config.train.vlm else None,
+                vlm=vlm_config,
                 chosen_index=chosen_index,
                 max_perturbation=max_perturbation,
                 n_gradient_steps=exp_config.train.n_gradient_steps,
@@ -255,12 +271,7 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
                 eval_jdg_name=eval_jdg_name,
                 colpali_only_images=exp_config.train.colpali_only_images,
                 kb_compromised_fraction=exp_config.train.kb_compromised_fraction,
-                judge=TaskJudgeConfig(
-                    model_name=model_name_jdg,
-                    lambda_=exp_config.train.judge.lambda_,
-                    target_answer=exp_config.train.judge.target_answer,
-                    metrics=exp_config.train.judge.metrics,
-                ) if exp_config.train.judge else None,
+                judge=judge_config,
                 attack_mask=attack_mask,
                 image_size=exp_config.train.image_size,
                 target_query_idx=exp_config.train.target_query_idx,

@@ -1,24 +1,26 @@
 import json
 from collections import defaultdict
-from strenum import StrEnum
-import matplotlib.pyplot as plt
 
-from config.task import generate_task_configs, TaskConfig
+import matplotlib.pyplot as plt
+from strenum import StrEnum
+
 from config.experiment import ExperimentConfig
+from config.task import TaskConfig, generate_task_configs
 from utils.image_utils import gpt_filename
 from wrappers.embedded_dataset import make_safe_filename
 from wrappers.embedding import EmbedderName, is_loss_compatible
-from wrappers.vlm import VLMName
+from wrappers.judge import JudgeMetric
+from wrappers.vlm import VLMEvaluationMetric, VLMName
 
 
 class Metric(StrEnum):
     RETRIEVAL_RECALL_BEFORE = "Recall-B"
     RETRIEVAL_RECALL_AFTER = "Recall-A"
     RETRIEVAL_ASR_TRAIN = "ASR-R (train)"
-    RETRIEVAL_ASR_TEST =  "ASR-R (test)"
-    RETRIEVAL_ASR_TARGETED =  "ASR-R targeted"
-    RETRIEVAL_FPR_TARGETED_TRAIN =  "FPR-R targeted (train)"
-    RETRIEVAL_FPR_TARGETED_TEST =  "FPR-R targeted (test)"
+    RETRIEVAL_ASR_TEST = "ASR-R (test)"
+    RETRIEVAL_ASR_TARGETED = "ASR-R targeted"
+    RETRIEVAL_FPR_TARGETED_TRAIN = "FPR-R targeted (train)"
+    RETRIEVAL_FPR_TARGETED_TEST = "FPR-R targeted (test)"
     GENERATION_ASR_EXACT_TRAIN = "ASR-G-HARD (train)"
     GENERATION_ASR_EMBED_TRAIN = "SIM-G-ADV (train)"
     GENERATION_ASR_EXACT_TEST = "ASR-G-HARD (test)"
@@ -37,8 +39,8 @@ class Metric(StrEnum):
     JUDGE_IMAGE_FAITH_TEST = "Judge Image Faithfulness (test)"
     JUDGE_ANS_REL_TRAIN = "Judge Answer Relevancy (train)"
     JUDGE_ANS_REL_TEST = "Judge Answer Relevancy (test)"
-    
-    
+
+
 class PlotFilter:
     # condition lambdas (useful for selecting task configs from the tabulate object)
     CONDITION_SAME_MODELS = lambda row: row["eval vlm"] == row["vlm"] and row["eval emb"] == row["embedder"]
@@ -68,7 +70,7 @@ class PlotFilter:
     ]
 
     ALL_METRICS_TARGETED = [
-        Metric.RETRIEVAL_ASR_TARGETED ,
+        Metric.RETRIEVAL_ASR_TARGETED,
         # Metric.RETRIEVAL_FPR_TARGETED_TRAIN,
         Metric.RETRIEVAL_FPR_TARGETED_TEST,
         # Metric.GENERATION_ASR_EXACT_TARGETED_TRAIN,
@@ -83,7 +85,7 @@ class PlotFilter:
         Metric.RETRIEVAL_ASR_TEST,
     ]
 
-    METRICS_TEST_JUDGE = list( set(METRICS_JUDGE) & set(METRICS_TEST))
+    METRICS_TEST_JUDGE = list(set(METRICS_JUDGE) & set(METRICS_TEST))
 
     ALL_METRICS_UNTARGETED = METRICS_TEST + METRICS_RECALL
 
@@ -100,11 +102,12 @@ class PlotFilter:
 
 
 def strip_hf_org(model_name):
-    if isinstance(model_name, str): return model_name.split("/")[-1]
-    if isinstance(model_name, list): 
+    if isinstance(model_name, str):
+        return model_name.split("/")[-1]
+    if isinstance(model_name, list):
         if isinstance(model_name[0], str):
             return [name.split("/")[-1] for name in model_name]
-        if isinstance(model_name[0], tuple): 
+        if isinstance(model_name[0], tuple):
             return [" , ".join([emb.split("/")[-1], vlm.split("/")[-1]]) for (emb, vlm) in model_name]
     raise NotImplementedError(model_name)
 
@@ -119,7 +122,6 @@ MODEL_NICKNAME_DICT = {
     EmbedderName.SIGLIP2_LARGE_PATCH16: "SigLIP-L",
     EmbedderName.SIGLIP2_BASE_PATCH16: "SigLIP-B",
     EmbedderName.QWEN2_GME_2B: "GME-Qwen2-VL-2B",
-
     VLMName.SMOLVLM_1_256M: "SmolVLM-256M",
     VLMName.SMOLVLM_1_500M: "SmolVLM-500M",
     VLMName.SMOLVLM_1_2B: "SmolVLM",
@@ -127,21 +129,32 @@ MODEL_NICKNAME_DICT = {
     VLMName.INTERNVL_3_2B: "InternVL3-2B",
 }
 
+
 def shorten_model_name(model_name):
-    if isinstance(model_name, str): return shorten_model_name_str(model_name)
+    if isinstance(model_name, str):
+        return shorten_model_name_str(model_name)
     if isinstance(model_name, list):
         if len(model_name) == 1:
             return shorten_model_name_str(model_name[0])
         if isinstance(model_name[0], str):
             return [shorten_model_name_str(name) for name in model_name]
-        if isinstance(model_name[0], tuple): 
+        if isinstance(model_name[0], tuple):
             return [" , ".join([shorten_model_name_str(emb), shorten_model_name_str(vlm)]) for (emb, vlm) in model_name]
     raise NotImplementedError(model_name)
+
 
 def shorten_model_name_str(model_name: str):
     return MODEL_NICKNAME_DICT.get(model_name, -1) if MODEL_NICKNAME_DICT.get(model_name, -1) != -1 else model_name
 
-def get_metrics(exp_config: ExperimentConfig, task_config: TaskConfig, metrics_to_show: list[Metric], ret_topk_idx: int|None = None, gen_topk_idx: int|None = None, loss_idx: int|None = None):
+
+def get_metrics(
+    exp_config: ExperimentConfig,
+    task_config: TaskConfig,
+    metrics_to_show: list[Metric],
+    ret_topk_idx: int | None = None,
+    gen_topk_idx: int | None = None,
+    loss_idx: int | None = None,
+):
     if task_config.eval_emb_name:
         model_name_emb = task_config.eval_emb_name
     else:
@@ -162,10 +175,10 @@ def get_metrics(exp_config: ExperimentConfig, task_config: TaskConfig, metrics_t
 
     emb_test_loss_type_list_compatible = [loss for loss in exp_config.eval.emb_test_loss_type_list if is_loss_compatible(model_name_emb, loss)]
     if loss_idx is not None:
-        emb_test_loss_type_list_compatible = emb_test_loss_type_list_compatible[loss_idx:loss_idx+1]
+        emb_test_loss_type_list_compatible = emb_test_loss_type_list_compatible[loss_idx : loss_idx + 1]
 
     if ret_topk_idx is not None:
-        ret_topks = exp_config.eval.topk_list[ret_topk_idx:ret_topk_idx+1]
+        ret_topks = exp_config.eval.topk_list[ret_topk_idx : ret_topk_idx + 1]
     else:
         ret_topks = exp_config.eval.topk_list
     for loss in emb_test_loss_type_list_compatible:
@@ -183,36 +196,36 @@ def get_metrics(exp_config: ExperimentConfig, task_config: TaskConfig, metrics_t
                 metrics_to_output[f"{Metric.RETRIEVAL_FPR_TARGETED_TEST.value}{loss_tag}@{ret_topk}"] = metric_dict["retrieval"][key]["fpr_targeted_test"]
 
     if gen_topk_idx is not None:
-        gen_topks = exp_config.eval.gen_topk_list[gen_topk_idx:gen_topk_idx+1]
+        gen_topks = exp_config.eval.gen_topk_list[gen_topk_idx : gen_topk_idx + 1]
     else:
         gen_topks = exp_config.eval.gen_topk_list
     for gen_topk in gen_topks:
         key = f"gen_topk_{gen_topk}"
         if metric_dict["generation"]:
-            metrics_to_output[f"{Metric.GENERATION_ASR_EXACT_TRAIN.value}@{gen_topk}"] = metric_dict["generation"]["train"][key]["exact-asr"]["asr_universal"]
-            metrics_to_output[f"{Metric.GENERATION_ASR_EMBED_TRAIN.value}@{gen_topk}"] = metric_dict["generation"]["train"][key]["embed-adversarial"]["asr_universal"]
-            metrics_to_output[f"{Metric.GENERATION_ACC_EMBED_GT_TRAIN.value}@{gen_topk}"] = metric_dict["generation"]["train"][key]["embed-ground-truth"]["accuracy"]
-            metrics_to_output[f"{Metric.GENERATION_ASR_EXACT_TEST.value}@{gen_topk}"] = metric_dict["generation"]["test"][key]["exact-asr"]["asr_universal"]
-            metrics_to_output[f"{Metric.GENERATION_ASR_EMBED_TEST.value}@{gen_topk}"] = metric_dict["generation"]["test"][key]["embed-adversarial"]["asr_universal"]
-            metrics_to_output[f"{Metric.GENERATION_ACC_EMBED_GT_TEST.value}@{gen_topk}"] = metric_dict["generation"]["test"][key]["embed-ground-truth"]["accuracy"]
+            metrics_to_output[f"{Metric.GENERATION_ASR_EXACT_TRAIN.value}@{gen_topk}"] = metric_dict["generation"]["train"][key][VLMEvaluationMetric.ASR_EXACT]["asr_universal"]
+            metrics_to_output[f"{Metric.GENERATION_ASR_EMBED_TRAIN.value}@{gen_topk}"] = metric_dict["generation"]["train"][key][VLMEvaluationMetric.EMBED_ADV]["asr_universal"]
+            metrics_to_output[f"{Metric.GENERATION_ACC_EMBED_GT_TRAIN.value}@{gen_topk}"] = metric_dict["generation"]["train"][key][VLMEvaluationMetric.EMBED_GT]["accuracy"]
+            metrics_to_output[f"{Metric.GENERATION_ASR_EXACT_TEST.value}@{gen_topk}"] = metric_dict["generation"]["test"][key][VLMEvaluationMetric.ASR_EXACT]["asr_universal"]
+            metrics_to_output[f"{Metric.GENERATION_ASR_EMBED_TEST.value}@{gen_topk}"] = metric_dict["generation"]["test"][key][VLMEvaluationMetric.EMBED_ADV]["asr_universal"]
+            metrics_to_output[f"{Metric.GENERATION_ACC_EMBED_GT_TEST.value}@{gen_topk}"] = metric_dict["generation"]["test"][key][VLMEvaluationMetric.EMBED_GT]["accuracy"]
             if task_config.is_targeted:
-                metrics_to_output[f"{Metric.GENERATION_ASR_EXACT_TARGETED_TRAIN.value}@{gen_topk}"] = metric_dict["generation"]["train"][key]["exact-asr"]["asr_targeted"]
-                metrics_to_output[f"{Metric.GENERATION_FPR_TARGETED_TRAIN.value}@{gen_topk}"] = metric_dict["generation"]["train"][key]["exact-asr"]["fpr_targeted"]
-                metrics_to_output[f"{Metric.GENERATION_ASR_EMBED_TARGETED_TRAIN.value}@{gen_topk}"] = metric_dict["generation"]["train"][key]["embed-adversarial"]["asr_targeted"]
-                metrics_to_output[f"{Metric.GENERATION_FPR_EMBED_TARGETED_TRAIN.value}@{gen_topk}"] = metric_dict["generation"]["train"][key]["embed-adversarial"]["fpr_targeted"]
-                metrics_to_output[f"{Metric.GENERATION_FPR_TARGETED_TEST.value}@{gen_topk}"] = metric_dict["generation"]["test"][key]["exact-asr"]["fpr_targeted"]
-                metrics_to_output[f"{Metric.GENERATION_FPR_EMBED_TARGETED_TEST.value}@{gen_topk}"] = metric_dict["generation"]["test"][key]["embed-adversarial"]["fpr_targeted"]
+                metrics_to_output[f"{Metric.GENERATION_ASR_EXACT_TARGETED_TRAIN.value}@{gen_topk}"] = metric_dict["generation"]["train"][key][VLMEvaluationMetric.ASR_EXACT]["asr_targeted"]
+                metrics_to_output[f"{Metric.GENERATION_FPR_TARGETED_TRAIN.value}@{gen_topk}"] = metric_dict["generation"]["train"][key][VLMEvaluationMetric.ASR_EXACT]["fpr_targeted"]
+                metrics_to_output[f"{Metric.GENERATION_ASR_EMBED_TARGETED_TRAIN.value}@{gen_topk}"] = metric_dict["generation"]["train"][key][VLMEvaluationMetric.EMBED_ADV]["asr_targeted"]
+                metrics_to_output[f"{Metric.GENERATION_FPR_EMBED_TARGETED_TRAIN.value}@{gen_topk}"] = metric_dict["generation"]["train"][key][VLMEvaluationMetric.EMBED_ADV]["fpr_targeted"]
+                metrics_to_output[f"{Metric.GENERATION_FPR_TARGETED_TEST.value}@{gen_topk}"] = metric_dict["generation"]["test"][key][VLMEvaluationMetric.ASR_EXACT]["fpr_targeted"]
+                metrics_to_output[f"{Metric.GENERATION_FPR_EMBED_TARGETED_TEST.value}@{gen_topk}"] = metric_dict["generation"]["test"][key][VLMEvaluationMetric.EMBED_ADV]["fpr_targeted"]
 
         if metric_dict["judge"]:
-            metrics_to_output[f"{Metric.JUDGE_IMAGE_CONTXT_REL_TRAIN.value}@{gen_topk}"] = metric_dict["judge"]["train"][key]["image_context_relevancy"]["asr_universal"]
-            metrics_to_output[f"{Metric.JUDGE_IMAGE_CONTXT_REL_TEST.value}@{gen_topk}"] = metric_dict["judge"]["test"][key]["image_context_relevancy"]["asr_universal"]
-            metrics_to_output[f"{Metric.JUDGE_IMAGE_FAITH_TRAIN.value}@{gen_topk}"] = metric_dict["judge"]["train"][key]["image_faithfulness"]["asr_universal"]
-            metrics_to_output[f"{Metric.JUDGE_IMAGE_FAITH_TEST.value}@{gen_topk}"] = metric_dict["judge"]["test"][key]["image_faithfulness"]["asr_universal"]
-            metrics_to_output[f"{Metric.JUDGE_ANS_REL_TRAIN.value}@{gen_topk}"] = metric_dict["judge"]["train"][key]["answer_relevancy"]["asr_universal"]
-            metrics_to_output[f"{Metric.JUDGE_ANS_REL_TEST.value}@{gen_topk}"] = metric_dict["judge"]["test"][key]["answer_relevancy"]["asr_universal"]
+            metrics_to_output[f"{Metric.JUDGE_IMAGE_CONTXT_REL_TRAIN.value}@{gen_topk}"] = metric_dict["judge"]["train"][key][JudgeMetric.IMAGE_CONTEXT_RELEVANCY]["asr_universal"]
+            metrics_to_output[f"{Metric.JUDGE_IMAGE_CONTXT_REL_TEST.value}@{gen_topk}"] = metric_dict["judge"]["test"][key][JudgeMetric.IMAGE_CONTEXT_RELEVANCY]["asr_universal"]
+            metrics_to_output[f"{Metric.JUDGE_IMAGE_FAITH_TRAIN.value}@{gen_topk}"] = metric_dict["judge"]["train"][key][JudgeMetric.IMAGE_FAITHFULNESS]["asr_universal"]
+            metrics_to_output[f"{Metric.JUDGE_IMAGE_FAITH_TEST.value}@{gen_topk}"] = metric_dict["judge"]["test"][key][JudgeMetric.IMAGE_FAITHFULNESS]["asr_universal"]
+            metrics_to_output[f"{Metric.JUDGE_ANS_REL_TRAIN.value}@{gen_topk}"] = metric_dict["judge"]["train"][key][JudgeMetric.ANSWER_RELEVANCY]["asr_universal"]
+            metrics_to_output[f"{Metric.JUDGE_ANS_REL_TEST.value}@{gen_topk}"] = metric_dict["judge"]["test"][key][JudgeMetric.ANSWER_RELEVANCY]["asr_universal"]
 
     metric_titles = [m.value for m in metrics_to_show]
-    metrics_filtered = {k: v for (k,v) in metrics_to_output.items() if k.split("@")[0].split("+")[0] in metric_titles}
+    metrics_filtered = {k: v for (k, v) in metrics_to_output.items() if k.split("@")[0].split("+")[0] in metric_titles}
     return metrics_filtered, metric_titles
 
 
@@ -237,24 +250,25 @@ def plot_metrics_vs_perturbation(exp_config: ExperimentConfig, metrics_to_show: 
             except KeyError:
                 metric = metrics[f"{metric_name.value}@1"]
             label = f"{shorten_model_name(task_config.model_name_embs)} + {shorten_model_name(task_config.vlm.models) if task_config.vlm else ''}"
-            plot_dict_x[i][label].append(task_config.max_perturbation*255)
+            plot_dict_x[i][label].append(task_config.max_perturbation * 255)
             plot_dict_y[i][label].append(metric)
     markers = ["o", "v", "s", "x", "+", "^"]
     n_plots = len(plot_dict_x[0].keys())
     n_rows = 2
-    n_cols = n_plots//n_rows
-    fig, ax = plt.subplots(nrows=n_rows,ncols=n_cols, figsize=(10,5), sharex=True, sharey=True)
+    n_cols = n_plots // n_rows
+    fig, ax = plt.subplots(nrows=n_rows, ncols=n_cols, figsize=(10, 5), sharex=True, sharey=True)
     for k, label in enumerate(plot_dict_x[0].keys()):
+        axis = ax[k % n_rows][k // n_rows]
         for i in range(len(metrics_to_show)):
-            ax[k % n_rows][k//n_rows].plot(plot_dict_x[i][label], plot_dict_y[i][label], label=titles[i], marker=markers[i])
-            ax[k % n_rows][k//n_rows].set_xscale("log")
-        ax[k % n_rows][k//n_rows].grid(visible=True)
-        ax[k % n_rows][k//n_rows].set_xticks(plot_dict_x[0][label], labels=plot_dict_x[0][label])
-        ax[k % n_rows][k//n_rows].set_xlim([0.9,40])
-        ax[k % n_rows][k//n_rows].set_ylim([-0.05,1.05])
-        ax[k % n_rows][k//n_rows].set_title(label)
+            axis.plot(plot_dict_x[i][label], plot_dict_y[i][label], label=titles[i], marker=markers[i])
+            axis.set_xscale("log")
+        axis.grid(visible=True)
+        axis.set_xticks(plot_dict_x[0][label], labels=plot_dict_x[0][label])
+        axis.set_xlim([0.9, 40])
+        axis.set_ylim([-0.05, 1.05])
+        axis.set_title(label)
     handles, labels = ax[0][0].get_legend_handles_labels()
-    fig.legend(handles, labels, bbox_to_anchor = (1.25, 0.6), loc='center right')
+    fig.legend(handles, labels, bbox_to_anchor=(1.25, 0.6), loc="center right")
     fig.supxlabel("Maximum Allowed Perturbation (/255)")
     fig.supylabel("Attack Success")
     fig.tight_layout()

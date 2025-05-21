@@ -6,7 +6,8 @@ from utils.defence import DefenceName
 from wrappers.embedding import EmbedderName, EmbeddingLoss
 from wrappers.judge import JudgeMetric
 from wrappers.text_embedding import TextEmbedderName
-from wrappers.vlm import VLMName, VLMEvaluationMetric
+from wrappers.vlm import VLMEvaluationMetric, VLMName
+
 from . import RESULTS_FOLDER
 
 
@@ -16,7 +17,11 @@ class ExperimentEvalConfig:
     emb_test_loss_type_list: list[EmbeddingLoss] = field(default_factory=lambda: [EmbeddingLoss.COS, EmbeddingLoss.MAXSIM])
     topk_list: list[int] = field(default_factory=lambda: [1, 5])
     gen_metric_list: list[str] = field(
-        default_factory=lambda: [VLMEvaluationMetric.ASR_EXACT, VLMEvaluationMetric.EMBED_ADV, VLMEvaluationMetric.EMBED_GT]
+        default_factory=lambda: [
+            VLMEvaluationMetric.ASR_EXACT,
+            VLMEvaluationMetric.EMBED_ADV,
+            VLMEvaluationMetric.EMBED_GT,
+        ]
     )
     gen_text_embedder: TextEmbedderName = TextEmbedderName.JINA_TEXT_V3
     gen_batch_size: int = 4

@@ -11,7 +11,6 @@ from wrappers.embedding import EmbedderName
 from wrappers.judge import JudgeMetric
 from wrappers.vlm import VLMName
 
-
 configstore = ConfigStore.instance()
 
 """
@@ -83,7 +82,7 @@ configstore.store(
         train=ExperimentTrainConfig(
             embedder_list=[EmbedderName.CLIP_BASE_PATCH16],
             vlm=VLMConfig(
-                models=[[VLMName.SMOLVLM_1_256M, VLMName.INTERNVL_3_1B ], VLMName.SMOLVLM_1_256M, VLMName.INTERNVL_3_1B],
+                models=[[VLMName.SMOLVLM_1_256M, VLMName.INTERNVL_3_1B], VLMName.SMOLVLM_1_256M, VLMName.INTERNVL_3_1B],
             ),
         ),
         eval=ExperimentEvalConfig(
@@ -116,4 +115,3 @@ configstore.store(
         ),
     ),
 )
-

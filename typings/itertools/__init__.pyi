@@ -1,7 +1,16 @@
+"""
+Copied from https://github.com/python/typeshed/blob/30b16c168d428f2690473e8d317c5eb240e7000e/stdlib/itertools.pyi.
+
+Modified to allow more arguments for itertools.product, which we use in task generation.
+
+See https://github.com/python/typeshed/pull/13492. Can be removed if/when issue is fixed.
+"""
+
 import sys
-from _typeshed import MaybeNone
 from collections.abc import Callable, Iterable, Iterator
 from typing import Any, Generic, Literal, SupportsComplex, SupportsFloat, SupportsIndex, SupportsInt, TypeVar, overload
+
+from _typeshed import MaybeNone
 from typing_extensions import Self, TypeAlias
 
 if sys.version_info >= (3, 9):
@@ -131,9 +140,7 @@ class zip_longest(Generic[_T_co]):
     # is longer.
     def __new__(cls, iter1: Iterable[_T1], iter2: Iterable[_T2], /) -> zip_longest[tuple[_T1 | MaybeNone, _T2 | MaybeNone]]: ...
     @overload
-    def __new__(
-        cls, iter1: Iterable[_T1], iter2: Iterable[_T2], /, *, fillvalue: _T
-    ) -> zip_longest[tuple[_T1 | _T, _T2 | _T]]: ...
+    def __new__(cls, iter1: Iterable[_T1], iter2: Iterable[_T2], /, *, fillvalue: _T) -> zip_longest[tuple[_T1 | _T, _T2 | _T]]: ...
     # three iterables
     @overload
     def __new__(
@@ -197,8 +204,6 @@ class zip_longest(Generic[_T_co]):
     ) -> zip_longest[tuple[_T, ...]]: ...
     def __iter__(self) -> Self: ...
     def __next__(self) -> _T_co: ...
-
-
 
 class product(Generic[_T_co]):
     @overload
@@ -374,7 +379,6 @@ class product(Generic[_T_co]):
     def __new__(cls, *iterables: Iterable[_T1], repeat: int = 1) -> product[tuple[_T1, ...]]: ...
     def __iter__(self) -> Self: ...
     def __next__(self) -> _T_co: ...
-
 
 class permutations(Generic[_T_co]):
     @overload

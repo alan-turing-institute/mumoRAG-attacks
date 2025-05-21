@@ -4,7 +4,7 @@ import torch
 import torch.nn.functional as F
 import torchvision.transforms.v2 as T
 from strenum import StrEnum
-from transformers import AutoModel, AutoModelForImageTextToText, AutoTokenizer, AutoProcessor, BitsAndBytesConfig
+from transformers import AutoModel, AutoModelForImageTextToText, AutoProcessor, AutoTokenizer, BitsAndBytesConfig
 
 from utils.image_utils import process_image
 
@@ -35,7 +35,7 @@ CLIP_LIKE_MODELS = [
 COLSMOL_MODELS = [
     EmbedderName.COLSMOL_500M,
     EmbedderName.COLSMOL_256M,
-    EmbedderName.SMOLVLM_256M  # NOTE: we can use any VLM as if it was a colpali model
+    EmbedderName.SMOLVLM_256M,  # NOTE: we can use any VLM as if it was a colpali model
 ]
 
 COLPALI_MODELS = COLSMOL_MODELS + [
@@ -59,10 +59,7 @@ COLPALI_LOSSES = [
     EmbeddingLoss.SOFTMAXSIM,
     EmbeddingLoss.COS_AVGEMB,
 ]
-NON_COLPALI_LOSSES = [
-    EmbeddingLoss.COS,
-    EmbeddingLoss.MSE
-]
+NON_COLPALI_LOSSES = [EmbeddingLoss.COS, EmbeddingLoss.MSE]
 
 QWEN_GME_MODELS = [
     EmbedderName.QWEN2_GME_2B,
@@ -102,44 +99,35 @@ class EmbeddingModel:
         quantization_config = BitsAndBytesConfig(load_in_4bit=True) if quantize else None
 
         if model_name == EmbedderName.JINA_CLIP_2:
-            self.model = AutoModel.from_pretrained(
-                model_name,
-                torch_dtype=torch.float32 if device == "mps" else "auto",
-                trust_remote_code=True).to(device)
+            self.model = AutoModel.from_pretrained(model_name, torch_dtype=torch.float32 if device == "mps" else "auto", trust_remote_code=True).to(device)
             self.processor = None
             self.tokenizer = None
 
         elif model_name in CLIP_LIKE_MODELS:
-            self.model = AutoModel.from_pretrained(
-                model_name,
-                torch_dtype=torch.float32 if device == "mps" else "auto").to(device)
+            self.model = AutoModel.from_pretrained(model_name, torch_dtype=torch.float32 if device == "mps" else "auto").to(device)
             self.processor = AutoProcessor.from_pretrained(model_name, use_fast=True)
             self.tokenizer = AutoTokenizer.from_pretrained(model_name)
 
         elif model_name == EmbedderName.E5_V:
-            self.model = AutoModelForImageTextToText.from_pretrained(model_name,
-                                                                     quantization_config=quantization_config).to(device)
+            self.model = AutoModelForImageTextToText.from_pretrained(model_name, quantization_config=quantization_config).to(device)
             self.processor = AutoProcessor.from_pretrained(model_name)
             self.tokenizer = None
             # reduce number of image patches
             self.processor.patch_size = 16
             self.processor.image_processor.image_grid_pinpoints = [[336, 336]]
-            self.processor.image_processor.size['shortest_edge'] = 336
+            self.processor.image_processor.size["shortest_edge"] = 336
 
         elif model_name == EmbedderName.COLPALI:
             from colpali_engine.models import ColPali, ColPaliProcessor
 
-            self.model = ColPali.from_pretrained(
-                model_name,
-                torch_dtype=torch.float32 if device == "mps" else torch.bfloat16).to(device)
+            self.model = ColPali.from_pretrained(model_name, torch_dtype=torch.float32 if device == "mps" else torch.bfloat16).to(device)
             self.processor = ColPaliProcessor.from_pretrained(model_name)
             self.tokenizer = None
 
         elif model_name in COLSMOL_MODELS:
             from colpali_engine.models import ColIdefics3, ColIdefics3Processor
-            self.model = ColIdefics3.from_pretrained(
-                model_name,
-                torch_dtype=torch.float32 if device == "mps" else torch.bfloat16).to(device).eval()
+
+            self.model = ColIdefics3.from_pretrained(model_name, torch_dtype=torch.float32 if device == "mps" else torch.bfloat16).to(device).eval()
             self.tokenizer = AutoTokenizer.from_pretrained(model_name)
             self.processor = ColIdefics3Processor.from_pretrained(model_name)
             self.processor.image_processor.do_image_splitting = False
@@ -162,7 +150,8 @@ class EmbeddingModel:
     @torch.no_grad()
     def compare_embeddings(self, image, user_query, overwrite=False, loss_type: EmbeddingLoss = EmbeddingLoss.MSE):
         self.model.eval()
-        if type(user_query) == str: user_query = [user_query]
+        if type(user_query) == str:
+            user_query = [user_query]
 
         user_query_embedding = self.compute_txt_embedding(user_query)
         image_embedding = self.compute_img_embedding(image, image, overwrite)
@@ -170,24 +159,20 @@ class EmbeddingModel:
         return self.compute_embedding_loss(image_embedding, user_query_embedding, loss_type).item()
 
     def compute_txt_embedding(self, user_query):
-
         if self.name == EmbedderName.JINA_CLIP_2:
             return torch.tensor(self.model.encode_text(user_query)).to(self.device).type(self.model.dtype)
 
         if self.name in CLIP_LIKE_MODELS:
-            user_query_embedding = self.model.get_text_features(
-                **self.tokenizer(user_query, return_tensors="pt", truncation=True, padding=True).to(
-                    self.device))  # it had [0].detach()
+            user_query_embedding = self.model.get_text_features(**self.tokenizer(user_query, return_tensors="pt", truncation=True, padding=True).to(self.device))  # it had [0].detach()
             return user_query_embedding
 
         if self.name == EmbedderName.E5_V:
-            if isinstance(user_query, str): user_query = [user_query]
-            llama3_template = '<|start_header_id|>user<|end_header_id|>\n\n{}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n \n'
-            text_prompt = llama3_template.format('<sent>\nSummary above sentence in one word: ')
-            text_inputs = self.processor([text_prompt.replace('<sent>', text) for text in user_query],
-                                         return_tensors="pt", padding=True).to(self.device)
-            user_query_embedding = self.model(**text_inputs, output_hidden_states=True, return_dict=True).hidden_states[
-                                       -1][:, -1, :]
+            if isinstance(user_query, str):
+                user_query = [user_query]
+            llama3_template = "<|start_header_id|>user<|end_header_id|>\n\n{}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n \n"
+            text_prompt = llama3_template.format("<sent>\nSummary above sentence in one word: ")
+            text_inputs = self.processor([text_prompt.replace("<sent>", text) for text in user_query], return_tensors="pt", padding=True).to(self.device)
+            user_query_embedding = self.model(**text_inputs, output_hidden_states=True, return_dict=True).hidden_states[-1][:, -1, :]
             user_query_embedding = F.normalize(user_query_embedding, dim=-1)
             print(user_query_embedding.shape)
             return user_query_embedding
@@ -201,17 +186,16 @@ class EmbeddingModel:
             batch_queries = self.processor.process_queries(user_query).to(self.device)
             user_query_embedding = self.model(**batch_queries)
             return user_query_embedding
-        
+
         if self.name in QWEN_GME_MODELS:
             assert isinstance(user_query, list)
-            msg = [f'<|im_start|>system\n{self.instruction}<|im_end|>\n<|im_start|>user\n{q}<|im_end|>\n<|im_start|>assistant\n<|endoftext|>' for q in user_query]
+            msg = [f"<|im_start|>system\n{self.instruction}<|im_end|>\n<|im_start|>user\n{q}<|im_end|>\n<|im_start|>assistant\n<|endoftext|>" for q in user_query]
             inputs = self.processor(text=msg, return_tensors="pt", padding=True, padding_side="left", truncation=True).to(self.device)
             outputs = self.model(**inputs, output_hidden_states=True)
             last_hidden_state = outputs.hidden_states[-1]
             embeddings = last_hidden_state[:, -1].contiguous()
             embeddings = torch.nn.functional.normalize(embeddings, p=2, dim=1)
             return embeddings
-
 
         raise ValueError(f"Not supported model {self.name}!")
 
@@ -230,32 +214,32 @@ class EmbeddingModel:
 
         if self.name in CLIP_LIKE_MODELS:
             if overwrite:
-                image_input_emb = self.processor(images=[mock_image], return_tensors='pt').to(self.device)
+                image_input_emb = self.processor(images=[mock_image], return_tensors="pt").to(self.device)
                 # we cannot process multiple images
                 image_ppd_emb = process_image(image, self)
-                image_input_emb['pixel_values'][0] = image_ppd_emb
+                image_input_emb["pixel_values"][0] = image_ppd_emb
             else:
-                if not isinstance(image, list): image = [image]
-                image_input_emb = self.processor(images=image, return_tensors='pt').to(self.device)
+                if not isinstance(image, list):
+                    image = [image]
+                image_input_emb = self.processor(images=image, return_tensors="pt").to(self.device)
 
             image_embedding = self.model.get_image_features(**image_input_emb)
             return image_embedding
 
         if self.name == EmbedderName.E5_V:
-            llama3_template = '<|start_header_id|>user<|end_header_id|>\n\n{}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n \n'
-            img_prompt = llama3_template.format('<image>\nSummary above image in one word: ')
+            llama3_template = "<|start_header_id|>user<|end_header_id|>\n\n{}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n \n"
+            img_prompt = llama3_template.format("<image>\nSummary above image in one word: ")
 
             if overwrite:
                 img_inputs = self.processor(img_prompt, mock_image, return_tensors="pt", padding=True).to(self.device)
                 image_ppd_emb = process_image(image)
-                img_inputs['pixel_values'][0][0] = image_ppd_emb
-                img_inputs['pixel_values'][0][1] = image_ppd_emb
+                img_inputs["pixel_values"][0][0] = image_ppd_emb
+                img_inputs["pixel_values"][0][1] = image_ppd_emb
             else:
-                if not isinstance(image, list): image = [image]
-                img_inputs = self.processor([img_prompt] * len(image), image, return_tensors="pt", padding=True).to(
-                    self.device)
-            image_embedding = self.model(**img_inputs, output_hidden_states=True, return_dict=True).hidden_states[-1][:,
-                              -1, :]
+                if not isinstance(image, list):
+                    image = [image]
+                img_inputs = self.processor([img_prompt] * len(image), image, return_tensors="pt", padding=True).to(self.device)
+            image_embedding = self.model(**img_inputs, output_hidden_states=True, return_dict=True).hidden_states[-1][:, -1, :]
             image_embedding = F.normalize(image_embedding, dim=-1)
             print(image_embedding.shape)
             return image_embedding
@@ -266,9 +250,10 @@ class EmbeddingModel:
 
                 # we cannot process multiple images
                 image_ppd_emb = process_image(image, self)
-                image_input_emb['pixel_values'][0] = image_ppd_emb
+                image_input_emb["pixel_values"][0] = image_ppd_emb
             else:
-                if not isinstance(image, list): image = [image]
+                if not isinstance(image, list):
+                    image = [image]
                 image_input_emb = self.processor.process_images(image).to(self.device)
 
             if self.colpali_only_images:
@@ -277,28 +262,26 @@ class EmbeddingModel:
                 if self.name == EmbedderName.COLPALI:
                     image_input_emb.input_ids = image_input_emb.input_ids[:, :-7]
                     image_input_emb.attention_mask = image_input_emb.attention_mask[:, :-7]
-                    image_embedding = self.model(input_ids=image_input_emb.input_ids,
-                                                 attention_mask = image_input_emb.attention_mask,
-                                                 pixel_values = image_input_emb.pixel_values)
+                    image_embedding = self.model(input_ids=image_input_emb.input_ids, attention_mask=image_input_emb.attention_mask, pixel_values=image_input_emb.pixel_values)
                 else:
                     image_input_emb.input_ids = image_input_emb.input_ids[:, 9:-2]
                     image_input_emb.attention_mask = image_input_emb.attention_mask[:, 9:-2]
-                    image_embedding = self.model(input_ids=image_input_emb.input_ids,
-                                                 attention_mask = image_input_emb.attention_mask,
-                                                 pixel_values = image_input_emb.pixel_values,
-                                                 pixel_attention_mask = image_input_emb.pixel_attention_mask)
+                    image_embedding = self.model(
+                        input_ids=image_input_emb.input_ids,
+                        attention_mask=image_input_emb.attention_mask,
+                        pixel_values=image_input_emb.pixel_values,
+                        pixel_attention_mask=image_input_emb.pixel_attention_mask,
+                    )
             else:
-                image_embedding = self.model(input_ids=image_input_emb.input_ids,
-                                             attention_mask=image_input_emb.attention_mask,
-                                             pixel_values=image_input_emb.pixel_values)
+                image_embedding = self.model(input_ids=image_input_emb.input_ids, attention_mask=image_input_emb.attention_mask, pixel_values=image_input_emb.pixel_values)
             return image_embedding
-        
-        if self.name in QWEN_GME_MODELS: 
+
+        if self.name in QWEN_GME_MODELS:
             if isinstance(image, list):
-                image = torch.cat([T.Resize((512,512))(T.PILToTensor()(im)).unsqueeze(0) for im in image], dim=0)
+                image = torch.cat([T.Resize((512, 512))(T.PILToTensor()(im)).unsqueeze(0) for im in image], dim=0)
             n_image = 1 if len(image.shape) == 3 else image.shape[0]
-            image_text = '<|vision_start|><|image_pad|><|vision_end|>'
-            msg = [f'<|im_start|>system\n{self.instruction}<|im_end|>\n<|im_start|>user\n{image_text}<|im_end|>\n<|im_start|>assistant\n<|endoftext|>' for _ in range(n_image)]
+            image_text = "<|vision_start|><|image_pad|><|vision_end|>"
+            msg = [f"<|im_start|>system\n{self.instruction}<|im_end|>\n<|im_start|>user\n{image_text}<|im_end|>\n<|im_start|>assistant\n<|endoftext|>" for _ in range(n_image)]
             inputs = self.processor(text=msg, images=image, return_tensors="pt", padding=True, padding_side="left", truncation=True).to(self.device)
             outputs = self.model(**inputs, output_hidden_states=True)
             last_hidden_state = outputs.hidden_states[-1]
@@ -306,30 +289,28 @@ class EmbeddingModel:
             embeddings = torch.nn.functional.normalize(embeddings, p=2, dim=1)
             return embeddings
 
-
         raise ValueError(f"Not supported model {self.name}!")
 
-    
     def compute_embedding_loss(self, image_embedding, text_embedding, loss_type: EmbeddingLoss, is_targeted: bool, positive_idx: list[int]):
         if not is_targeted:
             return self._compute_embedding_loss(image_embedding, text_embedding, loss_type)
-        
+
         # compute loss separately for in-target and out-of-target queries
-        negative_idx = [i for i in range(text_embedding.shape[0]) if  i not in positive_idx]
+        negative_idx = [i for i in range(text_embedding.shape[0]) if i not in positive_idx]
         text_embedding_pos = text_embedding[positive_idx, :]
         text_embedding_neg = text_embedding[negative_idx, :]
         loss_pos, loss_neg = torch.tensor([0]).to(self.device), torch.tensor([0]).to(self.device)
-        if text_embedding_pos.shape[0]>0: loss_pos = self._compute_embedding_loss(image_embedding, text_embedding_pos, loss_type)
-        if text_embedding_neg.shape[0]>0: loss_neg = self._compute_embedding_loss(image_embedding, text_embedding_neg, loss_type)
+        if text_embedding_pos.shape[0] > 0:
+            loss_pos = self._compute_embedding_loss(image_embedding, text_embedding_pos, loss_type)
+        if text_embedding_neg.shape[0] > 0:
+            loss_neg = self._compute_embedding_loss(image_embedding, text_embedding_neg, loss_type)
         return loss_pos - loss_neg
-        
 
     def _compute_embedding_loss(self, image_embedding, text_embedding, loss_type: EmbeddingLoss):
         # colpali has its own retrieval score (MaxSim)
         if (self.name in COLPALI_MODELS or self.name == EmbedderName.COLPALI) and loss_type != EmbeddingLoss.COS_AVGEMB:
             # my version of the scoring function (allowing different losses)
-            return -1 * score_multi_vector_modified(text_embedding, image_embedding, device=self.device,
-                                                    loss=loss_type).mean()
+            return -1 * score_multi_vector_modified(text_embedding, image_embedding, device=self.device, loss=loss_type).mean()
 
         match loss_type:
             case EmbeddingLoss.COS_AVGEMB:
@@ -349,8 +330,7 @@ class EmbeddingModel:
     def compare_embeddings(self, embeddings_1, embeddings_2, loss_type):
         if (self.name in COLPALI_MODELS or self.name == EmbedderName.COLPALI) and loss_type != EmbeddingLoss.COS_AVGEMB:
             # my version of the scoring function (allowing different losses)
-            return score_multi_vector_modified(embeddings_1, embeddings_2, device=self.device,
-                                                    loss=loss_type)
+            return score_multi_vector_modified(embeddings_1, embeddings_2, device=self.device, loss=loss_type)
         match loss_type:
             case EmbeddingLoss.COS_AVGEMB:
                 return torch.nn.CosineSimilarity()(embeddings_1.mean(dim=1), embeddings_2.mean(dim=1)).mean()
@@ -359,17 +339,18 @@ class EmbeddingModel:
             case _:
                 raise ValueError(f"Unknown loss type {loss_type}!")
 
+
 """
 Functions
 """
 
 
 def score_multi_vector_modified(
-        qs: torch.Tensor | list[torch.Tensor],
-        ps: torch.Tensor | list[torch.Tensor],
-        batch_size: int = 128,
-        device: Optional[str | torch.device] = None,
-        loss: EmbeddingLoss = EmbeddingLoss.MAXSIM,
+    qs: torch.Tensor | list[torch.Tensor],
+    ps: torch.Tensor | list[torch.Tensor],
+    batch_size: int = 128,
+    device: Optional[str | torch.device] = None,
+    loss: EmbeddingLoss = EmbeddingLoss.MAXSIM,
 ) -> torch.Tensor:
     """
     NOTE: this is a modified version of Colpali's scoring function at https://github.com/illuin-tech/colpali/blob/main/colpali_engine/utils/processing_utils.py
@@ -384,13 +365,9 @@ def score_multi_vector_modified(
 
     for i in range(0, len(qs), batch_size):
         scores_batch = []
-        qs_batch = torch.nn.utils.rnn.pad_sequence(qs[i: i + batch_size], batch_first=True, padding_value=0).to(
-            device
-        )
+        qs_batch = torch.nn.utils.rnn.pad_sequence(qs[i : i + batch_size], batch_first=True, padding_value=0).to(device)
         for j in range(0, len(ps), batch_size):
-            ps_batch = torch.nn.utils.rnn.pad_sequence(
-                ps[j: j + batch_size], batch_first=True, padding_value=0
-            ).to(device)
+            ps_batch = torch.nn.utils.rnn.pad_sequence(ps[j : j + batch_size], batch_first=True, padding_value=0).to(device)
 
             match loss:
                 case EmbeddingLoss.MAXSIM:
@@ -411,4 +388,3 @@ def score_multi_vector_modified(
 
     scores = scores.to(torch.float32)
     return scores
-

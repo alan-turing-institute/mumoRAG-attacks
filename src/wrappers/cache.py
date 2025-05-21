@@ -3,11 +3,11 @@ from typing import Optional
 
 from utils.logger import logger
 
-from .dataset import DatasetName, Dataset, create_dataset
+from .dataset import Dataset, DatasetName, create_dataset
 from .embedded_dataset import EmbeddedDataset
-from .embedding import EmbeddingModel, EmbedderName
+from .embedding import EmbedderName, EmbeddingModel
 from .judge import JudgeVLM
-from .text_embedding import TextEmbeddingModel, TextEmbedderName
+from .text_embedding import TextEmbedderName, TextEmbeddingModel
 from .vlm import VLM, VLMName
 
 
@@ -41,9 +41,7 @@ def get_dataset(ds_name: DatasetName, train_ratio: float = 0.8, num_images: Opti
 
 
 # @lru_cache(maxsize=1)  # Datasets are not immutable, caching can lead to odd behaviour
-def get_embedded_dataset(
-    dataset: Dataset, model_name_emb: EmbedderName, quantize: bool, colpali_only_images: bool, device: str
-) -> EmbeddedDataset:
+def get_embedded_dataset(dataset: Dataset, model_name_emb: EmbedderName, quantize: bool, colpali_only_images: bool, device: str) -> EmbeddedDataset:
     logger.info(f"Dataset: loading {dataset.ds_name} with {model_name_emb}")
     embedder = get_embedder(model_name_emb, quantize=quantize, colpali_only_images=colpali_only_images, device=device)
     return EmbeddedDataset(dataset, embedder)
