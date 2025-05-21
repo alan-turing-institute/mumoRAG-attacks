@@ -73,7 +73,6 @@ class Dataset:
         """
         Adds the adversarial image to the database
         """
-        # todo dan: remove mutability
         # keep the adversarial image at position [-1]
         if len(self.images) == self.num_images_orig:
             self.images.append(adv_img)

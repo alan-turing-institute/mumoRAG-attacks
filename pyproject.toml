@@ -3,7 +3,7 @@ name = "mumoRAG-attacks"
 version = "0.0.1"
 requires-python = " >=3.10, <3.13"
 dependencies = [
-  "transformers[hf-xet]",
+  "transformers[hf-xet]>=4.52.2",
   "datasets",
   "torch==2.6",
   "torchvision",
@@ -42,6 +42,7 @@ test = [
 
 [tool.uv]
 no-build-isolation-package = ["flash-attn"]
+override-dependencies = ["transformers[hf-xet]>=4.52.2,<4.53"]
 
 [tool.uv.sources]
 torch = [{ index = "pytorch-cu126", marker = "sys_platform != 'darwin'" }]
