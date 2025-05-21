@@ -1,6 +1,7 @@
 from functools import lru_cache
-from typing import Optional
+from pathlib import Path
 
+from config import EMBEDDINGS_FOLDER
 from utils.logger import logger
 
 from .dataset import Dataset, DatasetName, create_dataset
@@ -30,18 +31,25 @@ def get_judge(model_name_jdg: VLMName, device: str) -> JudgeVLM:
 
 @lru_cache(maxsize=1)
 def get_embedder(model_name_emb: EmbedderName, quantize: bool, colpali_only_images: bool, device: str) -> EmbeddingModel:
-    logger.info(f"Embedding: loading {model_name_emb}")
+    logger.info(f"Embedder: loading {model_name_emb}")
     return EmbeddingModel(model_name_emb, device, quantize=quantize, colpali_only_images=colpali_only_images)
 
 
 # @lru_cache(maxsize=1)  # Datasets are not immutable, caching can lead to odd behaviour
-def get_dataset(ds_name: DatasetName, train_ratio: float = 0.8, num_images: Optional[int] = None) -> Dataset:
+def get_dataset(ds_name: DatasetName, paraphrase_queries: bool = False, train_ratio: float = 0.8) -> Dataset:
     logger.info(f"Dataset: loading {ds_name}")
-    return create_dataset(ds_name=ds_name, train_ratio=train_ratio, num_images=num_images)
+    return create_dataset(ds_name=ds_name, train_ratio=train_ratio, paraphrase_queries=paraphrase_queries)
 
 
 # @lru_cache(maxsize=1)  # Datasets are not immutable, caching can lead to odd behaviour
-def get_embedded_dataset(dataset: Dataset, model_name_emb: EmbedderName, quantize: bool, colpali_only_images: bool, device: str) -> EmbeddedDataset:
-    logger.info(f"Dataset: loading {dataset.ds_name} with {model_name_emb}")
+def get_embedded_dataset(
+    dataset: Dataset,
+    model_name_emb: EmbedderName,
+    quantize: bool,
+    colpali_only_images: bool,
+    device: str,
+    embeddings_folder: Path = EMBEDDINGS_FOLDER,
+) -> EmbeddedDataset:
     embedder = get_embedder(model_name_emb, quantize=quantize, colpali_only_images=colpali_only_images, device=device)
-    return EmbeddedDataset(dataset, embedder)
+    logger.info(f"Embedded Dataset: loading {dataset.ds_name} with {model_name_emb}")
+    return EmbeddedDataset(dataset, embedder, embeddings_folder=embeddings_folder)

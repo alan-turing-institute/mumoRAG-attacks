@@ -76,8 +76,7 @@ def run(exp_config: ExperimentConfig):
         else:
             model_name_emb = task_config.model_name_embs[0]
 
-        ds = get_dataset(task_config.ds_name)
-        ds.use_original_or_paraphrased_queries(task_config.defence)
+        ds = get_dataset(task_config.ds_name, paraphrase_queries=task_config.defence == DefenceName.PARAPHRASE)
 
         # update target queries and answers in case the attack is targeted
         all_target_query_idx, all_adv_target_answers_vlm, all_answers_vlm = get_all_target_queries_and_answers(
@@ -103,6 +102,7 @@ def run(exp_config: ExperimentConfig):
                 quantize=False,
                 colpali_only_images=exp_config.train.colpali_only_images,
                 device=device,
+                embeddings_folder=exp_config.train.emb_folder,
             )
             embedded_ds.add_adv_image(image_adv)
             # remove incompatible losses

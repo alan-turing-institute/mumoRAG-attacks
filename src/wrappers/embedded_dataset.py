@@ -1,12 +1,12 @@
 import itertools
 import math
 import time
+from pathlib import Path
 
 import torch
 import torchvision.transforms.v2 as T
 from tqdm import tqdm
 
-from config import EMBEDDINGS_FOLDER
 from utils.logger import logger
 from wrappers.embedding import COLPALI_MODELS, EmbedderName, EmbeddingLoss, EmbeddingModel, score_multi_vector_modified
 
@@ -24,11 +24,11 @@ def make_safe_filename(s):
 
 
 class EmbeddedDataset:
-    def __init__(self, dataset: Dataset, embedder: EmbeddingModel):
+    def __init__(self, dataset: Dataset, embedder: EmbeddingModel, embeddings_folder: Path):
         self.dataset = dataset
         self.embedder = embedder
 
-        self.embeddings_folder = EMBEDDINGS_FOLDER
+        self.embeddings_folder = embeddings_folder
 
         self.embedder = embedder
         self.query_embeddings = None
@@ -51,7 +51,9 @@ class EmbeddedDataset:
     def embeddings_filename(self):
         emb_str = f"{self.dataset.ds_name}_{self.embedder.name}"
         if self.embedder.colpali_only_images:
-            emb_str += f"_{self.embedder.colpali_only_images}"
+            emb_str += f"_colpali_only_images"
+        if self.dataset.paraphrase_queries:
+            emb_str += "_paraphrased"
         return self.embeddings_folder / f"embeds_{make_safe_filename(emb_str)}.pt"
 
     def compute_embeddings(self, batch_size=None, for_queries=True, for_images=True):
@@ -65,8 +67,8 @@ class EmbeddedDataset:
             logger.info(f"Computed {len(self.dataset.images)} image embeddings in {time.time() - t:.2f}s")
         if for_queries:
             t = time.time()
-            self.query_embeddings = self.embedder.compute_txt_embedding(self.dataset.queries_orig)
-            logger.info(f"Computed {len(self.dataset.queries_orig)} query embeddings in {time.time() - t:.2f}s")
+            self.query_embeddings = self.embedder.compute_txt_embedding(self.dataset.queries)
+            logger.info(f"Computed {len(self.dataset.queries)} query embeddings in {time.time() - t:.2f}s")
 
         # save to file
         dict_to_save = {"image_embeddings": self.image_embeddings, "query_embeddings": self.query_embeddings, "wrappers": self.dataset.ds_name, "model_name": self.embedder.name}
@@ -132,13 +134,13 @@ class EmbeddedDataset:
 
             topk = torch.topk(losses, k=k, dim=-1, largest=False, sorted=True)
 
-            correct_retrievals = [any(x in topk.indices[i] for x in self.dataset.ground_truth_retrievals[i]) for i in range(len(self.dataset.queries_orig))]
+            correct_retrievals = [any(x in topk.indices[i] for x in self.dataset.ground_truth_retrievals[i]) for i in range(len(self.dataset.queries))]
             accuracy_train = sum(correct_retrievals[: self.dataset.num_train]) / self.dataset.num_train
             accuracy_test = sum(correct_retrievals[self.dataset.num_train :]) / self.dataset.num_test
             accuracy = accuracy_train * self.dataset.train_ratio + accuracy_test * (1 - self.dataset.train_ratio)
 
             # if include_adv=False, then will always be zero
-            adversarial_retrievals = [self.dataset.num_images_orig in topk.indices[i] for i in range(len(self.dataset.queries_orig))]
+            adversarial_retrievals = [self.dataset.num_images_orig in topk.indices[i] for i in range(len(self.dataset.queries))]
             asr_train = sum(adversarial_retrievals[: self.dataset.num_train]) / self.dataset.num_train
             asr_test = sum(adversarial_retrievals[self.dataset.num_train :]) / self.dataset.num_test
 

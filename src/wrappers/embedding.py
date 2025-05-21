@@ -1,5 +1,3 @@
-from typing import Optional
-
 import torch
 import torch.nn.functional as F
 import torchvision.transforms.v2 as T
@@ -349,7 +347,7 @@ def score_multi_vector_modified(
     qs: torch.Tensor | list[torch.Tensor],
     ps: torch.Tensor | list[torch.Tensor],
     batch_size: int = 128,
-    device: Optional[str | torch.device] = None,
+    device: str | torch.device | None = None,
     loss: EmbeddingLoss = EmbeddingLoss.MAXSIM,
 ) -> torch.Tensor:
     """
