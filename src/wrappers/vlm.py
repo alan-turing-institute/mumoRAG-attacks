@@ -169,9 +169,7 @@ class VLM:
         out = self.model(**inputs, use_cache=False, output_attentions=False, output_hidden_states=False)
         return out
 
-    def compute_gen_loss(self, vlm_output, target_tokens, positive_idx=None):
-        if positive_idx is None:
-            positive_idx = [i for i in range(len(target_tokens))]
+    def compute_gen_loss(self, vlm_output, target_tokens):
         loss = torch.zeros((len(target_tokens),))
         for i, tt in enumerate(target_tokens):
             logits_to_optimize = vlm_output.logits[i, -len(tt) - 1 : -1, :].unsqueeze(0).transpose(1, 2)
