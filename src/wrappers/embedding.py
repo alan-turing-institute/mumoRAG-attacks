@@ -145,17 +145,6 @@ class EmbeddingModel:
         self.model.requires_grad_(False)
         self.model.eval()
 
-    @torch.no_grad()
-    def compare_embeddings(self, image, user_query, overwrite=False, loss_type: EmbeddingLoss = EmbeddingLoss.MSE):
-        self.model.eval()
-        if type(user_query) == str:
-            user_query = [user_query]
-
-        user_query_embedding = self.compute_txt_embedding(user_query)
-        image_embedding = self.compute_img_embedding(image, image, overwrite)
-
-        return self.compute_embedding_loss(image_embedding, user_query_embedding, loss_type).item()
-
     def compute_txt_embedding(self, user_query):
         if self.name == EmbedderName.JINA_CLIP_2:
             return torch.tensor(self.model.encode_text(user_query)).to(self.device).type(self.model.dtype)
