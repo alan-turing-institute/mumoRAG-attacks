@@ -5,14 +5,8 @@ requires-python = " >=3.10, <3.13"
 dependencies = [
   "transformers[hf-xet]",
   "datasets",
-  "requests",
   "torch==2.6",
   "torchvision",
-  "einops",
-  "timm",
-  "sentencepiece",
-  "protobuf",
-  "qwen-vl-utils",
   "colpali-engine>=0.3.10",
   "strenum",
   "hydra-core",
@@ -22,6 +16,7 @@ dependencies = [
 [project.optional-dependencies]
 # optional dependencies for running the training
 opt = [
+  "einops",
   "xformers",
   "flash-attn @ https://github.com/Dao-AILab/flash-attention/releases/download/v2.7.4.post1/flash_attn-2.7.4.post1+cu12torch2.6cxx11abiTRUE-cp311-cp311-linux_x86_64.whl",
 ]
