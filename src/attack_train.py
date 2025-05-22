@@ -23,7 +23,7 @@ def run(exp_config: ExperimentConfig):
     for i, task_config in enumerate(task_configs):
         logger.info(f"{'+' * 20}\nTrain Attack {(i + 1):4d}/{n_evals}, task_config -> {pformat(task_config.to_dict(), indent=4)}")
 
-        ds = get_dataset(task_config.ds_name, paraphrase_queries=task_config.defence == DefenceName.PARAPHRASE)
+        ds = get_dataset(task_config.ds_name)
 
         vlms = (
             [
