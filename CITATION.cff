@@ -51,18 +51,19 @@ preferred-citation:
       given-names: Burak
       affiliation:
         - "The Alan Turing Institute"
-    - family-names: Vasilios
-      given-names: Mavroudis
+    - family-names: Mavroudis
+      given-names: Vasilios
+      orcid: https://orcid.org/0000-0003-2667-5906
       affiliation:
         - "The Alan Turing Institute"
-    - family-names: Chris
-      given-names: Hicks
+    - family-names: Hicks
+      given-names: Chris
       affiliation:
         - "The Alan Turing Institute"
-    title: "One Pic is All it Takes: Poisoning Visual Document Retrieval Augmented Generation with a Single Image"
-    type: article
-    identifiers:
-      - type: doi
-        value: "10.48550/arXiv.2504.02132"
+  title: "One Pic is All it Takes: Poisoning Visual Document Retrieval Augmented Generation with a Single Image"
+  type: article
+  identifiers:
+    - type: doi
+      value: "10.48550/arXiv.2504.02132"
 license: MIT
 
