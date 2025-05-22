@@ -9,7 +9,7 @@ from wrappers.embedding import EmbedderName, EmbeddingLoss
 from wrappers.judge import JudgeMetric
 from wrappers.vlm import VLMName
 
-from . import ATTACKS_FOLDER
+from . import ATTACKS_FOLDER, EMBEDDINGS_FOLDER
 
 
 @dataclass
@@ -39,6 +39,7 @@ class ExperimentTrainConfig:
     emb_train_loss_type_list: list[EmbeddingLoss] = field(default_factory=lambda: [EmbeddingLoss.DEFAULT])
     is_adaptive_list: list[bool] = field(default_factory=lambda: [False])
     save_folder: Path = ATTACKS_FOLDER
+    emb_folder: Path = EMBEDDINGS_FOLDER
     chosen_index_list: list[int] = field(default_factory=lambda: [150])
     n_gradient_steps: int = 250
     print_every: int = 5

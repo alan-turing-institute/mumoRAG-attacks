@@ -3,16 +3,10 @@ name = "mumoRAG-attacks"
 version = "0.0.1"
 requires-python = " >=3.10, <3.13"
 dependencies = [
-  "transformers[hf-xet]",
+  "transformers[hf-xet]>=4.52.2",
   "datasets",
-  "requests",
   "torch==2.6",
   "torchvision",
-  "einops",
-  "timm",
-  "sentencepiece",
-  "protobuf",
-  "qwen-vl-utils",
   "colpali-engine>=0.3.10",
   "strenum",
   "hydra-core",
@@ -20,6 +14,14 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# optional dependencies for running the training
+opt = [
+  "einops",
+  "xformers",
+  "flash-attn @ https://github.com/Dao-AILab/flash-attention/releases/download/v2.7.4.post1/flash_attn-2.7.4.post1+cu12torch2.6cxx11abiTRUE-cp311-cp311-linux_x86_64.whl",
+]
+
+# dependencies for running the plotting notebooks
 nb = [
   "jupyter",
   "matplotlib",
@@ -35,15 +37,12 @@ dev = [
 
 test = [
   "pytest",
-]
-
-opt = [
-  "xformers",
-  "flash-attn @ https://github.com/Dao-AILab/flash-attention/releases/download/v2.7.4.post1/flash_attn-2.7.4.post1+cu12torch2.6cxx11abiTRUE-cp311-cp311-linux_x86_64.whl",
+  "pytest-mock",
 ]
 
 [tool.uv]
 no-build-isolation-package = ["flash-attn"]
+override-dependencies = ["transformers[hf-xet]>=4.52.2,<4.53"]
 
 [tool.uv.sources]
 torch = [{ index = "pytorch-cu126", marker = "sys_platform != 'darwin'" }]

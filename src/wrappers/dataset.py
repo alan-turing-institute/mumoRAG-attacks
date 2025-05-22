@@ -4,8 +4,6 @@ import math
 import random
 from ast import literal_eval
 from collections import defaultdict
-from pathlib import Path
-from typing import Optional
 
 import torch
 import torchvision.transforms.v2 as T
@@ -13,8 +11,7 @@ from datasets import load_dataset
 from strenum import StrEnum
 from tqdm import tqdm
 
-from config import DATA_FOLDER
-from utils.defence import DefenceName
+from config import PARAPHRASE_FOLDER
 from utils.logger import logger
 from wrappers.judge import METRIC_2_PROMPT, JudgeMetric, JudgeVLM
 from wrappers.text_embedding import TextEmbeddingModel
@@ -43,28 +40,32 @@ class Dataset:
         self,
         ds_name: DatasetName,
         images: list,
-        queries: list,
-        answers: list,
-        ground_truth_retrievals: list,
+        queries: list[str],
+        answers: list[str],
+        ground_truth_retrievals: list[list[int]],
         train_ratio: float,
+        paraphrase_queries: bool = False,
     ):
         self.ds_name = ds_name
 
         self.images = images
         self.num_images_orig = len(self.images)
 
-        self.queries_orig = queries
         self.ground_truth_answers = answers
         self.ground_truth_retrievals = ground_truth_retrievals
 
-        self.queries_para = self.load_paraphrased_queries()
+        self.queries_orig = queries
+        self.paraphrase_queries = paraphrase_queries
+        if paraphrase_queries:
+            self.queries = self.load_paraphrased_queries()
+        else:
+            self.queries = queries
 
         self.train_ratio = train_ratio
         self.num_train = int(len(self.queries_orig) * train_ratio)
         self.num_test = len(self.queries_orig) - self.num_train
 
-        self.queries_orig_train, self.queries_orig_test = self.split_train_test(self.queries_orig)
-        self.queries_para_train, self.queries_para_test = self.split_train_test(self.queries_para)
+        self.queries_train, self.queries_test = self.split_train_test(self.queries)
         self.ground_truth_answers_train, self.ground_truth_answers_test = self.split_train_test(self.ground_truth_answers)
         self.ground_truth_retrievals_train, self.ground_truth_retrievals_test = self.split_train_test(self.ground_truth_retrievals)
 
@@ -78,30 +79,19 @@ class Dataset:
         else:
             self.images[-1] = adv_img
 
-    def load_paraphrased_queries(
-        self,
-    ):
+    def load_paraphrased_queries(self):
         match self.ds_name:
             case DatasetName.VIDORE_SYN_AI:
                 filename = "vidore_v1_ai_paraphrased.json"
             case DatasetName.VIDORE_V2_ESG:
                 filename = "vidore_v2_esg_paraphrased.json"
             case _:
-                raise ValueError(f"Praphrased queries not available for dataset {self.ds_name}!")
+                raise ValueError(f"Paraphrased queries not available for dataset {self.ds_name}!")
 
-        PARAPHRASE_FOLDER = DATA_FOLDER / "paraphrased-queries"
         with open(PARAPHRASE_FOLDER / filename, "r") as f:
             paraphrased_queries = json.load(f)
 
         return paraphrased_queries
-
-    def use_original_or_paraphrased_queries(self, defence):
-        # sets the variable self.queries, which will be later used during attack training or evaluation
-        if defence == DefenceName.PARAPHRASE:
-            self.queries = self.queries_para
-        else:
-            self.queries = self.queries_orig
-        self.queries_train, self.queries_test = self.split_train_test(self.queries)
 
     def sample_images_from_ds(self, fraction: float):
         n_images = math.floor(fraction * self.num_images_orig)
@@ -336,7 +326,7 @@ class Dataset:
         return output_dict
 
 
-def create_dataset(ds_name: DatasetName, train_ratio: float = 0.8, num_images: Optional[int] = None) -> Dataset:
+def create_dataset(ds_name: DatasetName, paraphrase_queries: bool, train_ratio: float = 0.8) -> Dataset:
     if ds_name.startswith("vidore"):
         if "V2" in ds_name.name:
             corpus = load_dataset(ds_name, "corpus", split="all")
@@ -354,14 +344,7 @@ def create_dataset(ds_name: DatasetName, train_ratio: float = 0.8, num_images: O
             queries = filter_none(ds["query"])
             answers = extract_answers(filter_none(ds["answer"]))
             ground_truth_retrievals = [[i] for i in range(len(images))]
-        if num_images is not None:
-            images = images[:num_images]
         return Dataset(
-            ds_name=ds_name,
-            images=images,
-            queries=queries,
-            answers=answers,
-            ground_truth_retrievals=ground_truth_retrievals,
-            train_ratio=train_ratio,
+            ds_name=ds_name, images=images, queries=queries, answers=answers, ground_truth_retrievals=ground_truth_retrievals, train_ratio=train_ratio, paraphrase_queries=paraphrase_queries
         )
     raise ValueError(f"Dataset {ds_name} is not supported")

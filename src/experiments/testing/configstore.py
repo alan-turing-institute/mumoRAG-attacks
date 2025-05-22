@@ -68,7 +68,10 @@ configstore.store(
             ),
         ),
         eval=ExperimentEvalConfig(
-            eval_emb_list=[EmbedderName.SIGLIP2_BASE_PATCH16, EmbedderName.CLIP_BASE_PATCH16],
+            eval_emb_list=[
+                EmbedderName.SIGLIP2_BASE_PATCH16,
+                EmbedderName.CLIP_BASE_PATCH16,
+            ],
         ),
     ),
 )
@@ -82,7 +85,11 @@ configstore.store(
         train=ExperimentTrainConfig(
             embedder_list=[EmbedderName.CLIP_BASE_PATCH16],
             vlm=VLMConfig(
-                models=[[VLMName.SMOLVLM_1_256M, VLMName.INTERNVL_3_1B], VLMName.SMOLVLM_1_256M, VLMName.INTERNVL_3_1B],
+                models=[
+                    [VLMName.SMOLVLM_1_256M, VLMName.INTERNVL_3_1B],
+                    VLMName.SMOLVLM_1_256M,
+                    VLMName.INTERNVL_3_1B,
+                ],
             ),
         ),
         eval=ExperimentEvalConfig(
@@ -105,13 +112,21 @@ configstore.store(
             judge=JudgeConfig(
                 lambda_=1,
                 models=[VLMName.SMOLVLM_1_2B],
-                metrics=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY],
+                metrics=[
+                    JudgeMetric.IMAGE_CONTEXT_RELEVANCY,
+                    JudgeMetric.IMAGE_FAITHFULNESS,
+                    JudgeMetric.ANSWER_RELEVANCY,
+                ],
             ),
         ),
         eval=ExperimentEvalConfig(
             gen_topk_list=[-1, 1, 5],
             do_judge=True,
-            eval_jdg_metric_list=[JudgeMetric.IMAGE_CONTEXT_RELEVANCY, JudgeMetric.IMAGE_FAITHFULNESS, JudgeMetric.ANSWER_RELEVANCY],
+            eval_jdg_metric_list=[
+                JudgeMetric.IMAGE_CONTEXT_RELEVANCY,
+                JudgeMetric.IMAGE_FAITHFULNESS,
+                JudgeMetric.ANSWER_RELEVANCY,
+            ],
         ),
     ),
 )

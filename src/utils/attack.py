@@ -113,9 +113,9 @@ def rag_attack(
             target_idx=target_query_idx,
             optimize_nontargeted_queries=optimize_nontargeted_queries,
         )
-        positive_idx = [i for i in range(len(samples_idx)) if samples_idx[i] in target_query_idx]
 
         if lambda_emb > 0:
+            positive_idx = [i for i in range(len(samples_idx)) if samples_idx[i] in target_query_idx]
             for embedder in embedders:
                 emb_loss_type = get_loss_with_default(embedder.name, config.emb_train_loss_type)
                 # retrieval loss function
@@ -134,7 +134,7 @@ def rag_attack(
                 full_text_vlm_prompt_batch = [full_text_vlm_prompts[i] for i in samples_idx]
                 target_tokens_vlm_batch = [target_tokens_vlm[i] for i in samples_idx]
                 out = vlm.forward(raw_image, full_text_vlm_prompt_batch, context_images, adv_indices, overwrite=True)
-                loss_vlm += vlm.compute_gen_loss(out, target_tokens_vlm_batch, positive_idx)
+                loss_vlm += vlm.compute_gen_loss(out, target_tokens_vlm_batch)
             if config.judge:
                 samples_jdg_idx = torch.randint(0, len(train_user_queries) * len(config.judge.metrics), (batch_size_per_iter,))
                 full_text_jdg_prompt_batch = [full_text_jdg_prompts[i] for i in samples_jdg_idx]

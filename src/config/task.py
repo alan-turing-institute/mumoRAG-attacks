@@ -70,13 +70,7 @@ class TaskConfig:
     defence: DefenceName = DefenceName.NONE
 
     def create_hash_string(self):
-        target_str = (
-            ",".join([str(query_id) for query_id in self.target_query_idx])
-            + f"{self.n_knn_target_queries}"
-            + f"{self.optimize_nontargeted_queries}"
-            if self.is_targeted
-            else ""
-        )
+        target_str = ",".join([str(query_id) for query_id in self.target_query_idx]) + f"{self.n_knn_target_queries}" + f"{self.optimize_nontargeted_queries}" if self.is_targeted else ""
         target_answer_str = ",".join(self.vlm.target_answers) if self.vlm else ""
 
         model_name_embs = self.model_name_embs[0] if len(self.model_name_embs) == 1 else self.model_name_embs
@@ -209,9 +203,7 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
 
         if isinstance(model_name_embs, list):
             if include_eval and not eval_emb_name:
-                raise ValueError(
-                    "If trained with multiple embedders, evaluation config must specify a single embedder to test transferability"
-                )
+                raise ValueError("If trained with multiple embedders, evaluation config must specify a single embedder to test transferability")
             if exp_config.train.is_targeted and exp_config.train.n_knn_target_queries > 1:
                 raise ValueError("Multi-embedder tasks do not k-nearest neighbour targeted attacks.")
             if emb_train_loss_type != EmbeddingLoss.DEFAULT:
@@ -230,9 +222,7 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
             model_name_vlms = [model_name_vlms]
 
         if exp_config.train.vlm and len(exp_config.train.vlm.target_answers) not in [1, len(exp_config.train.target_query_idx)]:
-            raise ValueError(
-                f"VLM target answers array has incompatible length ({len(exp_config.train.vlm.target_answers)}) with target queries ({len(exp_config.train.target_query_idx)})"
-            )
+            raise ValueError(f"VLM target answers array has incompatible length ({len(exp_config.train.vlm.target_answers)}) with target queries ({len(exp_config.train.target_query_idx)})")
         vlm_config = None
         if exp_config.train.vlm:
             vlm_config = TaskVLMConfig(

@@ -9,6 +9,7 @@ from config.experiment import ExperimentConfig
 from config.task import generate_task_configs
 from experiments import DEFAULT_EXPERIMENT
 from utils.attack import rag_attack
+from utils.defence import DefenceName
 from utils.logger import logger
 from utils.utils import get_device
 from wrappers.cache import get_dataset, get_embedder, get_judge, get_vlm
@@ -23,7 +24,6 @@ def run(exp_config: ExperimentConfig):
         logger.info(f"{'+' * 20}\nTrain Attack {(i + 1):4d}/{n_evals}, task_config -> {pformat(task_config.to_dict(), indent=4)}")
 
         ds = get_dataset(task_config.ds_name)
-        ds.use_original_or_paraphrased_queries(task_config.defence)
 
         vlms = (
             [

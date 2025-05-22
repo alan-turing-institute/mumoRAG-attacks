@@ -1,5 +1,3 @@
-from typing import Optional
-
 import torch
 import torch.nn.functional as F
 import torchvision.transforms.v2 as T
@@ -146,17 +144,6 @@ class EmbeddingModel:
 
         self.model.requires_grad_(False)
         self.model.eval()
-
-    @torch.no_grad()
-    def compare_embeddings(self, image, user_query, overwrite=False, loss_type: EmbeddingLoss = EmbeddingLoss.MSE):
-        self.model.eval()
-        if type(user_query) == str:
-            user_query = [user_query]
-
-        user_query_embedding = self.compute_txt_embedding(user_query)
-        image_embedding = self.compute_img_embedding(image, image, overwrite)
-
-        return self.compute_embedding_loss(image_embedding, user_query_embedding, loss_type).item()
 
     def compute_txt_embedding(self, user_query):
         if self.name == EmbedderName.JINA_CLIP_2:
@@ -349,7 +336,7 @@ def score_multi_vector_modified(
     qs: torch.Tensor | list[torch.Tensor],
     ps: torch.Tensor | list[torch.Tensor],
     batch_size: int = 128,
-    device: Optional[str | torch.device] = None,
+    device: str | torch.device | None = None,
     loss: EmbeddingLoss = EmbeddingLoss.MAXSIM,
 ) -> torch.Tensor:
     """

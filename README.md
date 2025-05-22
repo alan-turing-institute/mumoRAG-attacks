@@ -1,15 +1,19 @@
 # mumoRAG-attacks
+
 Adversarial and poisoning attacks against multimodal retrieval-augmented generation (RAG)
 
 ## Instructions
-- Install poppler utils `brew install poppler`
+
 - Install `uv`: `pip install uv` 
 - Install the project as editable: `uv pip install -e .`
   - To install optional dependencies: `uv pip install -e ".[nb,opt,test,dev]"`
+Alternatively:
+  - `pip install -r requirements.txt` or `pip install -r requirements.opt.txt`
 
 ## Running
 
 ### Training
+
 To train the attack:
 ```shell
 python src/attack_train.py --config-name <name>
