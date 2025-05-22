@@ -1,5 +1,6 @@
 cff-version: 1.2.0
-message: "If you use this software, please cite it as below."
+message: "If you use this software, please cite both the article from preferred-citation and the software itself."
+title: "One Pic is All it Takes: Poisoning Visual Document Retrieval Augmented Generation with a Single Image"
 authors:
   - family-names: Shereen
     given-names: Ezzeldin
@@ -26,9 +27,42 @@ authors:
     given-names: Burak
     affiliation:
       - "The Alan Turing Institute"
-
-title: "One Pic is All it Takes: Poisoning Visual Document Retrieval Augmented Generation with a Single Image"
-identifiers:
-  - type: doi
-    value: "10.48550/arXiv.2504.02132"
+preferred-citation:
+  authors:
+    - family-names: Shereen
+      given-names: Ezzeldin
+      orcid: https://orcid.org/0000-0002-9988-9545
+      affiliation:
+        - "The Alan Turing Institute"
+    - family-names: Ristea
+      given-names: Dan
+      orcid: https://orcid.org/0000-0001-7707-3986
+      affiliation: 
+        - "University College London"
+        - "The Alan Turing Institute"
+    - family-names: McFadden
+      given-names: Shae
+      orcid: https://orcid.org/0009-0008-0180-2888
+      affiliation: 
+        - "University College London"
+        - "King's College London"
+        - "The Alan Turing Institute"
+    - family-names: Hasircioglu
+      given-names: Burak
+      affiliation:
+        - "The Alan Turing Institute"
+    - family-names: Vasilios
+      given-names: Mavroudis
+      affiliation:
+        - "The Alan Turing Institute"
+    - family-names: Chris
+      given-names: Hicks
+      affiliation:
+        - "The Alan Turing Institute"
+    title: "One Pic is All it Takes: Poisoning Visual Document Retrieval Augmented Generation with a Single Image"
+    type: article
+    identifiers:
+      - type: doi
+        value: "10.48550/arXiv.2504.02132"
 license: MIT
+
