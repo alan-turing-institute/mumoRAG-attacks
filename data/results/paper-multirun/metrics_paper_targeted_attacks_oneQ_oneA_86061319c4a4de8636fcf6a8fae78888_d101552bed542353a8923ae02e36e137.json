@@ -9,8 +9,8 @@
             "maxsim"
         ],
         "loss_maxsim_topk_1": {
-            "recall_before": 0.0,
-            "recall_after": 0.0,
+            "recall_before": 0.67,
+            "recall_after": 0.67,
             "asr_train": 0.0,
             "asr_test": 0.0,
             "asr_targeted": 0.0,
@@ -18,12 +18,12 @@
             "fpr_targeted_test": 0.0
         },
         "loss_maxsim_topk_5": {
-            "recall_before": 0.010000000000000002,
-            "recall_after": 0.010000000000000002,
-            "asr_train": 0.025,
+            "recall_before": 0.98,
+            "recall_after": 0.98,
+            "asr_train": 0.0125,
             "asr_test": 0.0,
             "asr_targeted": 1.0,
-            "fpr_targeted_train": 0.012658227848101266,
+            "fpr_targeted_train": 0.0,
             "fpr_targeted_test": 0.0
         }
     },
@@ -36,12 +36,12 @@
                     "fpr_targeted": 0.0
                 },
                 "embed-adversarial": {
-                    "asr_universal": 0.5162652730941772,
-                    "asr_targeted": 0.1771475374698639,
-                    "fpr_targeted": 0.21369676633820503
+                    "asr_universal": 0.5188759565353394,
+                    "asr_targeted": 0.40318194031715393,
+                    "fpr_targeted": 0.2007514488282083
                 },
                 "embed-ground-truth": {
-                    "accuracy": 0.516248881816864
+                    "accuracy": 0.5233719348907471
                 }
             }
         },
@@ -52,11 +52,11 @@
                     "fpr_targeted": 0.0
                 },
                 "embed-adversarial": {
-                    "asr_universal": 0.5224820375442505,
-                    "fpr_targeted": 0.19591273572295903
+                    "asr_universal": 0.5421939492225647,
+                    "fpr_targeted": 0.20571723580360413
                 },
                 "embed-ground-truth": {
-                    "accuracy": 0.5224820375442505
+                    "accuracy": 0.5421939492225647
                 }
             }
         }

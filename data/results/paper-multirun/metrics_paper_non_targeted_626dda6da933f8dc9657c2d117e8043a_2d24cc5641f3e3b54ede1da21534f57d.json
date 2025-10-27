@@ -34,10 +34,10 @@
                     "asr_universal": 0.0
                 },
                 "embed-adversarial": {
-                    "asr_universal": 0.003941476345062256
+                    "asr_universal": -0.009066281840205193
                 },
                 "embed-ground-truth": {
-                    "accuracy": 0.48965984582901
+                    "accuracy": 0.5069698095321655
                 }
             }
         },
@@ -47,10 +47,10 @@
                     "asr_universal": 0.0
                 },
                 "embed-adversarial": {
-                    "asr_universal": -0.004674058873206377
+                    "asr_universal": 0.015313786454498768
                 },
                 "embed-ground-truth": {
-                    "accuracy": 0.5591192245483398
+                    "accuracy": 0.5334702730178833
                 }
             }
         }

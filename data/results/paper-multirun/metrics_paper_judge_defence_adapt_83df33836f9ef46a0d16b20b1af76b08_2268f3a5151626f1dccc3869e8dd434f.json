@@ -9,19 +9,19 @@
             "maxsim"
         ],
         "loss_maxsim_topk_1": {
-            "recall_before": 0.0,
-            "recall_after": 0.0,
-            "asr_train": 1.0,
-            "asr_test": 1.0,
+            "recall_before": 0.67,
+            "recall_after": 0.67,
+            "asr_train": 0.0125,
+            "asr_test": 0.0,
             "asr_targeted": -1,
             "fpr_targeted_train": -1,
             "fpr_targeted_test": -1
         },
         "loss_maxsim_topk_5": {
-            "recall_before": 0.010000000000000002,
-            "recall_after": 0.0,
-            "asr_train": 1.0,
-            "asr_test": 1.0,
+            "recall_before": 0.98,
+            "recall_after": 0.98,
+            "asr_train": 0.175,
+            "asr_test": 0.1,
             "asr_targeted": -1,
             "fpr_targeted_train": -1,
             "fpr_targeted_test": -1
@@ -31,26 +31,26 @@
         "train": {
             "gen_topk_-1": {
                 "exact-asr": {
-                    "asr_universal": 0.925
+                    "asr_universal": 0.3125
                 },
                 "embed-adversarial": {
-                    "asr_universal": 0.931658923625946
+                    "asr_universal": 0.3278469741344452
                 },
                 "embed-ground-truth": {
-                    "accuracy": 0.026081716641783714
+                    "accuracy": 0.3117929697036743
                 }
             }
         },
         "test": {
             "gen_topk_-1": {
                 "exact-asr": {
-                    "asr_universal": 0.85
+                    "asr_universal": 0.45
                 },
                 "embed-adversarial": {
-                    "asr_universal": 0.8391504287719727
+                    "asr_universal": 0.4411497712135315
                 },
                 "embed-ground-truth": {
-                    "accuracy": 0.07787907123565674
+                    "accuracy": 0.27990639209747314
                 }
             }
         }
@@ -62,10 +62,10 @@
                     "asr_universal": 1.0
                 },
                 "image_faithfulness": {
-                    "asr_universal": 0.95
+                    "asr_universal": 0.8125
                 },
                 "answer_relevancy": {
-                    "asr_universal": 1.0
+                    "asr_universal": 0.9625
                 }
             }
         },
@@ -75,7 +75,7 @@
                     "asr_universal": 1.0
                 },
                 "image_faithfulness": {
-                    "asr_universal": 0.95
+                    "asr_universal": 0.85
                 },
                 "answer_relevancy": {
                     "asr_universal": 1.0

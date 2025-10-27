@@ -9,8 +9,8 @@
             "maxsim"
         ],
         "loss_maxsim_topk_1": {
-            "recall_before": 0.0,
-            "recall_after": 0.0,
+            "recall_before": 0.67,
+            "recall_after": 0.67,
             "asr_train": 0.0,
             "asr_test": 0.0,
             "asr_targeted": 0.0,
@@ -18,12 +18,12 @@
             "fpr_targeted_test": 0.0
         },
         "loss_maxsim_topk_5": {
-            "recall_before": 0.010000000000000002,
-            "recall_after": 0.010000000000000002,
-            "asr_train": 0.0,
+            "recall_before": 0.98,
+            "recall_after": 0.98,
+            "asr_train": 0.025,
             "asr_test": 0.0,
-            "asr_targeted": 0.0,
-            "fpr_targeted_train": 0.0,
+            "asr_targeted": 1.0,
+            "fpr_targeted_train": 0.012658227848101266,
             "fpr_targeted_test": 0.0
         }
     },
@@ -36,12 +36,12 @@
                     "fpr_targeted": 0.0
                 },
                 "embed-adversarial": {
-                    "asr_universal": 0.5141735076904297,
-                    "asr_targeted": -0.08725649863481522,
-                    "fpr_targeted": -0.0073642276251052
+                    "asr_universal": 0.5220822691917419,
+                    "asr_targeted": -0.08278753608465195,
+                    "fpr_targeted": -0.016949161232885302
                 },
                 "embed-ground-truth": {
-                    "accuracy": 0.524329423904419
+                    "accuracy": 0.5326438546180725
                 }
             }
         },
@@ -52,11 +52,11 @@
                     "fpr_targeted": 0.0
                 },
                 "embed-adversarial": {
-                    "asr_universal": 0.5532474517822266,
-                    "fpr_targeted": 0.0014334019739180802
+                    "asr_universal": 0.5403178334236145,
+                    "fpr_targeted": 0.0019467454869300127
                 },
                 "embed-ground-truth": {
-                    "accuracy": 0.5532474517822266
+                    "accuracy": 0.5403178334236145
                 }
             }
         }
@@ -70,14 +70,14 @@
                     "fpr_targeted": 0.0
                 },
                 "image_faithfulness": {
-                    "asr_universal": 0.0125,
-                    "asr_targeted": 1.0,
-                    "fpr_targeted": 0.0
+                    "asr_universal": 0.025,
+                    "asr_targeted": 0.0,
+                    "fpr_targeted": 0.02531645569620253
                 },
                 "answer_relevancy": {
-                    "asr_universal": 0.0375,
+                    "asr_universal": 0.05,
                     "asr_targeted": 0.0,
-                    "fpr_targeted": 0.0379746835443038
+                    "fpr_targeted": 0.05063291139240506
                 }
             }
         },
@@ -92,8 +92,8 @@
                     "fpr_targeted": 0.0
                 },
                 "answer_relevancy": {
-                    "asr_universal": 0.1,
-                    "fpr_targeted": 0.1
+                    "asr_universal": 0.05,
+                    "fpr_targeted": 0.05
                 }
             }
         }

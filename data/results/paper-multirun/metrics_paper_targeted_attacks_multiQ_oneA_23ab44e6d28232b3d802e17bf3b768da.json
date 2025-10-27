@@ -9,8 +9,8 @@
             "maxsim"
         ],
         "loss_maxsim_topk_1": {
-            "recall_before": 0.0,
-            "recall_after": 0.0,
+            "recall_before": 0.67,
+            "recall_after": 0.67,
             "asr_train": 0.0,
             "asr_test": 0.0,
             "asr_targeted": 0.0,
@@ -18,30 +18,30 @@
             "fpr_targeted_test": 0.0
         },
         "loss_maxsim_topk_5": {
-            "recall_before": 0.010000000000000002,
-            "recall_after": 0.010000000000000002,
-            "asr_train": 0.0875,
-            "asr_test": 0.05,
-            "asr_targeted": 0.8,
-            "fpr_targeted_train": 0.04,
-            "fpr_targeted_test": 0.05
+            "recall_before": 0.98,
+            "recall_after": 0.98,
+            "asr_train": 0.0,
+            "asr_test": 0.0,
+            "asr_targeted": 0.0,
+            "fpr_targeted_train": 0.0,
+            "fpr_targeted_test": 0.0
         }
     },
     "generation": {
         "train": {
             "gen_topk_-1": {
                 "exact-asr": {
-                    "asr_universal": 0.05,
-                    "asr_targeted": 0.8,
-                    "fpr_targeted": 0.06666666666666667
+                    "asr_universal": 0.0,
+                    "asr_targeted": 0.0,
+                    "fpr_targeted": 0.0
                 },
                 "embed-adversarial": {
-                    "asr_universal": 0.4567134976387024,
-                    "asr_targeted": 0.7761573314666748,
-                    "fpr_targeted": 0.12210233353078365
+                    "asr_universal": 0.47917407751083374,
+                    "asr_targeted": 0.40090690907090903,
+                    "fpr_targeted": 0.0188233538189282
                 },
                 "embed-ground-truth": {
-                    "accuracy": 0.41452789306640625
+                    "accuracy": 0.46849194169044495
                 }
             }
         },
@@ -52,11 +52,11 @@
                     "fpr_targeted": 0.0
                 },
                 "embed-adversarial": {
-                    "asr_universal": 0.4841093420982361,
-                    "fpr_targeted": 0.06839973505120725
+                    "asr_universal": 0.5094987750053406,
+                    "fpr_targeted": -0.0101201860466972
                 },
                 "embed-ground-truth": {
-                    "accuracy": 0.4841093420982361
+                    "accuracy": 0.5094987750053406
                 }
             }
         }

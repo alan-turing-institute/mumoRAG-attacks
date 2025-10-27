@@ -9,8 +9,8 @@
             "maxsim"
         ],
         "loss_maxsim_topk_1": {
-            "recall_before": 0.0,
-            "recall_after": 0.0,
+            "recall_before": 0.67,
+            "recall_after": 0.67,
             "asr_train": 0.0,
             "asr_test": 0.0,
             "asr_targeted": 0.0,
@@ -18,8 +18,8 @@
             "fpr_targeted_test": 0.0
         },
         "loss_maxsim_topk_5": {
-            "recall_before": 0.010000000000000002,
-            "recall_after": 0.010000000000000002,
+            "recall_before": 0.98,
+            "recall_after": 0.98,
             "asr_train": 0.0,
             "asr_test": 0.0,
             "asr_targeted": 0.0,
@@ -33,15 +33,15 @@
                 "exact-asr": {
                     "asr_universal": 0.0125,
                     "asr_targeted": 1.0,
-                    "fpr_targeted": 0.10126582278481013
+                    "fpr_targeted": 0.21518987341772153
                 },
                 "embed-adversarial": {
-                    "asr_universal": 0.47444581985473633,
+                    "asr_universal": 0.4162425994873047,
                     "asr_targeted": 0.9999999403953552,
-                    "fpr_targeted": 0.09236086817764783
+                    "fpr_targeted": 0.19588243855823634
                 },
                 "embed-ground-truth": {
-                    "accuracy": 0.4612646698951721
+                    "accuracy": 0.4030613899230957
                 }
             }
         },
@@ -49,14 +49,14 @@
             "gen_topk_-1": {
                 "exact-asr": {
                     "asr_universal": 0.0,
-                    "fpr_targeted": 0.0
+                    "fpr_targeted": 0.15
                 },
                 "embed-adversarial": {
-                    "asr_universal": 0.5413426756858826,
-                    "fpr_targeted": 0.009402879746630788
+                    "asr_universal": 0.4448152482509613,
+                    "fpr_targeted": 0.13928940310142934
                 },
                 "embed-ground-truth": {
-                    "accuracy": 0.5413426756858826
+                    "accuracy": 0.4448152482509613
                 }
             }
         }
@@ -65,19 +65,19 @@
         "train": {
             "gen_topk_-1": {
                 "image_context_relevancy": {
-                    "asr_universal": 0.0125,
-                    "asr_targeted": 0.0,
-                    "fpr_targeted": 0.012658227848101266
-                },
-                "image_faithfulness": {
                     "asr_universal": 0.0,
                     "asr_targeted": 0.0,
                     "fpr_targeted": 0.0
                 },
-                "answer_relevancy": {
-                    "asr_universal": 0.05,
+                "image_faithfulness": {
+                    "asr_universal": 0.025,
                     "asr_targeted": 0.0,
-                    "fpr_targeted": 0.05063291139240506
+                    "fpr_targeted": 0.02531645569620253
+                },
+                "answer_relevancy": {
+                    "asr_universal": 0.0125,
+                    "asr_targeted": 0.0,
+                    "fpr_targeted": 0.012658227848101266
                 }
             }
         },
@@ -92,8 +92,8 @@
                     "fpr_targeted": 0.0
                 },
                 "answer_relevancy": {
-                    "asr_universal": 0.05,
-                    "fpr_targeted": 0.05
+                    "asr_universal": 0.0,
+                    "fpr_targeted": 0.0
                 }
             }
         }

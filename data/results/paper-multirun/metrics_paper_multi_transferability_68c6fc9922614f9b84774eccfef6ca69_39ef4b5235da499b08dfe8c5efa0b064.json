@@ -31,26 +31,26 @@
         "train": {
             "gen_topk_-1": {
                 "exact-asr": {
-                    "asr_universal": 0.8375
+                    "asr_universal": 0.025
                 },
                 "embed-adversarial": {
-                    "asr_universal": 0.8883147239685059
+                    "asr_universal": 0.04605904966592789
                 },
                 "embed-ground-truth": {
-                    "accuracy": 0.04106077179312706
+                    "accuracy": 0.4853724539279938
                 }
             }
         },
         "test": {
             "gen_topk_-1": {
                 "exact-asr": {
-                    "asr_universal": 0.95
+                    "asr_universal": 0.05
                 },
                 "embed-adversarial": {
-                    "asr_universal": 0.9504919052124023
+                    "asr_universal": 0.06472065299749374
                 },
                 "embed-ground-truth": {
-                    "accuracy": 0.033853091299533844
+                    "accuracy": 0.5361081957817078
                 }
             }
         }

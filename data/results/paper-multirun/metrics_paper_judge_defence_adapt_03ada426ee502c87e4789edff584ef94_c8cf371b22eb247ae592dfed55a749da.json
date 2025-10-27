@@ -9,19 +9,19 @@
             "maxsim"
         ],
         "loss_maxsim_topk_1": {
-            "recall_before": 0.0,
-            "recall_after": 0.0,
-            "asr_train": 1.0,
-            "asr_test": 1.0,
+            "recall_before": 0.67,
+            "recall_after": 0.67,
+            "asr_train": 0.0,
+            "asr_test": 0.0,
             "asr_targeted": -1,
             "fpr_targeted_train": -1,
             "fpr_targeted_test": -1
         },
         "loss_maxsim_topk_5": {
-            "recall_before": 0.010000000000000002,
-            "recall_after": 0.0,
-            "asr_train": 1.0,
-            "asr_test": 1.0,
+            "recall_before": 0.98,
+            "recall_after": 0.98,
+            "asr_train": 0.2125,
+            "asr_test": 0.05,
             "asr_targeted": -1,
             "fpr_targeted_train": -1,
             "fpr_targeted_test": -1
@@ -31,26 +31,26 @@
         "train": {
             "gen_topk_-1": {
                 "exact-asr": {
-                    "asr_universal": 0.975
+                    "asr_universal": 0.0
                 },
                 "embed-adversarial": {
-                    "asr_universal": 0.9887931942939758
+                    "asr_universal": -0.008526382967829704
                 },
                 "embed-ground-truth": {
-                    "accuracy": -0.005819820798933506
+                    "accuracy": 0.4925355017185211
                 }
             }
         },
         "test": {
             "gen_topk_-1": {
                 "exact-asr": {
-                    "asr_universal": 0.95
+                    "asr_universal": 0.0
                 },
                 "embed-adversarial": {
-                    "asr_universal": 0.9590705633163452
+                    "asr_universal": -0.001330034458078444
                 },
                 "embed-ground-truth": {
-                    "accuracy": 0.0633334070444107
+                    "accuracy": 0.5278946161270142
                 }
             }
         }
@@ -59,10 +59,10 @@
         "train": {
             "gen_topk_-1": {
                 "image_context_relevancy": {
-                    "asr_universal": 1.0
+                    "asr_universal": 0.95
                 },
                 "image_faithfulness": {
-                    "asr_universal": 1.0
+                    "asr_universal": 0.925
                 },
                 "answer_relevancy": {
                     "asr_universal": 1.0
@@ -75,7 +75,7 @@
                     "asr_universal": 1.0
                 },
                 "image_faithfulness": {
-                    "asr_universal": 1.0
+                    "asr_universal": 0.85
                 },
                 "answer_relevancy": {
                     "asr_universal": 1.0

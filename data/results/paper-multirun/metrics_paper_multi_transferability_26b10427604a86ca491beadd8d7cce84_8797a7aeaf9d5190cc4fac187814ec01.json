@@ -21,7 +21,7 @@
             "recall_before": 0.94,
             "recall_after": 0.94,
             "asr_train": 0.0375,
-            "asr_test": 0.1,
+            "asr_test": 0.05,
             "asr_targeted": -1,
             "fpr_targeted_train": -1,
             "fpr_targeted_test": -1
@@ -31,26 +31,26 @@
         "train": {
             "gen_topk_-1": {
                 "exact-asr": {
-                    "asr_universal": 0.95
+                    "asr_universal": 0.075
                 },
                 "embed-adversarial": {
-                    "asr_universal": 0.9694408178329468
+                    "asr_universal": 0.08122462779283524
                 },
                 "embed-ground-truth": {
-                    "accuracy": -0.001587270526215434
+                    "accuracy": 0.4633389115333557
                 }
             }
         },
         "test": {
             "gen_topk_-1": {
                 "exact-asr": {
-                    "asr_universal": 1.0
+                    "asr_universal": 0.0
                 },
                 "embed-adversarial": {
-                    "asr_universal": 0.9999998807907104
+                    "asr_universal": -0.01794789358973503
                 },
                 "embed-ground-truth": {
-                    "accuracy": 0.030102748423814774
+                    "accuracy": 0.516994059085846
                 }
             }
         }

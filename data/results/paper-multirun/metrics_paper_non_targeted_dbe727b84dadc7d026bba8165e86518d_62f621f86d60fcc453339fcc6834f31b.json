@@ -31,13 +31,13 @@
         "train": {
             "gen_topk_-1": {
                 "exact-asr": {
-                    "asr_universal": 1.0
+                    "asr_universal": 0.975
                 },
                 "embed-adversarial": {
-                    "asr_universal": 0.9999998807907104
+                    "asr_universal": 0.9757424592971802
                 },
                 "embed-ground-truth": {
-                    "accuracy": -0.010851713828742504
+                    "accuracy": 0.0009760513785295188
                 }
             }
         },

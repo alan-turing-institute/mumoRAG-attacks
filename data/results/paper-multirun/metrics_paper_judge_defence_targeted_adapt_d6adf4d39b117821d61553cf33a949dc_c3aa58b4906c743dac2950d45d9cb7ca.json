@@ -9,8 +9,8 @@
             "maxsim"
         ],
         "loss_maxsim_topk_1": {
-            "recall_before": 0.0,
-            "recall_after": 0.0,
+            "recall_before": 0.67,
+            "recall_after": 0.67,
             "asr_train": 0.0,
             "asr_test": 0.0,
             "asr_targeted": 0.0,
@@ -18,8 +18,8 @@
             "fpr_targeted_test": 0.0
         },
         "loss_maxsim_topk_5": {
-            "recall_before": 0.010000000000000002,
-            "recall_after": 0.010000000000000002,
+            "recall_before": 0.98,
+            "recall_after": 0.98,
             "asr_train": 0.0125,
             "asr_test": 0.0,
             "asr_targeted": 1.0,
@@ -33,15 +33,15 @@
                 "exact-asr": {
                     "asr_universal": 0.0125,
                     "asr_targeted": 1.0,
-                    "fpr_targeted": 0.06329113924050633
+                    "fpr_targeted": 0.4430379746835443
                 },
                 "embed-adversarial": {
-                    "asr_universal": 0.4531281888484955,
+                    "asr_universal": 0.2420031726360321,
                     "asr_targeted": 0.9999999403953552,
-                    "fpr_targeted": 0.06442394543769239
+                    "fpr_targeted": 0.4585915537833979
                 },
                 "embed-ground-truth": {
-                    "accuracy": 0.4399470388889313
+                    "accuracy": 0.2288219928741455
                 }
             }
         },
@@ -49,14 +49,14 @@
             "gen_topk_-1": {
                 "exact-asr": {
                     "asr_universal": 0.0,
-                    "fpr_targeted": 0.0
+                    "fpr_targeted": 0.5
                 },
                 "embed-adversarial": {
-                    "asr_universal": 0.5121380090713501,
-                    "fpr_targeted": 0.03752379920333624
+                    "asr_universal": 0.3075631260871887,
+                    "fpr_targeted": 0.4837312032468617
                 },
                 "embed-ground-truth": {
-                    "accuracy": 0.5121380090713501
+                    "accuracy": 0.3075631260871887
                 }
             }
         }
@@ -65,35 +65,35 @@
         "train": {
             "gen_topk_-1": {
                 "image_context_relevancy": {
-                    "asr_universal": 0.8875,
-                    "asr_targeted": 1.0,
-                    "fpr_targeted": 0.8860759493670886
+                    "asr_universal": 0.05,
+                    "asr_targeted": 0.0,
+                    "fpr_targeted": 0.05063291139240506
                 },
                 "image_faithfulness": {
-                    "asr_universal": 0.5125,
-                    "asr_targeted": 1.0,
-                    "fpr_targeted": 0.5063291139240507
+                    "asr_universal": 0.025,
+                    "asr_targeted": 0.0,
+                    "fpr_targeted": 0.02531645569620253
                 },
                 "answer_relevancy": {
-                    "asr_universal": 0.575,
-                    "asr_targeted": 1.0,
-                    "fpr_targeted": 0.569620253164557
+                    "asr_universal": 0.05,
+                    "asr_targeted": 0.0,
+                    "fpr_targeted": 0.05063291139240506
                 }
             }
         },
         "test": {
             "gen_topk_-1": {
                 "image_context_relevancy": {
-                    "asr_universal": 0.8,
-                    "fpr_targeted": 0.8
+                    "asr_universal": 0.05,
+                    "fpr_targeted": 0.05
                 },
                 "image_faithfulness": {
-                    "asr_universal": 0.4,
-                    "fpr_targeted": 0.4
+                    "asr_universal": 0.0,
+                    "fpr_targeted": 0.0
                 },
                 "answer_relevancy": {
-                    "asr_universal": 0.65,
-                    "fpr_targeted": 0.65
+                    "asr_universal": 0.0,
+                    "fpr_targeted": 0.0
                 }
             }
         }

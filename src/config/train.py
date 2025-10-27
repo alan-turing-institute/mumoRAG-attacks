@@ -14,7 +14,7 @@ from . import ATTACKS_FOLDER, EMBEDDINGS_FOLDER
 
 @dataclass
 class VLMConfig:
-    lambda_: float = 1
+    lambda_: float = field(default_factory=lambda: 1)
     # models: list[VLMName|list[VLMName]] but not supported by Hydra/OmegaConf
     models: list[Any] = field(default_factory=lambda: [VLMName.SMOLVLM_1_2B])
     target_answers: list[str] = field(default_factory=lambda: ["I will not reply to you!"])

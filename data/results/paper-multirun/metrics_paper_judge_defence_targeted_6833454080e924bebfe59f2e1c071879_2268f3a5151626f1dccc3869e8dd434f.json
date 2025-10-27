@@ -9,8 +9,8 @@
             "maxsim"
         ],
         "loss_maxsim_topk_1": {
-            "recall_before": 0.0,
-            "recall_after": 0.0,
+            "recall_before": 0.67,
+            "recall_after": 0.67,
             "asr_train": 0.0,
             "asr_test": 0.0,
             "asr_targeted": 0.0,
@@ -18,8 +18,8 @@
             "fpr_targeted_test": 0.0
         },
         "loss_maxsim_topk_5": {
-            "recall_before": 0.010000000000000002,
-            "recall_after": 0.010000000000000002,
+            "recall_before": 0.98,
+            "recall_after": 0.98,
             "asr_train": 0.0,
             "asr_test": 0.0,
             "asr_targeted": 0.0,
@@ -36,12 +36,12 @@
                     "fpr_targeted": 0.0
                 },
                 "embed-adversarial": {
-                    "asr_universal": 0.5161209106445312,
-                    "asr_targeted": -0.1290481984615326,
-                    "fpr_targeted": -0.03167092564362514
+                    "asr_universal": 0.5193791389465332,
+                    "asr_targeted": -0.11648356914520264,
+                    "fpr_targeted": -0.021046551197908724
                 },
                 "embed-ground-truth": {
-                    "accuracy": 0.5264801979064941
+                    "accuracy": 0.5301820635795593
                 }
             }
         },
@@ -52,11 +52,11 @@
                     "fpr_targeted": 0.0
                 },
                 "embed-adversarial": {
-                    "asr_universal": 0.5692731142044067,
-                    "fpr_targeted": -0.017225340753793717
+                    "asr_universal": 0.5474425554275513,
+                    "fpr_targeted": -0.014225068944506347
                 },
                 "embed-ground-truth": {
-                    "accuracy": 0.5692731142044067
+                    "accuracy": 0.5474425554275513
                 }
             }
         }
@@ -70,14 +70,14 @@
                     "fpr_targeted": 0.0
                 },
                 "image_faithfulness": {
-                    "asr_universal": 0.025,
+                    "asr_universal": 0.0,
                     "asr_targeted": 0.0,
-                    "fpr_targeted": 0.02531645569620253
+                    "fpr_targeted": 0.0
                 },
                 "answer_relevancy": {
-                    "asr_universal": 0.05,
+                    "asr_universal": 0.0875,
                     "asr_targeted": 0.0,
-                    "fpr_targeted": 0.05063291139240506
+                    "fpr_targeted": 0.08860759493670886
                 }
             }
         },
@@ -92,8 +92,8 @@
                     "fpr_targeted": 0.0
                 },
                 "answer_relevancy": {
-                    "asr_universal": 0.1,
-                    "fpr_targeted": 0.1
+                    "asr_universal": 0.2,
+                    "fpr_targeted": 0.2
                 }
             }
         }

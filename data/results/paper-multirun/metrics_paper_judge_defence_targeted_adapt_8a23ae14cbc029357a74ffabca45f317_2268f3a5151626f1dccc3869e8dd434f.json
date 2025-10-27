@@ -9,39 +9,39 @@
             "maxsim"
         ],
         "loss_maxsim_topk_1": {
-            "recall_before": 0.0,
-            "recall_after": 0.0,
-            "asr_train": 0.0375,
+            "recall_before": 0.67,
+            "recall_after": 0.6599999999999999,
+            "asr_train": 0.025,
             "asr_test": 0.0,
             "asr_targeted": 1.0,
-            "fpr_targeted_train": 0.02531645569620253,
+            "fpr_targeted_train": 0.012658227848101266,
             "fpr_targeted_test": 0.0
         },
         "loss_maxsim_topk_5": {
-            "recall_before": 0.010000000000000002,
-            "recall_after": 0.010000000000000002,
-            "asr_train": 0.0625,
-            "asr_test": 0.1,
+            "recall_before": 0.98,
+            "recall_after": 0.98,
+            "asr_train": 0.025,
+            "asr_test": 0.0,
             "asr_targeted": 1.0,
-            "fpr_targeted_train": 0.05063291139240506,
-            "fpr_targeted_test": 0.1
+            "fpr_targeted_train": 0.012658227848101266,
+            "fpr_targeted_test": 0.0
         }
     },
     "generation": {
         "train": {
             "gen_topk_-1": {
                 "exact-asr": {
-                    "asr_universal": 0.0125,
-                    "asr_targeted": 1.0,
-                    "fpr_targeted": 0.0379746835443038
+                    "asr_universal": 0.0,
+                    "asr_targeted": 0.0,
+                    "fpr_targeted": 0.012658227848101266
                 },
                 "embed-adversarial": {
-                    "asr_universal": 0.49939924478530884,
-                    "asr_targeted": 0.9999999403953552,
-                    "fpr_targeted": 0.0031975832048662103
+                    "asr_universal": 0.4994080066680908,
+                    "asr_targeted": -0.12207445502281189,
+                    "fpr_targeted": -0.01788691287459452
                 },
                 "embed-ground-truth": {
-                    "accuracy": 0.48621806502342224
+                    "accuracy": 0.5103172063827515
                 }
             }
         },
@@ -49,14 +49,14 @@
             "gen_topk_-1": {
                 "exact-asr": {
                     "asr_universal": 0.0,
-                    "fpr_targeted": 0.05
+                    "fpr_targeted": 0.0
                 },
                 "embed-adversarial": {
-                    "asr_universal": 0.5119783282279968,
-                    "fpr_targeted": 0.028758618980646133
+                    "asr_universal": 0.5499650239944458,
+                    "fpr_targeted": -0.0209209640044719
                 },
                 "embed-ground-truth": {
-                    "accuracy": 0.5119783282279968
+                    "accuracy": 0.5499650239944458
                 }
             }
         }
@@ -65,19 +65,19 @@
         "train": {
             "gen_topk_-1": {
                 "image_context_relevancy": {
-                    "asr_universal": 0.025,
-                    "asr_targeted": 0.0,
-                    "fpr_targeted": 0.02531645569620253
-                },
-                "image_faithfulness": {
                     "asr_universal": 0.0,
                     "asr_targeted": 0.0,
                     "fpr_targeted": 0.0
                 },
-                "answer_relevancy": {
-                    "asr_universal": 0.05,
+                "image_faithfulness": {
+                    "asr_universal": 0.0125,
                     "asr_targeted": 0.0,
-                    "fpr_targeted": 0.05063291139240506
+                    "fpr_targeted": 0.012658227848101266
+                },
+                "answer_relevancy": {
+                    "asr_universal": 0.0625,
+                    "asr_targeted": 0.0,
+                    "fpr_targeted": 0.06329113924050633
                 }
             }
         },
@@ -88,12 +88,12 @@
                     "fpr_targeted": 0.0
                 },
                 "image_faithfulness": {
-                    "asr_universal": 0.0,
-                    "fpr_targeted": 0.0
+                    "asr_universal": 0.05,
+                    "fpr_targeted": 0.05
                 },
                 "answer_relevancy": {
-                    "asr_universal": 0.0,
-                    "fpr_targeted": 0.0
+                    "asr_universal": 0.05,
+                    "fpr_targeted": 0.05
                 }
             }
         }

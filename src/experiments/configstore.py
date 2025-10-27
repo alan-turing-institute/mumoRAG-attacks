@@ -31,6 +31,14 @@ embedders = [
     EmbedderName.QWEN2_GME_2B,
     # EmbedderName.SIGLIP2_LARGE_PATCH16
 ]
+
+eval_embedders = [
+    EmbedderName.CLIP_LARGE_PATCH14,
+    EmbedderName.COLPALI,
+    EmbedderName.QWEN2_GME_2B,
+    # EmbedderName.SIGLIP2_LARGE_PATCH16
+]
+
 vlms = [
     VLMName.SMOLVLM_1_2B,
     VLMName.QWEN_2p5_VL_3B,
@@ -148,8 +156,8 @@ configstore.store(
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
-            embedder_list=[embedders_sets],
-            vlm=VLMConfig(models=[vlms_sets]),
+            embedder_list=embedders_sets,
+            vlm=VLMConfig(models=vlms_sets),
             chosen_index_list=[150,251,420,676,769],
         ),
         eval=ExperimentEvalConfig(
@@ -189,8 +197,8 @@ configstore.store(
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
-            embedder_list=[embedders_sets],
-            vlm=VLMConfig(models=[vlms_sets]),
+            embedder_list=embedders_sets,
+            vlm=VLMConfig(models=vlms_sets),
             is_targeted=True,
             target_query_idx=[0],
             n_knn_target_queries=1,
@@ -213,7 +221,7 @@ configstore.store(
 	    chosen_index_list=[150,251,420,676,769],
         ),
         eval=ExperimentEvalConfig(
-            eval_emb_list=embedders,
+            eval_emb_list=eval_embedders,
             eval_vlm_list=vlms,
         ),
     ),
@@ -241,7 +249,7 @@ configstore.store(
             n_knn_target_queries=1,
         ),
         eval=ExperimentEvalConfig(
-            eval_emb_list=embedders,
+            eval_emb_list=eval_embedders,
             eval_vlm_list=vlms,
         ),
     ),
@@ -508,7 +516,7 @@ configstore.store(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
             embedder_list=embedders,
-            vlm=VLMConfig(models=vlms, gen_topk_list=[1, 5]),
+            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B], gen_topk_list=[1, 5]),
             chosen_index_list=[150,251,420,676,769],
         ),
         eval=ExperimentEvalConfig(
@@ -527,7 +535,7 @@ configstore.store(
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
-            embedder_list=embedders,
+            embedder_list=[VLMName.SMOLVLM_1_2B],
             vlm=VLMConfig(models=vlms, gen_topk_list=[
                 1,
                 5

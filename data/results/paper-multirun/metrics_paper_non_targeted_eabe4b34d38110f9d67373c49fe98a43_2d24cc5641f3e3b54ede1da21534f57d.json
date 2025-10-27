@@ -10,8 +10,8 @@
         ],
         "loss_cos_topk_1": {
             "recall_before": 0.58,
-            "recall_after": 0.5700000000000001,
-            "asr_train": 0.0125,
+            "recall_after": 0.58,
+            "asr_train": 0.0,
             "asr_test": 0.0,
             "asr_targeted": -1,
             "fpr_targeted_train": -1,
@@ -20,7 +20,7 @@
         "loss_cos_topk_5": {
             "recall_before": 0.94,
             "recall_after": 0.94,
-            "asr_train": 0.0125,
+            "asr_train": 0.0375,
             "asr_test": 0.0,
             "asr_targeted": -1,
             "fpr_targeted_train": -1,

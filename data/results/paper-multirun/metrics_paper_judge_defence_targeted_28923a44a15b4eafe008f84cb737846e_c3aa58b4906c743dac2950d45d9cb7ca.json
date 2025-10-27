@@ -9,8 +9,8 @@
             "maxsim"
         ],
         "loss_maxsim_topk_1": {
-            "recall_before": 0.0,
-            "recall_after": 0.0,
+            "recall_before": 0.67,
+            "recall_after": 0.67,
             "asr_train": 0.0,
             "asr_test": 0.0,
             "asr_targeted": 0.0,
@@ -18,8 +18,8 @@
             "fpr_targeted_test": 0.0
         },
         "loss_maxsim_topk_5": {
-            "recall_before": 0.010000000000000002,
-            "recall_after": 0.010000000000000002,
+            "recall_before": 0.98,
+            "recall_after": 0.98,
             "asr_train": 0.0125,
             "asr_test": 0.0,
             "asr_targeted": 1.0,
@@ -31,17 +31,17 @@
         "train": {
             "gen_topk_-1": {
                 "exact-asr": {
-                    "asr_universal": 0.0125,
-                    "asr_targeted": 1.0,
+                    "asr_universal": 0.0,
+                    "asr_targeted": 0.0,
                     "fpr_targeted": 0.0
                 },
                 "embed-adversarial": {
-                    "asr_universal": 0.5064560174942017,
-                    "asr_targeted": 0.9999999403953552,
-                    "fpr_targeted": -0.006886191041314904
+                    "asr_universal": 0.5122931003570557,
+                    "asr_targeted": -0.09951106458902359,
+                    "fpr_targeted": -0.036910930577712726
                 },
                 "embed-ground-truth": {
-                    "accuracy": 0.49327486753463745
+                    "accuracy": 0.5231202244758606
                 }
             }
         },
@@ -52,11 +52,11 @@
                     "fpr_targeted": 0.0
                 },
                 "embed-adversarial": {
-                    "asr_universal": 0.4641909599304199,
-                    "fpr_targeted": 0.03110658689402044
+                    "asr_universal": 0.5267711877822876,
+                    "fpr_targeted": -0.01949762078002095
                 },
                 "embed-ground-truth": {
-                    "accuracy": 0.4641909599304199
+                    "accuracy": 0.5267711877822876
                 }
             }
         }

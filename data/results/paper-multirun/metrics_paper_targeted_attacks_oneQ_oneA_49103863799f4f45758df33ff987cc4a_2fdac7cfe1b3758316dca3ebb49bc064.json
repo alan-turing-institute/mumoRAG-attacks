@@ -9,8 +9,8 @@
             "maxsim"
         ],
         "loss_maxsim_topk_1": {
-            "recall_before": 0.0,
-            "recall_after": 0.0,
+            "recall_before": 0.67,
+            "recall_after": 0.67,
             "asr_train": 0.0,
             "asr_test": 0.0,
             "asr_targeted": 0.0,
@@ -18,12 +18,12 @@
             "fpr_targeted_test": 0.0
         },
         "loss_maxsim_topk_5": {
-            "recall_before": 0.010000000000000002,
-            "recall_after": 0.010000000000000002,
-            "asr_train": 0.0,
+            "recall_before": 0.98,
+            "recall_after": 0.98,
+            "asr_train": 0.0125,
             "asr_test": 0.0,
             "asr_targeted": 0.0,
-            "fpr_targeted_train": 0.0,
+            "fpr_targeted_train": 0.012658227848101266,
             "fpr_targeted_test": 0.0
         }
     },
@@ -36,12 +36,12 @@
                     "fpr_targeted": 0.0
                 },
                 "embed-adversarial": {
-                    "asr_universal": 0.5242084264755249,
-                    "asr_targeted": 0.5288341045379639,
-                    "fpr_targeted": 0.23157550818935224
+                    "asr_universal": 0.5238738059997559,
+                    "asr_targeted": 0.46221011877059937,
+                    "fpr_targeted": 0.24335600230607052
                 },
                 "embed-ground-truth": {
-                    "accuracy": 0.5266755223274231
+                    "accuracy": 0.5277565121650696
                 }
             }
         },
@@ -52,11 +52,11 @@
                     "fpr_targeted": 0.0
                 },
                 "embed-adversarial": {
-                    "asr_universal": 0.51790452003479,
-                    "fpr_targeted": 0.2396119251847267
+                    "asr_universal": 0.534469485282898,
+                    "fpr_targeted": 0.2315229158848524
                 },
                 "embed-ground-truth": {
-                    "accuracy": 0.51790452003479
+                    "accuracy": 0.534469485282898
                 }
             }
         }

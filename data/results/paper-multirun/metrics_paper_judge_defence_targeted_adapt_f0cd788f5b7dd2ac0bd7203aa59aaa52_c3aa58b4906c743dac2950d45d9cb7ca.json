@@ -9,21 +9,21 @@
             "maxsim"
         ],
         "loss_maxsim_topk_1": {
-            "recall_before": 0.0,
-            "recall_after": 0.0,
-            "asr_train": 0.0,
+            "recall_before": 0.67,
+            "recall_after": 0.6599999999999999,
+            "asr_train": 0.025,
             "asr_test": 0.0,
-            "asr_targeted": 0.0,
-            "fpr_targeted_train": 0.0,
+            "asr_targeted": 1.0,
+            "fpr_targeted_train": 0.012658227848101266,
             "fpr_targeted_test": 0.0
         },
         "loss_maxsim_topk_5": {
-            "recall_before": 0.010000000000000002,
-            "recall_after": 0.010000000000000002,
-            "asr_train": 0.0125,
+            "recall_before": 0.98,
+            "recall_after": 0.98,
+            "asr_train": 0.025,
             "asr_test": 0.0,
             "asr_targeted": 1.0,
-            "fpr_targeted_train": 0.0,
+            "fpr_targeted_train": 0.012658227848101266,
             "fpr_targeted_test": 0.0
         }
     },
@@ -36,12 +36,12 @@
                     "fpr_targeted": 0.0
                 },
                 "embed-adversarial": {
-                    "asr_universal": 0.5198180675506592,
-                    "asr_targeted": -0.1282605528831482,
-                    "fpr_targeted": -0.012825916379784481
+                    "asr_universal": 0.5103052258491516,
+                    "asr_targeted": -0.11800206452608109,
+                    "fpr_targeted": -0.021418736599197116
                 },
                 "embed-ground-truth": {
-                    "accuracy": 0.5302959680557251
+                    "accuracy": 0.5214269757270813
                 }
             }
         },
@@ -52,11 +52,11 @@
                     "fpr_targeted": 0.0
                 },
                 "embed-adversarial": {
-                    "asr_universal": 0.5358995199203491,
-                    "fpr_targeted": -0.008534443308599293
+                    "asr_universal": 0.5527592897415161,
+                    "fpr_targeted": -0.0016823653131723404
                 },
                 "embed-ground-truth": {
-                    "accuracy": 0.5358995199203491
+                    "accuracy": 0.5527592897415161
                 }
             }
         }
@@ -65,35 +65,35 @@
         "train": {
             "gen_topk_-1": {
                 "image_context_relevancy": {
-                    "asr_universal": 0.7,
-                    "asr_targeted": 1.0,
-                    "fpr_targeted": 0.6962025316455697
+                    "asr_universal": 0.0125,
+                    "asr_targeted": 0.0,
+                    "fpr_targeted": 0.012658227848101266
                 },
                 "image_faithfulness": {
-                    "asr_universal": 0.2125,
+                    "asr_universal": 0.0,
                     "asr_targeted": 0.0,
-                    "fpr_targeted": 0.21518987341772153
+                    "fpr_targeted": 0.0
                 },
                 "answer_relevancy": {
-                    "asr_universal": 0.4375,
+                    "asr_universal": 0.0625,
                     "asr_targeted": 0.0,
-                    "fpr_targeted": 0.4430379746835443
+                    "fpr_targeted": 0.06329113924050633
                 }
             }
         },
         "test": {
             "gen_topk_-1": {
                 "image_context_relevancy": {
-                    "asr_universal": 0.8,
-                    "fpr_targeted": 0.8
+                    "asr_universal": 0.0,
+                    "fpr_targeted": 0.0
                 },
                 "image_faithfulness": {
-                    "asr_universal": 0.2,
-                    "fpr_targeted": 0.2
+                    "asr_universal": 0.05,
+                    "fpr_targeted": 0.05
                 },
                 "answer_relevancy": {
-                    "asr_universal": 0.3,
-                    "fpr_targeted": 0.3
+                    "asr_universal": 0.0,
+                    "fpr_targeted": 0.0
                 }
             }
         }

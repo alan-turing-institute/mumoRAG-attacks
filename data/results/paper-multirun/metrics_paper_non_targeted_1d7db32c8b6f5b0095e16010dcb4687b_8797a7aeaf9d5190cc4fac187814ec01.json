@@ -20,7 +20,7 @@
         "loss_cos_topk_5": {
             "recall_before": 0.94,
             "recall_after": 0.94,
-            "asr_train": 0.025,
+            "asr_train": 0.0,
             "asr_test": 0.0,
             "asr_targeted": -1,
             "fpr_targeted_train": -1,
@@ -34,10 +34,10 @@
                     "asr_universal": 0.0
                 },
                 "embed-adversarial": {
-                    "asr_universal": -0.03513197600841522
+                    "asr_universal": -0.03986392542719841
                 },
                 "embed-ground-truth": {
-                    "accuracy": 0.5408847332000732
+                    "accuracy": 0.5396633744239807
                 }
             }
         },
@@ -47,10 +47,10 @@
                     "asr_universal": 0.0
                 },
                 "embed-adversarial": {
-                    "asr_universal": -0.002456200774759054
+                    "asr_universal": -0.016289696097373962
                 },
                 "embed-ground-truth": {
-                    "accuracy": 0.5171313285827637
+                    "accuracy": 0.5439876914024353
                 }
             }
         }

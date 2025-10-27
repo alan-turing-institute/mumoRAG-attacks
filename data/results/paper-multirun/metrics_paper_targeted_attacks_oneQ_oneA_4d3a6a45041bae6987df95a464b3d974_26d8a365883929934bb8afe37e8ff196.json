@@ -31,17 +31,17 @@
         "train": {
             "gen_topk_-1": {
                 "exact-asr": {
-                    "asr_universal": 0.0125,
-                    "asr_targeted": 1.0,
+                    "asr_universal": 0.0,
+                    "asr_targeted": 0.0,
                     "fpr_targeted": 0.0
                 },
                 "embed-adversarial": {
-                    "asr_universal": 0.5147396922111511,
-                    "asr_targeted": 0.9999998807907104,
-                    "fpr_targeted": 0.2245922524340545
+                    "asr_universal": 0.5299814939498901,
+                    "asr_targeted": 0.6676828861236572,
+                    "fpr_targeted": 0.21414011814690467
                 },
                 "embed-ground-truth": {
-                    "accuracy": 0.5088752508163452
+                    "accuracy": 0.5299261212348938
                 }
             }
         },
@@ -52,11 +52,11 @@
                     "fpr_targeted": 0.0
                 },
                 "embed-adversarial": {
-                    "asr_universal": 0.4757438600063324,
-                    "fpr_targeted": 0.19985756874084473
+                    "asr_universal": 0.5514325499534607,
+                    "fpr_targeted": 0.21406256183981895
                 },
                 "embed-ground-truth": {
-                    "accuracy": 0.4757438600063324
+                    "accuracy": 0.5514325499534607
                 }
             }
         }

@@ -9,8 +9,8 @@
             "maxsim"
         ],
         "loss_maxsim_topk_1": {
-            "recall_before": 0.0,
-            "recall_after": 0.0,
+            "recall_before": 0.67,
+            "recall_after": 0.67,
             "asr_train": 0.0,
             "asr_test": 0.0,
             "asr_targeted": 0.0,
@@ -18,12 +18,12 @@
             "fpr_targeted_test": 0.0
         },
         "loss_maxsim_topk_5": {
-            "recall_before": 0.010000000000000002,
-            "recall_after": 0.010000000000000002,
-            "asr_train": 0.0,
+            "recall_before": 0.98,
+            "recall_after": 0.98,
+            "asr_train": 0.025,
             "asr_test": 0.0,
-            "asr_targeted": 0.0,
-            "fpr_targeted_train": 0.0,
+            "asr_targeted": 1.0,
+            "fpr_targeted_train": 0.012658227848101266,
             "fpr_targeted_test": 0.0
         }
     },
@@ -36,12 +36,12 @@
                     "fpr_targeted": 0.0
                 },
                 "embed-adversarial": {
-                    "asr_universal": 0.5209938287734985,
-                    "asr_targeted": -0.07897010445594788,
-                    "fpr_targeted": -0.015721102569346564
+                    "asr_universal": 0.49462199211120605,
+                    "asr_targeted": -0.06824532896280289,
+                    "fpr_targeted": 0.014228285131150787
                 },
                 "embed-ground-truth": {
-                    "accuracy": 0.5312390327453613
+                    "accuracy": 0.504041314125061
                 }
             }
         },
@@ -52,11 +52,11 @@
                     "fpr_targeted": 0.0
                 },
                 "embed-adversarial": {
-                    "asr_universal": 0.5372017621994019,
-                    "fpr_targeted": 0.0035593754611909388
+                    "asr_universal": 0.43819135427474976,
+                    "fpr_targeted": 0.03563703647814691
                 },
                 "embed-ground-truth": {
-                    "accuracy": 0.5372017621994019
+                    "accuracy": 0.43819135427474976
                 }
             }
         }

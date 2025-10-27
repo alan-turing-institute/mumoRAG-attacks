@@ -36,12 +36,12 @@
                     "fpr_targeted": 0.0
                 },
                 "embed-adversarial": {
-                    "asr_universal": 0.49047917127609253,
-                    "asr_targeted": 0.4379507899284363,
-                    "fpr_targeted": 0.19647757086572767
+                    "asr_universal": 0.4863855242729187,
+                    "asr_targeted": 0.4400465190410614,
+                    "fpr_targeted": 0.191320138594395
                 },
                 "embed-ground-truth": {
-                    "accuracy": 0.4931473731994629
+                    "accuracy": 0.4904000163078308
                 }
             }
         },
@@ -52,11 +52,11 @@
                     "fpr_targeted": 0.0
                 },
                 "embed-adversarial": {
-                    "asr_universal": 0.5220078229904175,
-                    "fpr_targeted": 0.199508208502084
+                    "asr_universal": 0.5119739770889282,
+                    "fpr_targeted": 0.21764261610805988
                 },
                 "embed-ground-truth": {
-                    "accuracy": 0.5220078229904175
+                    "accuracy": 0.5119739770889282
                 }
             }
         }

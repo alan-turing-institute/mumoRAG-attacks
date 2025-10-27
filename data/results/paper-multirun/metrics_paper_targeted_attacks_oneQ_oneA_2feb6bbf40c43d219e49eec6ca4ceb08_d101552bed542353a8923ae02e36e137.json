@@ -9,8 +9,8 @@
             "maxsim"
         ],
         "loss_maxsim_topk_1": {
-            "recall_before": 0.0,
-            "recall_after": 0.0,
+            "recall_before": 0.67,
+            "recall_after": 0.67,
             "asr_train": 0.0,
             "asr_test": 0.0,
             "asr_targeted": 0.0,
@@ -18,12 +18,12 @@
             "fpr_targeted_test": 0.0
         },
         "loss_maxsim_topk_5": {
-            "recall_before": 0.010000000000000002,
-            "recall_after": 0.010000000000000002,
-            "asr_train": 0.0,
+            "recall_before": 0.98,
+            "recall_after": 0.98,
+            "asr_train": 0.025,
             "asr_test": 0.0,
             "asr_targeted": 0.0,
-            "fpr_targeted_train": 0.0,
+            "fpr_targeted_train": 0.02531645569620253,
             "fpr_targeted_test": 0.0
         }
     },
@@ -36,12 +36,12 @@
                     "fpr_targeted": 0.0
                 },
                 "embed-adversarial": {
-                    "asr_universal": 0.5283546447753906,
-                    "asr_targeted": 0.48282888531684875,
-                    "fpr_targeted": 0.2065077949716132
+                    "asr_universal": 0.5172935724258423,
+                    "asr_targeted": 0.4535220265388489,
+                    "fpr_targeted": 0.20290304115631536
                 },
                 "embed-ground-truth": {
-                    "accuracy": 0.5316294431686401
+                    "accuracy": 0.5209261775016785
                 }
             }
         },
@@ -52,11 +52,11 @@
                     "fpr_targeted": 0.0
                 },
                 "embed-adversarial": {
-                    "asr_universal": 0.5416920781135559,
-                    "fpr_targeted": 0.213186364620924
+                    "asr_universal": 0.520565390586853,
+                    "fpr_targeted": 0.19911112859845162
                 },
                 "embed-ground-truth": {
-                    "accuracy": 0.5416920781135559
+                    "accuracy": 0.520565390586853
                 }
             }
         }

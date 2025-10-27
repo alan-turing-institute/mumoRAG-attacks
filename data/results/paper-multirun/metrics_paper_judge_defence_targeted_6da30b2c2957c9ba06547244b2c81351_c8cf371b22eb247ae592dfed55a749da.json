@@ -9,8 +9,8 @@
             "maxsim"
         ],
         "loss_maxsim_topk_1": {
-            "recall_before": 0.0,
-            "recall_after": 0.0,
+            "recall_before": 0.67,
+            "recall_after": 0.67,
             "asr_train": 0.0,
             "asr_test": 0.0,
             "asr_targeted": 0.0,
@@ -18,8 +18,8 @@
             "fpr_targeted_test": 0.0
         },
         "loss_maxsim_topk_5": {
-            "recall_before": 0.010000000000000002,
-            "recall_after": 0.010000000000000002,
+            "recall_before": 0.98,
+            "recall_after": 0.98,
             "asr_train": 0.0,
             "asr_test": 0.0,
             "asr_targeted": 0.0,
@@ -31,17 +31,17 @@
         "train": {
             "gen_topk_-1": {
                 "exact-asr": {
-                    "asr_universal": 0.0125,
-                    "asr_targeted": 1.0,
-                    "fpr_targeted": 0.13924050632911392
+                    "asr_universal": 0.0,
+                    "asr_targeted": 0.0,
+                    "fpr_targeted": 0.17721518987341772
                 },
                 "embed-adversarial": {
-                    "asr_universal": 0.4514734148979187,
-                    "asr_targeted": 0.9999999403953552,
-                    "fpr_targeted": 0.13213152505598869
+                    "asr_universal": 0.4276962876319885,
+                    "asr_targeted": -0.1096038818359375,
+                    "fpr_targeted": 0.15871643120588003
                 },
                 "embed-ground-truth": {
-                    "accuracy": 0.4382922053337097
+                    "accuracy": 0.43841809034347534
                 }
             }
         },
@@ -49,14 +49,14 @@
             "gen_topk_-1": {
                 "exact-asr": {
                     "asr_universal": 0.0,
-                    "fpr_targeted": 0.15
+                    "fpr_targeted": 0.1
                 },
                 "embed-adversarial": {
-                    "asr_universal": 0.4591459631919861,
-                    "fpr_targeted": 0.15511022489517928
+                    "asr_universal": 0.49042072892189026,
+                    "fpr_targeted": 0.07837183461524547
                 },
                 "embed-ground-truth": {
-                    "accuracy": 0.4591459631919861
+                    "accuracy": 0.49042072892189026
                 }
             }
         }
@@ -65,35 +65,35 @@
         "train": {
             "gen_topk_-1": {
                 "image_context_relevancy": {
-                    "asr_universal": 0.55,
-                    "asr_targeted": 1.0,
-                    "fpr_targeted": 0.5443037974683544
-                },
-                "image_faithfulness": {
                     "asr_universal": 0.425,
                     "asr_targeted": 1.0,
                     "fpr_targeted": 0.4177215189873418
                 },
-                "answer_relevancy": {
-                    "asr_universal": 0.125,
+                "image_faithfulness": {
+                    "asr_universal": 0.275,
                     "asr_targeted": 0.0,
-                    "fpr_targeted": 0.12658227848101267
+                    "fpr_targeted": 0.27848101265822783
+                },
+                "answer_relevancy": {
+                    "asr_universal": 0.2125,
+                    "asr_targeted": 1.0,
+                    "fpr_targeted": 0.20253164556962025
                 }
             }
         },
         "test": {
             "gen_topk_-1": {
                 "image_context_relevancy": {
-                    "asr_universal": 0.7,
-                    "fpr_targeted": 0.7
+                    "asr_universal": 0.35,
+                    "fpr_targeted": 0.35
                 },
                 "image_faithfulness": {
-                    "asr_universal": 0.45,
-                    "fpr_targeted": 0.45
-                },
-                "answer_relevancy": {
                     "asr_universal": 0.25,
                     "fpr_targeted": 0.25
+                },
+                "answer_relevancy": {
+                    "asr_universal": 0.2,
+                    "fpr_targeted": 0.2
                 }
             }
         }

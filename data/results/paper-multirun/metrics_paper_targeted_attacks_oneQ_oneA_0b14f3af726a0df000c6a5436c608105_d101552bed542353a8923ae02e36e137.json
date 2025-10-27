@@ -9,8 +9,8 @@
             "maxsim"
         ],
         "loss_maxsim_topk_1": {
-            "recall_before": 0.0,
-            "recall_after": 0.0,
+            "recall_before": 0.67,
+            "recall_after": 0.67,
             "asr_train": 0.0,
             "asr_test": 0.0,
             "asr_targeted": 0.0,
@@ -18,12 +18,12 @@
             "fpr_targeted_test": 0.0
         },
         "loss_maxsim_topk_5": {
-            "recall_before": 0.010000000000000002,
-            "recall_after": 0.010000000000000002,
-            "asr_train": 0.0,
+            "recall_before": 0.98,
+            "recall_after": 0.98,
+            "asr_train": 0.0125,
             "asr_test": 0.0,
             "asr_targeted": 0.0,
-            "fpr_targeted_train": 0.0,
+            "fpr_targeted_train": 0.012658227848101266,
             "fpr_targeted_test": 0.0
         }
     },
@@ -33,15 +33,15 @@
                 "exact-asr": {
                     "asr_universal": 0.0125,
                     "asr_targeted": 1.0,
-                    "fpr_targeted": 0.0379746835443038
+                    "fpr_targeted": 0.0
                 },
                 "embed-adversarial": {
-                    "asr_universal": 0.5002356767654419,
+                    "asr_universal": 0.5165572166442871,
                     "asr_targeted": 0.9999998807907104,
-                    "fpr_targeted": 0.2570604308024992
+                    "fpr_targeted": 0.24047972106292279
                 },
                 "embed-ground-truth": {
-                    "accuracy": 0.49437132477760315
+                    "accuracy": 0.5106927752494812
                 }
             }
         },
@@ -52,11 +52,11 @@
                     "fpr_targeted": 0.0
                 },
                 "embed-adversarial": {
-                    "asr_universal": 0.5196510553359985,
-                    "fpr_targeted": 0.2054252415895462
+                    "asr_universal": 0.46145525574684143,
+                    "fpr_targeted": 0.23767293393611907
                 },
                 "embed-ground-truth": {
-                    "accuracy": 0.5196510553359985
+                    "accuracy": 0.46145525574684143
                 }
             }
         }
