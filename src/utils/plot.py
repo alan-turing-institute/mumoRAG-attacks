@@ -273,3 +273,31 @@ def plot_metrics_vs_perturbation(exp_config: ExperimentConfig, metrics_to_show: 
     fig.supylabel("Attack Success")
     fig.tight_layout()
     return fig
+
+def cleanup_colnames_after_groupby(col_names):
+    new_cols = []
+    for col in col_names:
+        if isinstance(col, tuple):
+            col = f'{col[0]} {col[1]}'.strip()
+        new_cols.append(col)
+    return new_cols
+
+def combine_mean_std_columns(df, aggregate_columns: list[str]):
+    # --- Format mean and std columns into a single column ---
+    for col in aggregate_columns:
+        mean_col = f'{col} mean'
+        std_col = f'{col} std'
+        new_col = f'{col} (mean ± std)'
+        
+        # Fill NaN values in the 'std' column before formatting to avoid errors
+        df[std_col] = df[std_col].fillna(0)
+        
+        # Create the new combined column
+        df[new_col] = df.apply(
+            lambda row: f'{row[mean_col]:.2f} ± {row[std_col]:.2f}',
+            axis=1
+        )
+        
+        # Drop the original mean and std columns
+        df.drop(columns=[mean_col, std_col], inplace=True)
+
