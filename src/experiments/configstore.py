@@ -530,153 +530,16 @@ configstore.store(
 Attack optimized when the malicious image is retrieved within top-k (not top-1)
 Evaluation when image is retrieved within top-k (not top-1)
 """
-configstore.store(
-    name="paper_topk_context_targeted",
-    node=ExperimentConfig(
-        train=ExperimentTrainConfig(
-            dataset_list=datasets,
-            embedder_list=[VLMName.SMOLVLM_1_2B],
-            vlm=VLMConfig(models=vlms, gen_topk_list=[
-                1,
-                5
-            ]),
-            is_targeted=True,
-            target_query_idx=[0],
-            n_knn_target_queries=1,
-            chosen_index_list=[150,251,420,676,769],
-        ),
-        eval=ExperimentEvalConfig(
-            gen_topk_list=[-1, 1, 5],
-            test_topk_order=False,
-        ),
-    ),
-)
-
-"""
-RAG evaluation and attack detection through VLM-as-a-judge
-"""
-configstore.store(
-    name="paper_combined_defence",
-    node=ExperimentConfig(
-        train=ExperimentTrainConfig(
-            dataset_list=datasets,
-            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
-            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B], gen_topk_list=[1, 5]),
-        ),
-        eval=ExperimentEvalConfig(
-            do_judge=True,
-            eval_jdg_list=vlms,
-            eval_jdg_metric_list=[
-                JudgeMetric.IMAGE_CONTEXT_RELEVANCY,
-                JudgeMetric.IMAGE_FAITHFULNESS,
-                JudgeMetric.ANSWER_RELEVANCY,
-            ],
-            gen_topk_list=[-1, 1, 5],
-            test_topk_order=False,
-        ),
-    ),
-)
-configstore.store(
-    name="paper_combined_defence_adapt",
-    node=ExperimentConfig(
-        train=ExperimentTrainConfig(
-            dataset_list=datasets,
-            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
-            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B], gen_topk_list=[1, 5]),
-            judge=JudgeConfig(
-                lambda_=1,
-                models=vlms,
-                metrics=[
-                    JudgeMetric.IMAGE_CONTEXT_RELEVANCY,
-                    JudgeMetric.IMAGE_FAITHFULNESS,
-                    JudgeMetric.ANSWER_RELEVANCY,
-                ],
-            ),
-        ),
-        eval=ExperimentEvalConfig(
-            do_judge=True,
-            eval_jdg_list=vlms,
-            eval_jdg_metric_list=[
-                JudgeMetric.IMAGE_CONTEXT_RELEVANCY,
-                JudgeMetric.IMAGE_FAITHFULNESS,
-                JudgeMetric.ANSWER_RELEVANCY,
-            ],
-            gen_topk_list=[-1, 1, 5],
-            test_topk_order=False,
-        ),
-    ),
-)
-configstore.store(
-    name="paper_combined_defence_targeted",
-    node=ExperimentConfig(
-        train=ExperimentTrainConfig(
-            dataset_list=datasets,
-            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
-            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B], gen_topk_list=[1, 5]),
-            is_targeted=True,
-            target_query_idx=[0],
-            n_knn_target_queries=1,
-            # optimize_nontargeted_queries_list=[True,False],
-        ),
-        eval=ExperimentEvalConfig(
-            do_judge=True,
-            eval_jdg_list=vlms,
-            eval_jdg_metric_list=[
-                JudgeMetric.IMAGE_CONTEXT_RELEVANCY,
-                JudgeMetric.IMAGE_FAITHFULNESS,
-                JudgeMetric.ANSWER_RELEVANCY,
-            ],
-            gen_topk_list=[-1, 1, 5],
-            test_topk_order=False,
-        ),
-    ),
-)
-configstore.store(
-    name="paper_combined_defence_targeted_adapt",
-    node=ExperimentConfig(
-        train=ExperimentTrainConfig(
-            dataset_list=datasets,
-            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
-            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B], gen_topk_list=[1, 5]),
-            is_targeted=True,
-            target_query_idx=[0],
-            n_knn_target_queries=1,
-            # optimize_nontargeted_queries_list=[True,False],
-            judge=JudgeConfig(
-                lambda_=1,
-                models=vlms,
-                metrics=[
-                    JudgeMetric.IMAGE_CONTEXT_RELEVANCY,
-                    JudgeMetric.IMAGE_FAITHFULNESS,
-                    JudgeMetric.ANSWER_RELEVANCY,
-                ],
-            ),
-        ),
-        eval=ExperimentEvalConfig(
-            do_judge=True,
-            eval_jdg_list=vlms,
-            eval_jdg_metric_list=[
-                JudgeMetric.IMAGE_CONTEXT_RELEVANCY,
-                JudgeMetric.IMAGE_FAITHFULNESS,
-                JudgeMetric.ANSWER_RELEVANCY,
-            ],
-            gen_topk_list=[-1, 1, 5],
-            test_topk_order=False,
-        ),
-    ),
-)
-
-"""
-Attack optimized when the malicious image is retrieved within top-k (not top-1)
-Evaluation when image is retrieved within top-k (not top-1)
-"""
 # configstore.store(
 #     name="paper_topk_context_targeted",
 #     node=ExperimentConfig(
 #         train=ExperimentTrainConfig(
 #             dataset_list=datasets,
-#             embedder_list=embedders,
-#             vlm=VLMConfig(models=vlms, gen_topk_list=[1, 5]),
+#             embedder_list=[VLMName.SMOLVLM_1_2B],
+#             vlm=VLMConfig(models=vlms, gen_topk_list=[
+#                 1,
+#                 5
+#             ]),
 #             is_targeted=True,
 #             target_query_idx=[0],
 #             n_knn_target_queries=1,
@@ -803,13 +666,151 @@ configstore.store(
     ),
 )
 
+"""
+Attack optimized when the malicious image is retrieved within top-k (not top-1)
+Evaluation when image is retrieved within top-k (not top-1)
+"""
+configstore.store(
+    name="paper_topk_context_targeted",
+    node=ExperimentConfig(
+        train=ExperimentTrainConfig(
+            dataset_list=datasets,
+            embedder_list=embedders,
+            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B], gen_topk_list=[1, 5]),
+            is_targeted=True,
+            target_query_idx=[0],
+            n_knn_target_queries=1,
+            chosen_index_list=[150,251,420,676,769],
+        ),
+        eval=ExperimentEvalConfig(
+            gen_topk_list=[-1, 1, 5],
+            test_topk_order=False,
+        ),
+    ),
+)
+
+"""
+RAG evaluation and attack detection through VLM-as-a-judge
+"""
+configstore.store(
+    name="paper_combined_defence",
+    node=ExperimentConfig(
+        train=ExperimentTrainConfig(
+            dataset_list=datasets,
+            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
+            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B], gen_topk_list=[1, 5]),
+        ),
+        eval=ExperimentEvalConfig(
+            do_judge=True,
+            eval_jdg_list=vlms,
+            eval_jdg_metric_list=[
+                JudgeMetric.IMAGE_CONTEXT_RELEVANCY,
+                JudgeMetric.IMAGE_FAITHFULNESS,
+                JudgeMetric.ANSWER_RELEVANCY,
+            ],
+            gen_topk_list=[-1, 1, 5],
+            test_topk_order=False,
+        ),
+    ),
+)
+configstore.store(
+    name="paper_combined_defence_adapt",
+    node=ExperimentConfig(
+        train=ExperimentTrainConfig(
+            dataset_list=datasets,
+            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
+            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B], gen_topk_list=[1, 5]),
+            judge=JudgeConfig(
+                lambda_=1,
+                models=vlms,
+                metrics=[
+                    JudgeMetric.IMAGE_CONTEXT_RELEVANCY,
+                    JudgeMetric.IMAGE_FAITHFULNESS,
+                    JudgeMetric.ANSWER_RELEVANCY,
+                ],
+            ),
+        ),
+        eval=ExperimentEvalConfig(
+            do_judge=True,
+            eval_jdg_list=vlms,
+            eval_jdg_metric_list=[
+                JudgeMetric.IMAGE_CONTEXT_RELEVANCY,
+                JudgeMetric.IMAGE_FAITHFULNESS,
+                JudgeMetric.ANSWER_RELEVANCY,
+            ],
+            gen_topk_list=[-1, 1, 5],
+            test_topk_order=False,
+        ),
+    ),
+)
+configstore.store(
+    name="paper_combined_defence_targeted",
+    node=ExperimentConfig(
+        train=ExperimentTrainConfig(
+            dataset_list=datasets,
+            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
+            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B], gen_topk_list=[1, 5]),
+            is_targeted=True,
+            target_query_idx=[0],
+            n_knn_target_queries=1,
+            # optimize_nontargeted_queries_list=[True,False],
+        ),
+        eval=ExperimentEvalConfig(
+            do_judge=True,
+            eval_jdg_list=vlms,
+            eval_jdg_metric_list=[
+                JudgeMetric.IMAGE_CONTEXT_RELEVANCY,
+                JudgeMetric.IMAGE_FAITHFULNESS,
+                JudgeMetric.ANSWER_RELEVANCY,
+            ],
+            gen_topk_list=[-1, 1, 5],
+            test_topk_order=False,
+        ),
+    ),
+)
+configstore.store(
+    name="paper_combined_defence_targeted_adapt",
+    node=ExperimentConfig(
+        train=ExperimentTrainConfig(
+            dataset_list=datasets,
+            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
+            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B], gen_topk_list=[1, 5]),
+            is_targeted=True,
+            target_query_idx=[0],
+            n_knn_target_queries=1,
+            # optimize_nontargeted_queries_list=[True,False],
+            judge=JudgeConfig(
+                lambda_=1,
+                models=vlms,
+                metrics=[
+                    JudgeMetric.IMAGE_CONTEXT_RELEVANCY,
+                    JudgeMetric.IMAGE_FAITHFULNESS,
+                    JudgeMetric.ANSWER_RELEVANCY,
+                ],
+            ),
+        ),
+        eval=ExperimentEvalConfig(
+            do_judge=True,
+            eval_jdg_list=vlms,
+            eval_jdg_metric_list=[
+                JudgeMetric.IMAGE_CONTEXT_RELEVANCY,
+                JudgeMetric.IMAGE_FAITHFULNESS,
+                JudgeMetric.ANSWER_RELEVANCY,
+            ],
+            gen_topk_list=[-1, 1, 5],
+            test_topk_order=False,
+        ),
+    ),
+)
+
 configstore.store(
     name="paper_defences",
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
-            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
-            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B]),
+            embedder_list=embedders,
+            vlm=VLMConfig(models=vlms),
+            chosen_index_list=[150,251,420,676,769],
         ),
         eval=ExperimentEvalConfig(defences_list=[DefenceName.PARAPHRASE]),
     ),
@@ -820,11 +821,12 @@ configstore.store(
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
-            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
-            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B]),
+            embedder_list=embedders,
+            vlm=VLMConfig(models=vlms),
             is_targeted=True,
             target_query_idx=[0],
             n_knn_target_queries=1,
+            chosen_index_list=[150,251,420,676,769],
         ),
         eval=ExperimentEvalConfig(defences_list=[DefenceName.PARAPHRASE]),
     ),
