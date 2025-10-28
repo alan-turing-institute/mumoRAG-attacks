@@ -40,6 +40,8 @@ class Metric(StrEnum):
     JUDGE_ANS_REL_TRAIN = "Judge Answer Relevancy (train)"
     JUDGE_ANS_REL_TEST = "Judge Answer Relevancy (test)"
 
+    GENERATION_ASR_EMBED_TARGETED_TRAIN_THRESHOLD = "ASR-G-Threshold targeted (train)"
+
 
 class PlotFilter:
     # condition lambdas (useful for selecting task configs from the tabulate object)
@@ -73,12 +75,14 @@ class PlotFilter:
         Metric.RETRIEVAL_ASR_TARGETED,
         # Metric.RETRIEVAL_FPR_TARGETED_TRAIN,
         Metric.RETRIEVAL_FPR_TARGETED_TEST,
-        # Metric.GENERATION_ASR_EXACT_TARGETED_TRAIN,
+        Metric.GENERATION_ASR_EXACT_TARGETED_TRAIN,
         # Metric.GENERATION_FPR_TARGETED_TRAIN,
         Metric.GENERATION_ASR_EMBED_TARGETED_TRAIN,
         # Metric.GENERATION_FPR_EMBED_TARGETED_TRAIN,
         # Metric.GENERATION_FPR_TARGETED_TEST,
         Metric.GENERATION_FPR_EMBED_TARGETED_TEST,
+
+        Metric.GENERATION_ASR_EMBED_TARGETED_TRAIN_THRESHOLD
     ]
 
     METRICS_COLPALI = [
@@ -154,6 +158,7 @@ def get_metrics(
     ret_topk_idx: int | None = None,
     gen_topk_idx: int | None = None,
     loss_idx: int | None = None,
+    metric_threshold: float = 0.9,
 ):
     if task_config.eval_emb_name:
         model_name_emb = task_config.eval_emb_name
@@ -215,6 +220,9 @@ def get_metrics(
                 metrics_to_output[f"{Metric.GENERATION_FPR_EMBED_TARGETED_TRAIN.value}@{gen_topk}"] = metric_dict["generation"]["train"][key][VLMEvaluationMetric.EMBED_ADV]["fpr_targeted"]
                 metrics_to_output[f"{Metric.GENERATION_FPR_TARGETED_TEST.value}@{gen_topk}"] = metric_dict["generation"]["test"][key][VLMEvaluationMetric.ASR_EXACT]["fpr_targeted"]
                 metrics_to_output[f"{Metric.GENERATION_FPR_EMBED_TARGETED_TEST.value}@{gen_topk}"] = metric_dict["generation"]["test"][key][VLMEvaluationMetric.EMBED_ADV]["fpr_targeted"]
+
+                thres_met_tmp = metric_dict["generation"]["train"][key][VLMEvaluationMetric.EMBED_ADV]["asr_targeted"]
+                metrics_to_output[f"{Metric.GENERATION_ASR_EMBED_TARGETED_TRAIN_THRESHOLD.value}@{gen_topk}"] = 1 if thres_met_tmp > metric_threshold else 0
 
         if metric_dict["judge"]:
             metrics_to_output[f"{Metric.JUDGE_IMAGE_CONTXT_REL_TRAIN.value}@{gen_topk}"] = metric_dict["judge"]["train"][key][JudgeMetric.IMAGE_CONTEXT_RELEVANCY]["asr_universal"]
