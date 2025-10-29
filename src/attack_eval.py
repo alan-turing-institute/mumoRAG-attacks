@@ -11,7 +11,7 @@ from config.task import generate_task_configs
 from experiments import DEFAULT_EXPERIMENT
 from utils.attack import get_all_target_queries_and_answers
 from utils.defence import DefenceName, add_noise
-from utils.image_utils import gpt_filename, load_adv_image, load_gpt_image
+from utils.image_utils import gpt_filename, load_adv_image, load_generative_image
 from utils.logger import logger
 from utils.utils import get_device
 from wrappers.cache import get_dataset, get_embedded_dataset, get_judge, get_text_embedder, get_vlm
@@ -48,8 +48,8 @@ def run(exp_config: ExperimentConfig):
     # first we just make sure that all required files are on disk, so that we don't waste time
     # this will raise an error if there are missing file(s)
     for task_config in task_configs:
-        if exp_config.eval.test_gpt_attack:
-            _ = load_gpt_image(task_config)
+        if exp_config.eval.test_generative_attacks:
+            _ = load_generative_image(task_config)
         else:
             _ = load_adv_image(task_config, exp_config.train)
 
@@ -63,8 +63,8 @@ def run(exp_config: ExperimentConfig):
     for i, task_config in enumerate(task_configs):
         logger.info(f"Eval {(i + 1):4d}/{n_evals}, task_config -> {pformat(task_config.to_dict(), indent=4)}\n{'=' * 20}")
 
-        if exp_config.eval.test_gpt_attack:
-            image_adv = load_gpt_image(task_config)
+        if exp_config.eval.test_generative_attacks:
+            image_adv = load_generative_image(task_config)
         else:
             image_adv = load_adv_image(task_config, exp_config.train)
         if task_config.defence == DefenceName.NOISE:
@@ -223,7 +223,7 @@ def run(exp_config: ExperimentConfig):
             "attack_config": task_config.to_dict(),
         }
 
-        if exp_config.eval.test_gpt_attack:
+        if exp_config.eval.test_generative_attacks:
             results_filename = exp_config.eval.results_folder / f"metrics_{gpt_filename(task_config)}_{make_safe_filename(f'{model_name_emb}_{model_name_vlm}')}.json"
         else:
             results_filename = task_config.get_result_filename(exp_config.eval.results_folder)

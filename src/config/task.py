@@ -67,6 +67,7 @@ class TaskConfig:
     eval_emb_name: EmbedderName | None = None
     eval_vlm_name: VLMName | None = None
     eval_jdg_name: VLMName | None = None
+    test_generative_attack: str | None = None
     defence: DefenceName = DefenceName.NONE
 
     def create_hash_string(self):
@@ -97,6 +98,9 @@ class TaskConfig:
         if self.judge:
             jdg_metric_str = "".join(self.judge.metrics)
             config_str += f"{self.judge.model_name}{self.judge.lambda_}{self.judge.target_answer}{jdg_metric_str}"
+
+        if self.test_generative_attack:
+            config_str += f"{self.test_generative_attack}"
 
         # if self.defence != DefenceName.NONE:
         #     defence_str = "".join(self.defence)
@@ -159,6 +163,7 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
             EmbedderName | None,
             VLMName | None,
             VLMName | None,
+            str | None,
             DefenceName,
         ]
     ] = product(  # type: ignore
@@ -176,6 +181,7 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
         (exp_config.eval.eval_emb_list if include_eval else None) or [None],
         (exp_config.eval.eval_vlm_list if include_eval else None) or [None],
         (exp_config.eval.eval_jdg_list if include_eval else None) or [None],
+        (exp_config.eval.test_generative_attacks if include_eval else None) or [None],
         (exp_config.eval.defences_list if include_eval else None) or [DefenceName.NONE],
     )
     attack_configs = []
@@ -195,6 +201,7 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
             eval_emb_name,
             eval_vlm_name,
             eval_jdg_name,
+            test_generative_attack,
             defence,
         ) = params
 
@@ -259,6 +266,7 @@ def generate_task_configs(exp_config: ExperimentConfig, include_eval: bool = Fal
                 eval_emb_name=eval_emb_name,
                 eval_vlm_name=eval_vlm_name,
                 eval_jdg_name=eval_jdg_name,
+                test_generative_attack=test_generative_attack,
                 colpali_only_images=exp_config.train.colpali_only_images,
                 kb_compromised_fraction=exp_config.train.kb_compromised_fraction,
                 judge=judge_config,

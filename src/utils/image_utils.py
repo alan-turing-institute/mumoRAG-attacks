@@ -157,8 +157,8 @@ def load_adv_image(task_config: "TaskConfig", exp_config_train: "ExperimentTrain
         raise ValueError(f"Error! Could not find file: {filename}! You need to train an attack with this configuration first")
 
 
-def load_gpt_image(task_config: "TaskConfig") -> torch.tensor:
-    filename = DATA_FOLDER / "attacks" / "gpt-attacks" / f"attack-{gpt_filename(task_config)}.png"
+def load_generative_image(task_config: "TaskConfig") -> torch.tensor:
+    filename = DATA_FOLDER / "attacks" / "gpt-attacks" / f"{task_config.test_generative_attack}" /f"{gpt_filename(task_config)}.png"
     try:
         image_pil = Image.open(filename)
     except FileNotFoundError:
@@ -168,12 +168,12 @@ def load_gpt_image(task_config: "TaskConfig") -> torch.tensor:
 
 def gpt_filename(task_config: "TaskConfig"):
     if not task_config.is_targeted:
-        filename = "gpt-universal"
+        filename = f"untargeted-{task_config.chosen_index}"
     elif len(task_config.target_query_idx) == 1 and task_config.n_knn_target_queries == 1:
-        filename = "gpt-targeted-one-one"
+        filename = f"targeted-1to1-{task_config.chosen_index}"
     elif len(task_config.vlm.target_answers) == 1:
-        filename = "gpt-targeted-many-one"
+        filename = f"targeted-manyto1-{task_config.chosen_index}"
     else:
-        filename = "gpt-targeted-many-many"
+        filename = f"targeted-manytomany-{task_config.chosen_index}"
 
     return filename

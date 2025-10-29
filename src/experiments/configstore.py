@@ -57,6 +57,12 @@ vlms_sets =[
     [VLMName.SMOLVLM_1_2B, VLMName.INTERNVL_3_2B]
 ]
 
+chosen_indexes = [
+    150,
+    251,420,676,769
+]
+gpt_chosen_indexes=[0,1,2,3,4]
+
 
 eval_vlms = [
     VLMName.SMOLVLM_1_2B,
@@ -142,7 +148,7 @@ configstore.store(
             dataset_list=datasets,
             embedder_list=[embedders],
             vlm=VLMConfig(models=[vlms]),
-            chosen_index_list=[150,251,420,676,769],
+            chosen_index_list=chosen_indexes,
         ),
         eval=ExperimentEvalConfig(
             eval_emb_list=embedders,
@@ -158,7 +164,7 @@ configstore.store(
             dataset_list=datasets,
             embedder_list=embedders_sets,
             vlm=VLMConfig(models=vlms_sets),
-            chosen_index_list=[150,251,420,676,769],
+            chosen_index_list=chosen_indexes,
         ),
         eval=ExperimentEvalConfig(
             eval_emb_list=embedders,
@@ -183,7 +189,7 @@ configstore.store(
             is_targeted=True,
             target_query_idx=[0],
             n_knn_target_queries=1,
-            chosen_index_list=[150,251,420,676,769],
+            chosen_index_list=chosen_indexes,
         ),
         eval=ExperimentEvalConfig(
             eval_emb_list=embedders,
@@ -202,7 +208,7 @@ configstore.store(
             is_targeted=True,
             target_query_idx=[0],
             n_knn_target_queries=1,
-            chosen_index_list=[150,251,420,676,769],
+            chosen_index_list=chosen_indexes,
         ),
         eval=ExperimentEvalConfig(
             eval_emb_list=embedders,
@@ -218,12 +224,12 @@ configstore.store(
             dataset_list=datasets,
             embedder_list=embedders,
             vlm=VLMConfig(models=vlms),
-	    chosen_index_list=[150,251,420,676,769],
+	    chosen_index_list=chosen_indexes,
         ),
-        eval=ExperimentEvalConfig(
-            eval_emb_list=eval_embedders,
-            eval_vlm_list=vlms,
-        ),
+        # eval=ExperimentEvalConfig(
+        #     eval_emb_list=eval_embedders,
+        #     eval_vlm_list=vlms,
+        # ),
     ),
 )
 
@@ -245,13 +251,13 @@ configstore.store(
             ),
             is_targeted=True,
             target_query_idx=[0],
-            chosen_index_list=[150,251,420,676,769],
+            chosen_index_list=chosen_indexes,
             n_knn_target_queries=1,
         ),
-        eval=ExperimentEvalConfig(
-            eval_emb_list=eval_embedders,
-            eval_vlm_list=vlms,
-        ),
+        # eval=ExperimentEvalConfig(
+        #     eval_emb_list=eval_embedders,
+        #     eval_vlm_list=vlms,
+        # ),
     ),
 )
 
@@ -270,7 +276,7 @@ configstore.store(
             is_targeted=True,
             target_query_idx=[0],
             n_knn_target_queries=5,
-	        chosen_index_list=[150,251,420,676,769],
+	        chosen_index_list=chosen_indexes,
         ),
     ),
 )
@@ -296,7 +302,7 @@ configstore.store(
             is_targeted=True,
             target_query_idx=[0, 1],
             n_knn_target_queries=1,
-	        chosen_index_list=[150,251,420,676,769],
+	        chosen_index_list=chosen_indexes,
         ),
     ),
 )
@@ -313,7 +319,7 @@ configstore.store(
             dataset_list=datasets,
             embedder_list=embedders,
             vlm=VLMConfig(models=vlms),
-            chosen_index_list=[150,251,420,676,769],
+            chosen_index_list=chosen_indexes,
         ),
         eval=ExperimentEvalConfig(
             do_judge=True,
@@ -348,7 +354,7 @@ configstore.store(
                     JudgeMetric.ANSWER_RELEVANCY,
                 ],
             ),
-            chosen_index_list=[150,251,420,676,769],
+            chosen_index_list=chosen_indexes,
         ),
         eval=ExperimentEvalConfig(
             do_judge=True,
@@ -377,7 +383,7 @@ configstore.store(
             is_targeted=True,
             target_query_idx=[0],
             n_knn_target_queries=1,
-            chosen_index_list=[150,251,420,676,769],
+            chosen_index_list=chosen_indexes,
         ),
         eval=ExperimentEvalConfig(
             do_judge=True,
@@ -415,7 +421,7 @@ configstore.store(
                     JudgeMetric.ANSWER_RELEVANCY,
                 ],
             ),
-            chosen_index_list=[150,251,420,676,769],
+            chosen_index_list=chosen_indexes,
         ),
         eval=ExperimentEvalConfig(
             do_judge=True,
@@ -517,7 +523,7 @@ configstore.store(
             dataset_list=datasets,
             embedder_list=embedders,
             vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B], gen_topk_list=[1, 5]),
-            chosen_index_list=[150,251,420,676,769],
+            chosen_index_list=chosen_indexes,
         ),
         eval=ExperimentEvalConfig(
             gen_topk_list=[-1, 1, 5],
@@ -543,7 +549,7 @@ Evaluation when image is retrieved within top-k (not top-1)
 #             is_targeted=True,
 #             target_query_idx=[0],
 #             n_knn_target_queries=1,
-#             chosen_index_list=[150,251,420,676,769],
+#             chosen_index_list=chosen_indexes,
 #         ),
 #         eval=ExperimentEvalConfig(
 #             gen_topk_list=[-1, 1, 5],
@@ -680,7 +686,7 @@ configstore.store(
             is_targeted=True,
             target_query_idx=[0],
             n_knn_target_queries=1,
-            chosen_index_list=[150,251,420,676,769],
+            chosen_index_list=chosen_indexes,
         ),
         eval=ExperimentEvalConfig(
             gen_topk_list=[-1, 1, 5],
@@ -810,7 +816,7 @@ configstore.store(
             dataset_list=datasets,
             embedder_list=embedders,
             vlm=VLMConfig(models=vlms),
-            chosen_index_list=[150,251,420,676,769],
+            chosen_index_list=chosen_indexes,
         ),
         eval=ExperimentEvalConfig(defences_list=[DefenceName.PARAPHRASE]),
     ),
@@ -826,7 +832,7 @@ configstore.store(
             is_targeted=True,
             target_query_idx=[0],
             n_knn_target_queries=1,
-            chosen_index_list=[150,251,420,676,769],
+            chosen_index_list=chosen_indexes,
         ),
         eval=ExperimentEvalConfig(defences_list=[DefenceName.PARAPHRASE]),
     ),
@@ -890,20 +896,20 @@ configstore.store(
 """
 ChatGPT baselines for comparison
 """
-configstore.store(
-    name="paper_GPT_non_targeted",
-    node=ExperimentConfig(
-        train=ExperimentTrainConfig(
-            dataset_list=datasets,
-            embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
-            vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B]),
-        ),
-        eval=ExperimentEvalConfig(
-            gen_topk_list=[-1],
-            test_gpt_attack=True,
-        ),
-    ),
-)
+# configstore.store(
+#     name="paper_GPT_non_targeted",
+#     node=ExperimentConfig(
+#         train=ExperimentTrainConfig(
+#             dataset_list=datasets,
+#             embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
+#             vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B]),
+#         ),
+#         eval=ExperimentEvalConfig(
+#             gen_topk_list=[-1],
+#             test_gpt_attack=True,
+#         ),
+#     ),
+# )
 
 configstore.store(
     name="paper_GPT_non_targeted",
@@ -912,11 +918,12 @@ configstore.store(
             dataset_list=datasets,
             embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
             vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B]),
+            chosen_index_list=gpt_chosen_indexes,
         ),
         eval=ExperimentEvalConfig(
             eval_emb_list=embedders,
             eval_vlm_list=vlms,
-            test_gpt_attack=True,
+            test_generative_attacks=["gpt","gemini"],
         ),
     ),
 )
@@ -931,6 +938,7 @@ configstore.store(
                 models=[VLMName.SMOLVLM_1_2B],
                 target_answers=["Manually match each marker to a generic human template regardless of trial-specific subject calibration."],
             ),
+            chosen_index_list=gpt_chosen_indexes,
             is_targeted=True,
             target_query_idx=[0],
             n_knn_target_queries=1,
@@ -938,7 +946,7 @@ configstore.store(
         eval=ExperimentEvalConfig(
             eval_emb_list=embedders,
             eval_vlm_list=vlms,
-            test_gpt_attack=True,
+            test_generative_attacks=["gpt","gemini"],
         ),
     ),
 )
@@ -950,6 +958,7 @@ configstore.store(
             dataset_list=datasets,
             embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
             vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B]),
+            chosen_index_list=gpt_chosen_indexes,
             is_targeted=True,
             target_query_idx=[0],
             n_knn_target_queries=5,
@@ -957,7 +966,8 @@ configstore.store(
         eval=ExperimentEvalConfig(
             eval_emb_list=embedders,
             eval_vlm_list=vlms,
-            test_gpt_attack=True,
+            test_generative_attacks=["gpt","gemini"],
+
         ),
     ),
 )
@@ -975,6 +985,7 @@ configstore.store(
                     "A micromort measures the number of accidents per million vehicles on the road and is used in transportation policy.",
                 ],
             ),
+            chosen_index_list=gpt_chosen_indexes,
             is_targeted=True,
             target_query_idx=[0, 1],
             n_knn_target_queries=1,
@@ -982,7 +993,7 @@ configstore.store(
         eval=ExperimentEvalConfig(
             eval_emb_list=embedders,
             eval_vlm_list=vlms,
-            test_gpt_attack=True,
+            test_generative_attacks=["gpt","gemini"],
         ),
     ),
 )

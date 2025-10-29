@@ -165,7 +165,7 @@ def get_metrics(
     else:
         model_name_emb = task_config.model_name_embs[0]
 
-    if exp_config.eval.test_gpt_attack:
+    if exp_config.eval.test_generative_attacks:
         if task_config.eval_vlm_name:
             model_name_vlm = task_config.eval_vlm_name
         else:

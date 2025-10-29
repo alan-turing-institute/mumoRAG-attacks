@@ -32,7 +32,7 @@ class ExperimentEvalConfig:
     test_topk_order: bool = False
     defences_list: list[DefenceName] = field(default_factory=lambda: [DefenceName.NONE])
     noise_defence_level: float = 16.0
-    test_gpt_attack: bool = False
+    test_generative_attacks: list[str] | None = field(default_factory=lambda: None)
     # following used to test transferability, None means white-box setting
     eval_emb_list: list[EmbedderName] | None = None
     eval_vlm_list: list[VLMName] | None = None
