@@ -57,10 +57,7 @@ vlms_sets =[
     [VLMName.SMOLVLM_1_2B, VLMName.INTERNVL_3_2B]
 ]
 
-chosen_indexes = [
-    150,
-    251,420,676,769
-]
+chosen_indexes = [150,251,420,676,769]
 gpt_chosen_indexes=[0,1,2,3,4]
 
 
@@ -185,7 +182,10 @@ configstore.store(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
             embedder_list=[embedders],
-            vlm=VLMConfig(models=[vlms]),
+            vlm=VLMConfig(
+                models=[vlms],
+                target_answers=["Manually match each marker to a generic human template regardless of trial-specific subject calibration."],
+            ),
             is_targeted=True,
             target_query_idx=[0],
             n_knn_target_queries=1,
@@ -204,7 +204,10 @@ configstore.store(
         train=ExperimentTrainConfig(
             dataset_list=datasets,
             embedder_list=embedders_sets,
-            vlm=VLMConfig(models=vlms_sets),
+            vlm=VLMConfig(
+                models=vlms_sets,
+                target_answers=["Manually match each marker to a generic human template regardless of trial-specific subject calibration."],
+            ),
             is_targeted=True,
             target_query_idx=[0],
             n_knn_target_queries=1,
@@ -226,10 +229,10 @@ configstore.store(
             vlm=VLMConfig(models=vlms),
 	    chosen_index_list=chosen_indexes,
         ),
-        # eval=ExperimentEvalConfig(
-        #     eval_emb_list=eval_embedders,
-        #     eval_vlm_list=vlms,
-        # ),
+        eval=ExperimentEvalConfig(
+            eval_emb_list=eval_embedders,
+            eval_vlm_list=vlms,
+        ),
     ),
 )
 
@@ -254,10 +257,10 @@ configstore.store(
             chosen_index_list=chosen_indexes,
             n_knn_target_queries=1,
         ),
-        # eval=ExperimentEvalConfig(
-        #     eval_emb_list=eval_embedders,
-        #     eval_vlm_list=vlms,
-        # ),
+        eval=ExperimentEvalConfig(
+            eval_emb_list=eval_embedders,
+            eval_vlm_list=vlms,
+        ),
     ),
 )
 
