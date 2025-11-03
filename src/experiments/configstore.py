@@ -997,7 +997,10 @@ configstore.store(
         eval=ExperimentEvalConfig(
             eval_emb_list=embedders,
             eval_vlm_list=vlms,
-            test_generative_attacks=["gpt","gemini"],
+            test_generative_attacks=[
+                "gpt",
+                # "gemini"
+            ],
         ),
     ),
 )
@@ -1020,7 +1023,10 @@ configstore.store(
         eval=ExperimentEvalConfig(
             eval_emb_list=embedders,
             eval_vlm_list=vlms,
-            test_generative_attacks=["gpt","gemini"],
+            test_generative_attacks=[
+                "gpt",
+                # "gemini"
+            ],
         ),
     ),
 )
@@ -1040,7 +1046,10 @@ configstore.store(
         eval=ExperimentEvalConfig(
             eval_emb_list=embedders,
             eval_vlm_list=vlms,
-            test_generative_attacks=["gpt","gemini"],
+            test_generative_attacks=[
+                "gpt",
+                # "gemini"
+            ],
 
         ),
     ),
@@ -1067,7 +1076,10 @@ configstore.store(
         eval=ExperimentEvalConfig(
             eval_emb_list=embedders,
             eval_vlm_list=vlms,
-            test_generative_attacks=["gpt","gemini"],
+            test_generative_attacks=[
+                "gpt",
+                # "gemini"
+            ],
         ),
     ),
 )
