@@ -12,7 +12,7 @@ exps=(
 #  "paper_targeted_attacks_multiQ_oneA"
 #  "paper_targeted_attacks_multiQ_multiA"
 #  "paper_multi_transferability"
-  "paper_multi_transferability_targeted"
+#  "paper_multi_transferability_targeted"
 #  "paper_judge_defence"
 #  "paper_judge_defence_adapt"
 #  "paper_judge_defence_targeted"
@@ -22,7 +22,7 @@ exps=(
 #  "paper_topk_context"
 
 #  "paper_leave_one_out_multi_transferability"
-  "paper_leave_one_out_multi_transferability_targeted"
+#  "paper_leave_one_out_multi_transferability_targeted"
 #
 # "paper_defences"
 # "paper_targeted_defences"
@@ -33,6 +33,13 @@ exps=(
 #  "paper_GPT_targeted_attacks_oneQ_oneA"
 #  "paper_GPT_targeted_attacks_multiQ_oneA"
 #  "paper_GPT_targeted_attacks_multiQ_multiA"
+
+# -------
+
+"paper_universal_GT_baseline"
+"paper_targeted_1-1_neg_baseline"
+"paper_targeted_m-1_neg_baseline"
+"paper_targeted_m-m_neg_baseline"
 
 # -------
 

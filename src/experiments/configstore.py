@@ -236,6 +236,77 @@ configstore.store(
     ),
 )
 
+configstore.store(
+    name="paper_universal_GT_baseline",
+    node=ExperimentConfig(
+        train=ExperimentTrainConfig(
+            dataset_list=datasets,
+            embedder_list=embedders,
+            vlm=VLMConfig(models=vlms),
+	    chosen_index_list=chosen_indexes,
+        n_gradient_steps=0,
+        ),
+    ),
+)
+
+configstore.store(
+    name="paper_targeted_1-1_neg_baseline",
+    node=ExperimentConfig(
+        train=ExperimentTrainConfig(
+            dataset_list=datasets,
+            embedder_list=embedders,
+            vlm=VLMConfig(
+                models=vlms,
+                target_answers=[
+                    "Manually match each marker to a generic human template regardless of trial-specific subject calibration."],
+            ),
+            is_targeted=True,
+            target_query_idx=[0],
+            chosen_index_list=chosen_indexes,
+            n_knn_target_queries=1,
+            n_gradient_steps=0,
+        )
+    ),
+)
+
+configstore.store(
+    name="paper_targeted_m-1_neg_baseline",
+    node=ExperimentConfig(
+        train=ExperimentTrainConfig(
+            dataset_list=datasets,
+            embedder_list=embedders,
+            vlm=VLMConfig(models=vlms),
+            is_targeted=True,
+            target_query_idx=[0],
+            n_knn_target_queries=5,
+	        chosen_index_list=chosen_indexes,
+            n_gradient_steps=0,
+        ),
+    ),
+)
+
+configstore.store(
+    name="paper_targeted_m-m_neg_baseline",
+    node=ExperimentConfig(
+        train=ExperimentTrainConfig(
+            dataset_list=datasets,
+            embedder_list=embedders,
+            vlm=VLMConfig(
+                models=vlms,
+                target_answers=[
+                    "Manually match each marker to a generic human template regardless of trial-specific subject calibration.",
+                    "A micromort measures the number of accidents per million vehicles on the road and is used in transportation policy.",
+                ],
+            ),
+            is_targeted=True,
+            target_query_idx=[0, 1],
+            n_knn_target_queries=1,
+	        chosen_index_list=chosen_indexes,
+            n_gradient_steps=0,
+        ),
+    ),
+)
+
 """
 Targeted attacks against a specific query.
 Produces:
