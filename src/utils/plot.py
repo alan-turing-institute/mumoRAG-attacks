@@ -46,6 +46,10 @@ class Metric(StrEnum):
 class PlotFilter:
     # condition lambdas (useful for selecting task configs from the tabulate object)
     CONDITION_SAME_MODELS = lambda row: row["eval vlm"] == row["vlm"] and row["eval emb"] == row["embedder"]
+    CONDITION_INCLUDES_MODELS = lambda row: row["eval vlm"] in row["vlm"] and row["eval emb"] in row["embedder"]
+    CONDITION_NOT_INCLUDES_MODELS = lambda row: row["eval vlm"] not in row["vlm"] and row["eval emb"] not in row["embedder"]
+    CONDITION_INCLUDES_VLM = lambda row: row["eval vlm"] in row["vlm"] and row["eval emb"] not in row["embedder"]
+    CONDITION_INCLUDES_EMB = lambda row: row["eval vlm"] not in row["vlm"] and row["eval emb"] in row["embedder"]
 
     # metric_lists
     METRICS_TEST = [
@@ -75,14 +79,13 @@ class PlotFilter:
         Metric.RETRIEVAL_ASR_TARGETED,
         # Metric.RETRIEVAL_FPR_TARGETED_TRAIN,
         Metric.RETRIEVAL_FPR_TARGETED_TEST,
-        Metric.GENERATION_ASR_EXACT_TARGETED_TRAIN,
+        # Metric.GENERATION_ASR_EXACT_TARGETED_TRAIN,
         # Metric.GENERATION_FPR_TARGETED_TRAIN,
+        # Metric.GENERATION_ASR_EMBED_TARGETED_TRAIN_THRESHOLD,
         Metric.GENERATION_ASR_EMBED_TARGETED_TRAIN,
         # Metric.GENERATION_FPR_EMBED_TARGETED_TRAIN,
         # Metric.GENERATION_FPR_TARGETED_TEST,
         Metric.GENERATION_FPR_EMBED_TARGETED_TEST,
-
-        Metric.GENERATION_ASR_EMBED_TARGETED_TRAIN_THRESHOLD
     ]
 
     METRICS_COLPALI = [
@@ -171,7 +174,7 @@ def get_metrics(
         else:
             model_name_vlm = task_config.vlm.models[0]
 
-        filename = exp_config.eval.results_folder / f"metrics_{gpt_filename(task_config)}_{make_safe_filename(f'{model_name_emb}_{model_name_vlm}')}.json"
+        filename = exp_config.eval.results_folder / task_config.test_generative_attack / f"metrics_{gpt_filename(task_config)}_{make_safe_filename(f'{model_name_emb}_{model_name_vlm}')}.json"
     else:
         filename = task_config.get_result_filename(exp_config.eval.results_folder)
     with open(filename, "r") as file:
@@ -216,13 +219,15 @@ def get_metrics(
             if task_config.is_targeted:
                 metrics_to_output[f"{Metric.GENERATION_ASR_EXACT_TARGETED_TRAIN.value}@{gen_topk}"] = metric_dict["generation"]["train"][key][VLMEvaluationMetric.ASR_EXACT]["asr_targeted"]
                 metrics_to_output[f"{Metric.GENERATION_FPR_TARGETED_TRAIN.value}@{gen_topk}"] = metric_dict["generation"]["train"][key][VLMEvaluationMetric.ASR_EXACT]["fpr_targeted"]
+
+                thres_met_tmp = metric_dict["generation"]["train"][key][VLMEvaluationMetric.EMBED_ADV]["asr_targeted"]
+                metrics_to_output[f"{Metric.GENERATION_ASR_EMBED_TARGETED_TRAIN_THRESHOLD.value}@{gen_topk}"] = 1 if thres_met_tmp > metric_threshold else 0
+
                 metrics_to_output[f"{Metric.GENERATION_ASR_EMBED_TARGETED_TRAIN.value}@{gen_topk}"] = metric_dict["generation"]["train"][key][VLMEvaluationMetric.EMBED_ADV]["asr_targeted"]
                 metrics_to_output[f"{Metric.GENERATION_FPR_EMBED_TARGETED_TRAIN.value}@{gen_topk}"] = metric_dict["generation"]["train"][key][VLMEvaluationMetric.EMBED_ADV]["fpr_targeted"]
                 metrics_to_output[f"{Metric.GENERATION_FPR_TARGETED_TEST.value}@{gen_topk}"] = metric_dict["generation"]["test"][key][VLMEvaluationMetric.ASR_EXACT]["fpr_targeted"]
                 metrics_to_output[f"{Metric.GENERATION_FPR_EMBED_TARGETED_TEST.value}@{gen_topk}"] = metric_dict["generation"]["test"][key][VLMEvaluationMetric.EMBED_ADV]["fpr_targeted"]
 
-                thres_met_tmp = metric_dict["generation"]["train"][key][VLMEvaluationMetric.EMBED_ADV]["asr_targeted"]
-                metrics_to_output[f"{Metric.GENERATION_ASR_EMBED_TARGETED_TRAIN_THRESHOLD.value}@{gen_topk}"] = 1 if thres_met_tmp > metric_threshold else 0
 
         if metric_dict["judge"]:
             metrics_to_output[f"{Metric.JUDGE_IMAGE_CONTXT_REL_TRAIN.value}@{gen_topk}"] = metric_dict["judge"]["train"][key][JudgeMetric.IMAGE_CONTEXT_RELEVANCY]["asr_universal"]
@@ -290,19 +295,19 @@ def cleanup_colnames_after_groupby(col_names):
         new_cols.append(col)
     return new_cols
 
-def combine_mean_std_columns(df, aggregate_columns: list[str]):
+def combine_columns(df, aggregate_columns: list[str]):
     # --- Format mean and std columns into a single column ---
     for col in aggregate_columns:
         mean_col = f'{col} mean'
         std_col = f'{col} std'
-        new_col = f'{col} (mean ± std)'
+        new_col = f'{col} mean (std)'
         
         # Fill NaN values in the 'std' column before formatting to avoid errors
         df[std_col] = df[std_col].fillna(0)
         
         # Create the new combined column
         df[new_col] = df.apply(
-            lambda row: f'{row[mean_col]:.2f} ± {row[std_col]:.2f}',
+            lambda row: f'{row[mean_col]:.2f} ({row[std_col]:.2f})',
             axis=1
         )
         

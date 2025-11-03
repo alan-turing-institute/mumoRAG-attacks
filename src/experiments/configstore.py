@@ -999,7 +999,7 @@ configstore.store(
             eval_vlm_list=vlms,
             test_generative_attacks=[
                 "gpt",
-                # "gemini"
+                "gemini"
             ],
         ),
     ),
@@ -1025,7 +1025,7 @@ configstore.store(
             eval_vlm_list=vlms,
             test_generative_attacks=[
                 "gpt",
-                # "gemini"
+                "gemini"
             ],
         ),
     ),
@@ -1048,7 +1048,7 @@ configstore.store(
             eval_vlm_list=vlms,
             test_generative_attacks=[
                 "gpt",
-                # "gemini"
+                "gemini"
             ],
 
         ),
@@ -1078,7 +1078,7 @@ configstore.store(
             eval_vlm_list=vlms,
             test_generative_attacks=[
                 "gpt",
-                # "gemini"
+                "gemini"
             ],
         ),
     ),
