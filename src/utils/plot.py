@@ -54,7 +54,7 @@ class PlotFilter:
     # metric_lists
     METRICS_TEST = [
         Metric.RETRIEVAL_ASR_TEST,
-        Metric.GENERATION_ASR_EXACT_TEST,
+        # Metric.GENERATION_ASR_EXACT_TEST,
         Metric.GENERATION_ASR_EMBED_TEST,
         Metric.GENERATION_ACC_EMBED_GT_TEST,
         Metric.JUDGE_ANS_REL_TEST,
