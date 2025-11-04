@@ -16,7 +16,7 @@ from utils.logger import logger
 from utils.utils import get_device
 from wrappers.cache import get_dataset, get_embedded_dataset, get_judge, get_text_embedder, get_vlm
 from wrappers.embedded_dataset import make_safe_filename
-from wrappers.embedding import is_loss_compatible
+from wrappers.embedding import is_loss_compatible, EmbedderName
 from wrappers.json_encoder import EnumEncoder
 from wrappers.vlm import VLMEvaluationMetric
 
@@ -86,7 +86,8 @@ def run(exp_config: ExperimentConfig):
             ds.queries,
             exp_config.train.n_knn_target_queries,
             ds.ground_truth_answers,
-            model_name_emb,
+            # model_name_emb,
+            model_name_emb if not exp_config.eval.test_generative_attacks else EmbedderName.CLIP_LARGE_PATCH14,
             task_config.emb_train_loss_type,
             device,
         )

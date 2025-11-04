@@ -36,12 +36,12 @@
                     "fpr_targeted": 0.0
                 },
                 "embed-adversarial": {
-                    "asr_universal": 0.5023834109306335,
-                    "asr_targeted": 0.4346681237220764,
-                    "fpr_targeted": 0.22533631612417065
+                    "asr_universal": 0.5011730194091797,
+                    "asr_targeted": 0.3871293067932129,
+                    "fpr_targeted": 0.2028588325822655
                 },
                 "embed-ground-truth": {
-                    "accuracy": 0.5064574480056763
+                    "accuracy": 0.505867600440979
                 }
             }
         },
@@ -52,11 +52,11 @@
                     "fpr_targeted": 0.0
                 },
                 "embed-adversarial": {
-                    "asr_universal": 0.5299897789955139,
-                    "fpr_targeted": 0.23192636501044034
+                    "asr_universal": 0.5232913494110107,
+                    "fpr_targeted": 0.214773940294981
                 },
                 "embed-ground-truth": {
-                    "accuracy": 0.5299897789955139
+                    "accuracy": 0.5232913494110107
                 }
             }
         }
@@ -79,7 +79,7 @@
             ],
             "gen_topk": 1
         },
-        "chosen_index": 150,
+        "chosen_index": 420,
         "max_perturbation": 0.03137254901960784,
         "n_gradient_steps": 0,
         "max_batch_size_per_iter": 2,

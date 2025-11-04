@@ -9,8 +9,8 @@
             "maxsim"
         ],
         "loss_cos_topk_1": {
-            "recall_before": 0.21000000000000002,
-            "recall_after": 0.21000000000000002,
+            "recall_before": 0.58,
+            "recall_after": 0.58,
             "asr_train": 0.0,
             "asr_test": 0.0,
             "asr_targeted": 0.0,
@@ -18,12 +18,12 @@
             "fpr_targeted_test": 0.0
         },
         "loss_cos_topk_5": {
-            "recall_before": 0.44,
-            "recall_after": 0.44,
-            "asr_train": 0.0,
+            "recall_before": 0.94,
+            "recall_after": 0.94,
+            "asr_train": 0.0125,
             "asr_test": 0.0,
             "asr_targeted": 0.0,
-            "fpr_targeted_train": 0.0,
+            "fpr_targeted_train": 0.012658227848101266,
             "fpr_targeted_test": 0.0
         }
     },
@@ -36,12 +36,12 @@
                     "fpr_targeted": 0.0
                 },
                 "embed-adversarial": {
-                    "asr_universal": 0.5023834109306335,
-                    "asr_targeted": 0.4346681237220764,
-                    "fpr_targeted": 0.22533631612417065
+                    "asr_universal": 0.5147249102592468,
+                    "asr_targeted": 0.48978039622306824,
+                    "fpr_targeted": 0.2222429697248566
                 },
                 "embed-ground-truth": {
-                    "accuracy": 0.5064574480056763
+                    "accuracy": 0.5180078148841858
                 }
             }
         },
@@ -52,11 +52,11 @@
                     "fpr_targeted": 0.0
                 },
                 "embed-adversarial": {
-                    "asr_universal": 0.5299897789955139,
-                    "fpr_targeted": 0.23192636501044034
+                    "asr_universal": 0.5330582857131958,
+                    "fpr_targeted": 0.21879168674349786
                 },
                 "embed-ground-truth": {
-                    "accuracy": 0.5299897789955139
+                    "accuracy": 0.5330582857131958
                 }
             }
         }
@@ -79,7 +79,7 @@
             ],
             "gen_topk": 1
         },
-        "chosen_index": 150,
+        "chosen_index": 420,
         "max_perturbation": 0.03137254901960784,
         "n_gradient_steps": 0,
         "max_batch_size_per_iter": 2,
@@ -111,8 +111,8 @@
         },
         "colpali_only_images": false,
         "kb_compromised_fraction": 0.1,
-        "eval_emb_name": "openai/clip-vit-large-patch14",
-        "eval_vlm_name": "Qwen/Qwen2.5-VL-3B-Instruct",
+        "eval_emb_name": "Alibaba-NLP/gme-Qwen2-VL-2B-Instruct",
+        "eval_vlm_name": "HuggingFaceTB/SmolVLM-Instruct",
         "eval_jdg_name": null,
         "test_generative_attack": null,
         "defence": ""

@@ -57,7 +57,13 @@ vlms_sets =[
     [VLMName.SMOLVLM_1_2B, VLMName.INTERNVL_3_2B]
 ]
 
-chosen_indexes = [150,251,420,676,769]
+chosen_indexes = [
+    150,
+    251,
+    420,
+    676,
+    769
+]
 gpt_chosen_indexes=[0,1,2,3,4]
 
 
@@ -1114,7 +1120,7 @@ configstore.store(
             eval_vlm_list=vlms,
             test_generative_attacks=[
                 "gpt",
-                "gemini"
+                # "gemini"
             ],
 
         ),

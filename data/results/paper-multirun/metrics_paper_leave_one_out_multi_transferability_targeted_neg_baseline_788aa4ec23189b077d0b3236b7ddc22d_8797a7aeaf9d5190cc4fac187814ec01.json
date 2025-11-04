@@ -9,8 +9,8 @@
             "maxsim"
         ],
         "loss_cos_topk_1": {
-            "recall_before": 0.21000000000000002,
-            "recall_after": 0.21000000000000002,
+            "recall_before": 0.58,
+            "recall_after": 0.58,
             "asr_train": 0.0,
             "asr_test": 0.0,
             "asr_targeted": 0.0,
@@ -18,8 +18,8 @@
             "fpr_targeted_test": 0.0
         },
         "loss_cos_topk_5": {
-            "recall_before": 0.44,
-            "recall_after": 0.44,
+            "recall_before": 0.94,
+            "recall_after": 0.94,
             "asr_train": 0.0,
             "asr_test": 0.0,
             "asr_targeted": 0.0,
@@ -36,12 +36,12 @@
                     "fpr_targeted": 0.0
                 },
                 "embed-adversarial": {
-                    "asr_universal": 0.5023834109306335,
-                    "asr_targeted": 0.4346681237220764,
-                    "fpr_targeted": 0.22533631612417065
+                    "asr_universal": 0.527376115322113,
+                    "asr_targeted": 0.4997243285179138,
+                    "fpr_targeted": 0.21514739096164703
                 },
                 "embed-ground-truth": {
-                    "accuracy": 0.5064574480056763
+                    "accuracy": 0.5306195616722107
                 }
             }
         },
@@ -52,11 +52,11 @@
                     "fpr_targeted": 0.0
                 },
                 "embed-adversarial": {
-                    "asr_universal": 0.5299897789955139,
-                    "fpr_targeted": 0.23192636501044034
+                    "asr_universal": 0.5412284731864929,
+                    "fpr_targeted": 0.22483850605785846
                 },
                 "embed-ground-truth": {
-                    "accuracy": 0.5299897789955139
+                    "accuracy": 0.5412284731864929
                 }
             }
         }
@@ -111,8 +111,8 @@
         },
         "colpali_only_images": false,
         "kb_compromised_fraction": 0.1,
-        "eval_emb_name": "openai/clip-vit-large-patch14",
-        "eval_vlm_name": "Qwen/Qwen2.5-VL-3B-Instruct",
+        "eval_emb_name": "Alibaba-NLP/gme-Qwen2-VL-2B-Instruct",
+        "eval_vlm_name": "OpenGVLab/InternVL3-2B-hf",
         "eval_jdg_name": null,
         "test_generative_attack": null,
         "defence": ""
