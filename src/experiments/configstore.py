@@ -307,6 +307,86 @@ configstore.store(
     ),
 )
 
+configstore.store(
+    name="paper_multi_transferability_GT_baseline",
+    node=ExperimentConfig(
+        train=ExperimentTrainConfig(
+            dataset_list=datasets,
+            embedder_list=[embedders],
+            vlm=VLMConfig(models=[vlms]),
+            chosen_index_list=chosen_indexes,
+            n_gradient_steps=0,
+        ),
+        eval=ExperimentEvalConfig(
+            eval_emb_list=embedders,
+            eval_vlm_list=vlms,
+        ),
+    ),
+)
+
+configstore.store(
+    name="paper_leave_one_out_multi_transferability_GT_baseline",
+    node=ExperimentConfig(
+        train=ExperimentTrainConfig(
+            dataset_list=datasets,
+            embedder_list=embedders_sets,
+            vlm=VLMConfig(models=vlms_sets),
+            chosen_index_list=chosen_indexes,
+            n_gradient_steps=0,
+        ),
+        eval=ExperimentEvalConfig(
+            eval_emb_list=embedders,
+            eval_vlm_list=vlms,
+        ),
+    ),
+)
+
+configstore.store(
+    name="paper_multi_transferability_targeted_neg_baseline",
+    node=ExperimentConfig(
+        train=ExperimentTrainConfig(
+            dataset_list=datasets,
+            embedder_list=[embedders],
+            vlm=VLMConfig(
+                models=[vlms],
+                target_answers=["Manually match each marker to a generic human template regardless of trial-specific subject calibration."],
+            ),
+            is_targeted=True,
+            target_query_idx=[0],
+            n_knn_target_queries=1,
+            chosen_index_list=chosen_indexes,
+            n_gradient_steps=0,
+        ),
+        eval=ExperimentEvalConfig(
+            eval_emb_list=embedders,
+            eval_vlm_list=vlms,
+        ),
+    ),
+)
+
+configstore.store(
+    name="paper_leave_one_out_multi_transferability_targeted_neg_baseline",
+    node=ExperimentConfig(
+        train=ExperimentTrainConfig(
+            dataset_list=datasets,
+            embedder_list=embedders_sets,
+            vlm=VLMConfig(
+                models=vlms_sets,
+                target_answers=["Manually match each marker to a generic human template regardless of trial-specific subject calibration."],
+            ),
+            is_targeted=True,
+            target_query_idx=[0],
+            n_knn_target_queries=1,
+            chosen_index_list=chosen_indexes,
+            n_gradient_steps=0,
+        ),
+        eval=ExperimentEvalConfig(
+            eval_emb_list=embedders,
+            eval_vlm_list=vlms,
+        ),
+    ),
+)
+
 """
 Targeted attacks against a specific query.
 Produces:
