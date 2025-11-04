@@ -36,14 +36,14 @@ exps=(
 
 # -------
 
-#"paper_universal_GT_baseline"
+"paper_universal_GT_baseline"
 #"paper_targeted_1-1_neg_baseline"
 #"paper_targeted_m-1_neg_baseline"
 #"paper_targeted_m-m_neg_baseline"
-"paper_multi_transferability_GT_baseline"
-"paper_leave_one_out_multi_transferability_GT_baseline"
-"paper_multi_transferability_targeted_neg_baseline"
-"paper_leave_one_out_multi_transferability_targeted_neg_baseline"
+#"paper_multi_transferability_GT_baseline"
+#"paper_leave_one_out_multi_transferability_GT_baseline"
+#"paper_multi_transferability_targeted_neg_baseline"
+#"paper_leave_one_out_multi_transferability_targeted_neg_baseline"
 
 # -------
 
@@ -68,13 +68,13 @@ declare -a failed=()
 # Define a function to run one experiment
 run_exp() {
     exp="$1"
-    echo "=== [1/2] Training: $exp ==="
-    python src/attack_train.py --config-name "$exp"
-    if [ $? -ne 0 ]; then
-        echo "❌ Training failed for $exp. Skipping eval."
-        failed+=("$exp (train failed)")
-        return
-    fi
+#    echo "=== [1/2] Training: $exp ==="
+#    python src/attack_train.py --config-name "$exp"
+#    if [ $? -ne 0 ]; then
+#        echo "❌ Training failed for $exp. Skipping eval."
+#        failed+=("$exp (train failed)")
+#        return
+#    fi
 
     echo "=== [2/2] Evaluating: $exp ==="
     python src/attack_eval.py --config-name "$exp"

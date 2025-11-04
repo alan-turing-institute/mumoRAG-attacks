@@ -1050,20 +1050,6 @@ configstore.store(
 """
 ChatGPT baselines for comparison
 """
-# configstore.store(
-#     name="paper_GPT_non_targeted",
-#     node=ExperimentConfig(
-#         train=ExperimentTrainConfig(
-#             dataset_list=datasets,
-#             embedder_list=[EmbedderName.CLIP_LARGE_PATCH14],
-#             vlm=VLMConfig(models=[VLMName.SMOLVLM_1_2B]),
-#         ),
-#         eval=ExperimentEvalConfig(
-#             gen_topk_list=[-1],
-#             test_gpt_attack=True,
-#         ),
-#     ),
-# )
 
 configstore.store(
     name="paper_GPT_non_targeted",
