@@ -118,20 +118,16 @@ class TaskConfig:
 
     def get_result_filename(self, results_folder: Path) -> Path:
         hash_string = self.create_hash_string()
-        transferability_suffix = get_transferability_file_suffix(self.eval_emb_name, self.eval_vlm_name, self.eval_jdg_name)
+        transferability_suffix = self.get_transferability_file_suffix()
         return results_folder / f"metrics_{get_config_name()}_{hash_string}{transferability_suffix}.json"
 
 
 # standalone functions
-def get_transferability_file_suffix(
-    eval_emb_name: EmbedderName | None,
-    eval_vlm_name: VLMName | None,
-    eval_jdg_name: VLMName | None = None,
-) -> str:
-    if not eval_emb_name and not eval_vlm_name and not eval_jdg_name:
-        return ""
-    transfer_str = f"{eval_emb_name or ''}{eval_vlm_name or ''}{eval_jdg_name or ''}"
-    return f"_{hashlib.md5(transfer_str.encode()).hexdigest()}"
+    def get_transferability_file_suffix(self) -> str:
+        if not self.eval_emb_name and not self.eval_vlm_name and not self.eval_jdg_name:
+            return ""
+        transfer_str = f"{self.eval_emb_name or ''}{self.eval_vlm_name or ''}{self.eval_jdg_name or ''}"
+        return f"_{hashlib.md5(transfer_str.encode()).hexdigest()}"
 
 
 def get_defence_file_suffix(defence: DefenceName) -> str:
