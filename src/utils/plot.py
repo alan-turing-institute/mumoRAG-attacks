@@ -61,13 +61,21 @@ class PlotFilter:
         Metric.JUDGE_IMAGE_FAITH_TEST,
         Metric.JUDGE_IMAGE_CONTXT_REL_TEST,
     ]
-    METRICS_JUDGE = [
-        Metric.JUDGE_ANS_REL_TEST,
+    METRICS_JUDGE_TARGETED = [
+        # Metric.JUDGE_ANS_REL_TEST,
         Metric.JUDGE_ANS_REL_TRAIN,
-        Metric.JUDGE_IMAGE_CONTXT_REL_TEST,
+        # Metric.JUDGE_IMAGE_CONTXT_REL_TEST,
         Metric.JUDGE_IMAGE_CONTXT_REL_TRAIN,
-        Metric.JUDGE_IMAGE_FAITH_TEST,
+        # Metric.JUDGE_IMAGE_FAITH_TEST,
         Metric.JUDGE_IMAGE_FAITH_TRAIN,
+    ]
+    METRICS_JUDGE_UNTARGETED = [
+        Metric.JUDGE_ANS_REL_TEST,
+        # Metric.JUDGE_ANS_REL_TRAIN,
+        Metric.JUDGE_IMAGE_CONTXT_REL_TEST,
+        # Metric.JUDGE_IMAGE_CONTXT_REL_TRAIN,
+        Metric.JUDGE_IMAGE_FAITH_TEST,
+        # Metric.JUDGE_IMAGE_FAITH_TRAIN,
     ]
 
     METRICS_RECALL = [
@@ -92,7 +100,7 @@ class PlotFilter:
         Metric.RETRIEVAL_ASR_TEST,
     ]
 
-    METRICS_TEST_JUDGE = list(set(METRICS_JUDGE) & set(METRICS_TEST))
+    METRICS_TEST_JUDGE = list(set(METRICS_JUDGE_UNTARGETED) & set(METRICS_TEST))
 
     ALL_METRICS_UNTARGETED = METRICS_TEST + METRICS_RECALL
 
