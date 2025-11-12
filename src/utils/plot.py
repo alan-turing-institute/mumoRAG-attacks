@@ -105,7 +105,7 @@ class PlotFilter:
     ALL_METRICS_UNTARGETED = METRICS_TEST + METRICS_RECALL
 
     METRICS_TOPK = [
-        Metric.GENERATION_ASR_EXACT_TEST,
+        # Metric.GENERATION_ASR_EXACT_TEST,
         Metric.GENERATION_ASR_EMBED_TEST,
         Metric.GENERATION_ACC_EMBED_GT_TEST,
     ]
@@ -309,16 +309,16 @@ def combine_columns(df, aggregate_columns: list[str]):
         mean_col = f'{col} mean'
         std_col = f'{col} std'
         new_col = f'{col} mean (std)'
-        
+
         # Fill NaN values in the 'std' column before formatting to avoid errors
         df[std_col] = df[std_col].fillna(0)
-        
+
         # Create the new combined column
         df[new_col] = df.apply(
             lambda row: f'{row[mean_col]:.2f} ({row[std_col]:.2f})',
             axis=1
         )
-        
+
         # Drop the original mean and std columns
         df.drop(columns=[mean_col, std_col], inplace=True)
 
