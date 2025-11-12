@@ -2,11 +2,6 @@
 
 # Define your experiments
 exps=(
-# "rebuttal_non_targeted"
-# "rebuttal_targeted_attacks_oneQ_oneA"
-
-# --------
-
 #  "paper_non_targeted"
 #  "paper_targeted_attacks_oneQ_oneA"
 #  "paper_targeted_attacks_multiQ_oneA"

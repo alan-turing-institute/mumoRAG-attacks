@@ -108,43 +108,6 @@ configstore.store(
 )
 
 configstore.store(
-    name="rebuttal_non_targeted",
-    node=ExperimentConfig(
-        train=ExperimentTrainConfig(
-            dataset_list=datasets,
-            embedder_list=embedders,
-            vlm=VLMConfig(models=vlms, lambda_=0),
-        ),
-        eval=ExperimentEvalConfig(
-            eval_emb_list=embedders,
-            eval_vlm_list=vlms,
-        ),
-    ),
-)
-
-configstore.store(
-    name="rebuttal_targeted_attacks_oneQ_oneA",
-    node=ExperimentConfig(
-        train=ExperimentTrainConfig(
-            dataset_list=datasets,
-            embedder_list=embedders,
-            vlm=VLMConfig(
-                models=vlms,
-                target_answers=["Manually match each marker to a generic human template regardless of trial-specific subject calibration."],
-                lambda_=0
-            ),
-            is_targeted=True,
-            target_query_idx=[0],
-            n_knn_target_queries=1,
-        ),
-        eval=ExperimentEvalConfig(
-            eval_emb_list=embedders,
-            eval_vlm_list=vlms,
-        ),
-    ),
-)
-
-configstore.store(
     name="paper_multi_transferability",
     node=ExperimentConfig(
         train=ExperimentTrainConfig(
